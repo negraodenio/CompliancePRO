@@ -109,8 +109,8 @@ export async function generateRIPD(processingActivity: string): Promise<string> 
 RIPD - RELATÓRIO DE IMPACTO À PROTEÇÃO DE DADOS PESSOAIS
 Atividade: ${processingActivity}
 Data: ${new Date().toISOString()}
-Controlador: CouncilIA / ia4all.eu
-DPO: dpo@aegisgov.ai
+Controlador: ComplyPRO.pt
+DPO: dpo@complypro.pt
 
 1. DESCRIÇÃO DO TRATAMENTO
    - Finalidade: Análise estruturada de decisões com IA
