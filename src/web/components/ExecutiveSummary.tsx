@@ -12,6 +12,7 @@ import {
 } from '../services/regulation-mapper';
 import { calculateMaturityLevel } from '../services/maturity-calculator';
 import { EnterpriseLeadModal } from './EnterpriseLeadModal';
+import { OrganizationalAssessmentModal } from './OrganizationalAssessmentModal';
 
 interface ExecutiveSummaryProps {
   result: ScannerResult;
@@ -37,6 +38,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [showFormulaModal, setShowFormulaModal] = useState(false);
   const [showEnterpriseModal, setShowEnterpriseModal] = useState(false);
+  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const violations = result.violations || [];
@@ -250,9 +252,18 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
             </div>
           </div>
 
-          <span className="text-[11px] font-mono text-slate-900 bg-slate-100 border border-slate-300 px-3 py-1 rounded-lg font-bold">
-            Diagnóstico Atual: {maturity.badge}
-          </span>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              onClick={() => setShowAssessmentModal(true)}
+              className="px-3 py-1 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg flex items-center space-x-1.5 cursor-pointer shadow-2xs transition-colors"
+            >
+              <FileText className="w-3.5 h-3.5 text-slate-500" />
+              <span>Avaliação de Processos (Opcional)</span>
+            </button>
+            <span className="text-[11px] font-mono text-slate-900 bg-slate-100 border border-slate-300 px-3 py-1 rounded-lg font-bold">
+              Diagnóstico: {maturity.badge}
+            </span>
+          </div>
         </div>
 
         {/* 5 Levels Step Progress Bar */}
@@ -384,6 +395,11 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
       {/* Enterprise Lead Capture Modal */}
       {showEnterpriseModal && (
         <EnterpriseLeadModal onClose={() => setShowEnterpriseModal(false)} featureContext="Roadmap de Maturidade de Governança de IA (Nível 4 e 5)" />
+      )}
+
+      {/* Optional Organizational Assessment Modal (ISO 42001 & EU AI Act) */}
+      {showAssessmentModal && (
+        <OrganizationalAssessmentModal result={result} onClose={() => setShowAssessmentModal(false)} />
       )}
 
       {/* Formula & Calculation Modal */}
