@@ -66,29 +66,11 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
   const securityViolationsCount = violations.filter(v => 
     v.severity === 'critical' || 
     v.severity === 'high' || 
-    v.category === 'owasp' || 
-    v.category === 'security'
+    v.category === 'owasp'
   ).length;
 
   const handleDownloadRipd = () => {
-    const ripd = generateRIPD({
-      processingActivity: `Auditoria de IA e Agentes - ${result.repo?.name || 'Sistema'}`,
-      purposes: ['DECISION_ANALYSIS', 'REGULATORY_COMPLIANCE'],
-      dataCategories: ['Logs de Prompt', 'Identificadores de Usuário', 'Decisões de Agentes'],
-      hasSensitiveData: violations.some(v => (v.rule || '').includes('LGPD') || (v.rule || '').includes('CPF')),
-      hasAutomatedDecisions: autonomousAgentsCount > 0,
-      humanOversightLevel: 'l2_human_review',
-    });
-
-    const blob = new Blob([ripd], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `RIPD-LGPD-${result.repo?.name || 'auditoria'}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    setCopiedRipd(true);
-    setTimeout(() => setCopiedRipd(false), 2500);
+    setShowRipdModal(true);
   };
 
   return (
