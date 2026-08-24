@@ -70,7 +70,7 @@ export const RemediationModal: React.FC<RemediationModalProps> = ({ violation, o
                 {violation.regulation || 'Conformidade de IA'} • {violation.file || 'Arquivo Geral'}
               </span>
               <h3 className="text-base font-bold text-white mt-0.5">
-                Auto-Remediação com IA (SiliconFlow)
+                Auto-Remediação Inteligente de Código
               </h3>
             </div>
           </div>
@@ -87,7 +87,7 @@ export const RemediationModal: React.FC<RemediationModalProps> = ({ violation, o
           <div className="py-12 flex flex-col items-center justify-center space-y-3">
             <div className="w-8 h-8 border-3 border-cyan-500 border-t-transparent rounded-full animate-spin" />
             <p className="text-xs text-slate-300 font-mono">
-              Consultando modelo Qwen 2.5 Coder via SiliconFlow...
+              Gerando código corrigido e parecer de conformidade...
             </p>
           </div>
         )}

@@ -238,7 +238,7 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
           <div className="w-8 h-8 mx-auto mb-2 rounded-lg bg-emerald-950/60 border border-emerald-800/40 flex items-center justify-center text-emerald-400">
             <Sparkles className="w-4 h-4" />
           </div>
-          <div className="text-xs font-semibold text-slate-200">SiliconFlow AI</div>
+          <div className="text-xs font-semibold text-slate-200">Auto-Remediação IA</div>
           <div className="text-[11px] text-slate-500">Auto-remediação & Pareceres</div>
         </div>
 

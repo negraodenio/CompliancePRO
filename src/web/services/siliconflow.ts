@@ -4,31 +4,31 @@ export const SILICONFLOW_BASE_URL = 'https://api.siliconflow.com/v1/chat/complet
 export const AVAILABLE_MODELS = [
   {
     id: 'deepseek-ai/DeepSeek-V3',
-    name: 'DeepSeek V3',
-    tag: 'Recomendado (Governança & Pareceres)',
-    badge: 'Fast & Smart',
-    description: 'Excelente para interpretação de leis (EU AI Act, LGPD, NIST) e geração de relatórios executivos.',
+    name: 'ComplyPRO Regulatory Engine',
+    tag: 'Motor Principal (Governança & Pareceres)',
+    badge: 'Governança & Leis',
+    description: 'Otimizado para análise regulatória (EU AI Act, LGPD, NIST) e pareceres de conformidade.',
   },
   {
     id: 'Qwen/Qwen2.5-72B-Instruct',
-    name: 'Qwen 2.5 72B Instruct',
-    tag: 'Recomendado para Código & Segurança',
-    badge: 'Code & Reasoning',
-    description: 'Modelo potente para detecção de vulnerabilidades e geração de código seguro.',
+    name: 'ComplyPRO Code Defense',
+    tag: 'Remediação de Código & Segurança',
+    badge: 'Code & Security',
+    description: 'Otimizado para detecção de vulnerabilidades e geração de código seguro.',
   },
   {
     id: 'deepseek-ai/DeepSeek-R1',
-    name: 'DeepSeek R1',
-    tag: 'Raciocínio Lógico Profundo',
-    badge: 'Deep Reasoning CoT',
-    description: 'Análise aprofundada com cadeia de pensamento (CoT) para auditorias regulatórias complexas.',
+    name: 'ComplyPRO Deep Reasoning',
+    tag: 'Raciocínio Jurídico Aprofundado',
+    badge: 'Deep Legal CoT',
+    description: 'Análise aprofundada com cadeia de raciocínio para auditorias regulatórias complexas.',
   },
   {
     id: 'Qwen/Qwen2.5-7B-Instruct',
-    name: 'Qwen 2.5 7B Instruct',
-    tag: 'Ultra Rápido',
+    name: 'ComplyPRO Fast Engine',
+    tag: 'Triagem Rápida',
     badge: 'Ultra Fast',
-    description: 'Respostas quase instantâneas com baixo consumo de tokens.',
+    description: 'Respostas instantâneas para validações rápidas de sintaxe e conformidade.',
   }
 ];
 

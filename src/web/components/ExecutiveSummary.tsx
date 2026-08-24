@@ -72,7 +72,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
       const report = await generateExecutiveSummaryWithAI(result);
       setAiReport(report);
     } catch (e: any) {
-      alert(`Falha ao consultar SiliconFlow: ${e.message}`);
+      alert(`Falha ao gerar parecer: ${e.message}`);
     } finally {
       setIsGeneratingReport(false);
     }
@@ -316,7 +316,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                 <Sparkles className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-white">Parecer Executivo de Governança (DeepSeek-V3 IA)</h4>
+                <h4 className="text-sm font-bold text-white">Parecer Executivo de Governança & Conformidade</h4>
                 <p className="text-[11px] text-slate-400">Análise jurídica e técnica consolidada</p>
               </div>
             </div>

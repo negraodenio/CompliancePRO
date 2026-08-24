@@ -317,7 +317,7 @@ export const App: React.FC = () => {
             <span>•</span>
             <span>EU AI Act & LGPD</span>
             <span>•</span>
-            <span>SiliconFlow Powered</span>
+            <span>Motor de Privacidade Client-Side</span>
           </div>
         </div>
       </footer>

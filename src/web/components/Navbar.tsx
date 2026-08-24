@@ -62,16 +62,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right Actions */}
         <div className="flex items-center space-x-3">
-          {/* SiliconFlow Model Badge */}
-          <button
-            onClick={onOpenSettings}
-            className="hidden sm:flex items-center space-x-2 px-2.5 py-1 rounded-lg bg-surface border border-surface-border text-xs text-slate-300 hover:border-purple-500/40 hover:text-white transition-all group"
-            title="Configurar IA SiliconFlow"
-          >
-            <div className="w-2 h-2 rounded-full bg-purple-400 group-hover:scale-125 transition-transform" />
-            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-            <span className="font-mono text-[11px] text-slate-300">{currentModel.name}</span>
-          </button>
+          {/* AI Engine Status Badge */}
+          <div className="hidden sm:flex items-center space-x-2 px-2.5 py-1 rounded-lg bg-[#0e1424] border border-cyan-500/30 text-xs text-slate-300 shadow-sm">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="font-semibold text-[11px] text-cyan-300">ComplyPRO AI Engine</span>
+          </div>
 
           {/* Export Report button (if scan exists) */}
           {hasScanResult && (

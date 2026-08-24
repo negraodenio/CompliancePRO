@@ -40,30 +40,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
               <Settings className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Configurações & Chaves de IA</h3>
-              <p className="text-[11px] text-slate-400">SiliconFlow & GitHub API</p>
+              <h3 className="text-base font-bold text-white">Configurações & Motor de IA</h3>
+              <p className="text-[11px] text-slate-400">ComplyPRO AI Engine & GitHub API</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-1 rounded-lg text-lg"
+            className="text-slate-400 hover:text-white p-1 rounded-lg text-lg cursor-pointer"
           >
             ✕
           </button>
         </div>
 
-        {/* SiliconFlow API Key */}
+        {/* AI Engine API Key */}
         <div className="space-y-2">
           <label className="text-xs font-semibold text-slate-300 flex items-center space-x-1.5">
-            <Key className="w-3.5 h-3.5 text-purple-400" />
-            <span>Chave de API SiliconFlow (API Key):</span>
+            <Key className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Chave de Acesso do Motor IA (API Key):</span>
           </label>
           <input
             type="password"
             value={apiKey}
             onChange={(e) => setKey(e.target.value)}
             placeholder="sk-..."
-            className="w-full px-3.5 py-2.5 bg-[#080c16] rounded-xl border border-slate-700 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+            className="w-full px-3.5 py-2.5 bg-[#080c16] rounded-xl border border-slate-700 text-xs text-white font-mono focus:outline-none focus:border-cyan-500"
           />
           <p className="text-[11px] text-slate-400">
             Sua chave está salva localmente no navegador e não é enviada para servidores de terceiros.

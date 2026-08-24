@@ -437,7 +437,7 @@ export const CodePlayground: React.FC = () => {
               {isAuditing ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                  <span>Auditando com DeepSeek-V3...</span>
+                  <span>Auditando Código & Regulações...</span>
                 </>
               ) : (
                 <>
@@ -535,7 +535,7 @@ export const CodePlayground: React.FC = () => {
           </div>
 
           <div className="pt-3 border-t border-surface-border text-[11px] text-slate-500 flex items-center justify-between">
-            <span>Remediação baseada em DeepSeek-V3 & Modelos de Governança</span>
+            <span>Remediação Inteligente baseada em Regras de Segurança & Conformidade</span>
             <span className="text-cyan-400 font-medium">✓ Pronto para Produção</span>
           </div>
 
