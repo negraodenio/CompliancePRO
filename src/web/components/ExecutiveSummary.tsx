@@ -10,6 +10,7 @@ import {
   calculateOverallScore, 
   classifySystemPurpose 
 } from '../services/regulation-mapper';
+import { calculateMaturityLevel } from '../services/maturity-calculator';
 import { EnterpriseLeadModal } from './EnterpriseLeadModal';
 
 interface ExecutiveSummaryProps {
@@ -53,6 +54,9 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
     regulationScores,
     purpose.domain
   );
+
+  // 3. Dynamic ISO 42001 & NIST AI RMF Maturity Level
+  const maturity = calculateMaturityLevel(result);
 
   const criticalViolations = violations.filter(v => v.severity === 'critical').length;
   const highViolations = violations.filter(v => v.severity === 'high').length;
@@ -240,12 +244,14 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                   ISO 42001 & NIST AI RMF
                 </span>
               </h3>
-              <p className="text-[11px] text-slate-500">Classificação da postura corporativa de conformidade e gestão de ciclo de vida</p>
+              <p className="text-[11px] text-slate-500">
+                {maturity.rationale}
+              </p>
             </div>
           </div>
 
-          <span className="text-[11px] font-mono text-slate-800 bg-slate-100 border border-slate-200 px-3 py-1 rounded-lg">
-            Diagnóstico Atual: <strong>NÍVEL 2 (EMERGENTE)</strong>
+          <span className="text-[11px] font-mono text-slate-900 bg-slate-100 border border-slate-300 px-3 py-1 rounded-lg font-bold">
+            Diagnóstico Atual: {maturity.badge}
           </span>
         </div>
 
@@ -253,41 +259,73 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
         <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5 text-xs">
           
           {/* Level 1 */}
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 opacity-60 space-y-1">
-            <span className="text-[10px] font-mono text-slate-500 block uppercase font-bold">Nível 1</span>
-            <span className="font-bold text-slate-700 block text-[11px]">Ad-Hoc / Não Gerenciado</span>
-            <p className="text-[10px] text-slate-500">Shadow AI dispersa e sem controle de chaves ou logs.</p>
+          <div className={`p-3.5 rounded-xl transition-all ${
+            maturity.level === 1
+              ? 'bg-slate-900 text-white border-2 border-slate-900 shadow-sm relative'
+              : 'bg-slate-50 border border-slate-200 opacity-70'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className={`text-[10px] font-mono uppercase font-bold ${maturity.level === 1 ? 'text-slate-300' : 'text-slate-500'}`}>Nível 1</span>
+              {maturity.level === 1 && <span className="px-1.5 py-0.2 bg-white text-slate-900 text-[9px] font-black rounded uppercase">Atual</span>}
+            </div>
+            <span className={`font-bold block text-[11px] mt-1 ${maturity.level === 1 ? 'text-white' : 'text-slate-800'}`}>Ad-Hoc / Não Gerenciado</span>
+            <p className={`text-[10px] mt-1 ${maturity.level === 1 ? 'text-slate-300' : 'text-slate-500'}`}>Shadow AI dispersa, sem inventário ou chaves expostas.</p>
           </div>
 
-          {/* Level 2 (ACTIVE) */}
-          <div className="p-3.5 rounded-xl bg-slate-900 text-white border-2 border-slate-900 shadow-sm space-y-1 relative">
+          {/* Level 2 */}
+          <div className={`p-3.5 rounded-xl transition-all ${
+            maturity.level === 2
+              ? 'bg-slate-900 text-white border-2 border-slate-900 shadow-sm relative'
+              : 'bg-slate-50 border border-slate-200 opacity-70'
+          }`}>
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono text-slate-300 block uppercase font-bold">Nível 2</span>
-              <span className="px-1.5 py-0.2 bg-white text-slate-900 text-[9px] font-black rounded uppercase">Atual</span>
+              <span className={`text-[10px] font-mono uppercase font-bold ${maturity.level === 2 ? 'text-slate-300' : 'text-slate-500'}`}>Nível 2</span>
+              {maturity.level === 2 && <span className="px-1.5 py-0.2 bg-white text-slate-900 text-[9px] font-black rounded uppercase">Atual</span>}
             </div>
-            <span className="font-bold text-white block text-[11px]">Emergente / Mapeamento Estático</span>
-            <p className="text-[10px] text-slate-300">Auditoria de código, detecção de 13 regulações e matriz SIPOC.</p>
+            <span className={`font-bold block text-[11px] mt-1 ${maturity.level === 2 ? 'text-white' : 'text-slate-800'}`}>Emergente / Mapeamento Estático</span>
+            <p className={`text-[10px] mt-1 ${maturity.level === 2 ? 'text-slate-300' : 'text-slate-500'}`}>Auditoria de código, 13 regulações e matriz SIPOC inicial.</p>
           </div>
 
           {/* Level 3 */}
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-            <span className="text-[10px] font-mono text-slate-600 block uppercase font-bold">Nível 3</span>
-            <span className="font-bold text-slate-800 block text-[11px]">Definido & Estruturado</span>
-            <p className="text-[10px] text-slate-500">Process Owners e esteira RACI homologados formalmente.</p>
+          <div className={`p-3.5 rounded-xl transition-all ${
+            maturity.level === 3
+              ? 'bg-slate-900 text-white border-2 border-slate-900 shadow-sm relative'
+              : 'bg-slate-50 border border-slate-200 opacity-70'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className={`text-[10px] font-mono uppercase font-bold ${maturity.level === 3 ? 'text-slate-300' : 'text-slate-500'}`}>Nível 3</span>
+              {maturity.level === 3 && <span className="px-1.5 py-0.2 bg-white text-slate-900 text-[9px] font-black rounded uppercase">Atual</span>}
+            </div>
+            <span className={`font-bold block text-[11px] mt-1 ${maturity.level === 3 ? 'text-white' : 'text-slate-800'}`}>Definido & Estruturado</span>
+            <p className={`text-[10px] mt-1 ${maturity.level === 3 ? 'text-slate-300' : 'text-slate-500'}`}>Process Owners homologados e supervisão humana (HITL).</p>
           </div>
 
           {/* Level 4 */}
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-            <span className="text-[10px] font-mono text-slate-600 block uppercase font-bold">Nível 4</span>
-            <span className="font-bold text-slate-800 block text-[11px]">Quantitativamente Gerenciado</span>
-            <p className="text-[10px] text-slate-500">SLAs de inferência, FinOps ativo e circuit breaker de loops.</p>
+          <div className={`p-3.5 rounded-xl transition-all ${
+            maturity.level === 4
+              ? 'bg-slate-900 text-white border-2 border-slate-900 shadow-sm relative'
+              : 'bg-slate-50 border border-slate-200 opacity-70'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className={`text-[10px] font-mono uppercase font-bold ${maturity.level === 4 ? 'text-slate-300' : 'text-slate-500'}`}>Nível 4</span>
+              {maturity.level === 4 && <span className="px-1.5 py-0.2 bg-white text-slate-900 text-[9px] font-black rounded uppercase">Atual</span>}
+            </div>
+            <span className={`font-bold block text-[11px] mt-1 ${maturity.level === 4 ? 'text-white' : 'text-slate-800'}`}>Quantitativamente Gerenciado</span>
+            <p className={`text-[10px] mt-1 ${maturity.level === 4 ? 'text-slate-300' : 'text-slate-500'}`}>SLAs de inferência, FinOps de tokens e guardrails de prompt.</p>
           </div>
 
           {/* Level 5 */}
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-            <span className="text-[10px] font-mono text-slate-600 block uppercase font-bold">Nível 5</span>
-            <span className="font-bold text-slate-800 block text-[11px]">Otimização Contínua</span>
-            <p className="text-[10px] text-slate-500">Auto-remediação de guardrails e relatórios automáticos ao Board.</p>
+          <div className={`p-3.5 rounded-xl transition-all ${
+            maturity.level === 5
+              ? 'bg-slate-900 text-white border-2 border-slate-900 shadow-sm relative'
+              : 'bg-slate-50 border border-slate-200 opacity-70'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className={`text-[10px] font-mono uppercase font-bold ${maturity.level === 5 ? 'text-slate-300' : 'text-slate-500'}`}>Nível 5</span>
+              {maturity.level === 5 && <span className="px-1.5 py-0.2 bg-white text-slate-900 text-[9px] font-black rounded uppercase">Atual</span>}
+            </div>
+            <span className={`font-bold block text-[11px] mt-1 ${maturity.level === 5 ? 'text-white' : 'text-slate-800'}`}>Otimização Contínua</span>
+            <p className={`text-[10px] mt-1 ${maturity.level === 5 ? 'text-slate-300' : 'text-slate-500'}`}>Auto-remediação contínua, CI/CD gates e 0 violações.</p>
           </div>
 
         </div>
