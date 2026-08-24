@@ -227,12 +227,13 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
       {/* Formula & Calculation Modal */}
       {showFormulaModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
-          <div className="glass-panel w-full max-w-xl bg-[#0e1424] border border-cyan-500/40 rounded-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="glass-panel w-full max-w-2xl bg-[#0c101d] border border-cyan-500/40 rounded-2xl p-6 sm:p-7 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
             
+            {/* Header */}
             <div className="flex items-start justify-between pb-3 border-b border-surface-border">
-              <div className="flex items-center space-x-2.5">
-                <div className="p-2 rounded-xl bg-cyan-950 text-cyan-400 border border-cyan-800">
-                  <Calculator className="w-5 h-5" />
+              <div className="flex items-center space-x-3">
+                <div className="p-2.5 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 text-black font-bold">
+                  <Calculator className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-white">Metodologia Auditável de Pontuação</h3>
@@ -247,59 +248,180 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
               </button>
             </div>
 
-            <div className="space-y-4 text-xs text-slate-300 leading-relaxed">
+            <div className="space-y-5 text-xs text-slate-300 leading-relaxed font-sans">
               
-              {/* Rule 1: Individual Regulation Score */}
-              <div className="p-3.5 rounded-xl bg-surface border border-surface-border space-y-2">
-                <span className="font-bold text-cyan-300 block">1. Fórmula do Score por Regulação (Base 100):</span>
-                <p className="text-[11px] text-slate-400">
-                  Toda regulação parte de <strong>100 pontos</strong>. Violações associadas aos seus artigos de lei específicos subtraem pontos por gravidade:
-                </p>
-                <div className="p-2.5 rounded bg-[#090d16] font-mono text-[11px] text-cyan-300 border border-slate-800">
-                  Score = max(0, 100 - (Crítica × 25) - (Alta × 14) - (Média × 7) - (Baixa × 3))
+              {/* Section 1: Score por Regulação */}
+              <div className="p-4 rounded-xl bg-[#080d1a] border border-surface-border space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-cyan-300 text-sm">1. Score por Regulação — Base 100</span>
+                  <span className="px-2 py-0.5 text-[10px] font-mono bg-cyan-950 text-cyan-300 rounded border border-cyan-800">
+                    Por Norma
+                  </span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-[11px] font-mono pt-1">
-                  <div className="p-1.5 rounded bg-rose-950/60 text-rose-300 border border-rose-800">Crítica: -25 pts</div>
-                  <div className="p-1.5 rounded bg-orange-950/60 text-orange-300 border border-orange-800">Alta: -14 pts</div>
-                  <div className="p-1.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800">Média: -7 pts</div>
-                  <div className="p-1.5 rounded bg-slate-800 text-slate-300 border border-slate-700">Baixa: -3 pts</div>
-                </div>
-                <p className="text-[10px] text-emerald-400 italic">
-                  ✓ Regulações sem violações pontuam estritamente 100%.
+                <p className="text-[11px] text-slate-300">
+                  Cada regulação aplicável começa com <strong>100 pontos</strong>. Cada violação identificada é subtraída de acordo com a sua gravidade técnica e jurídica:
                 </p>
+                
+                <div className="p-3 rounded-lg bg-[#050811] font-mono text-[11px] text-cyan-300 border border-slate-800 text-center font-bold">
+                  Score = max(0, 100 − (Crítica × 25) − (Alta × 14) − (Média × 7) − (Baixa × 3))
+                </div>
+
+                {/* Table of Penalties */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-mono text-center">
+                  <div className="p-2 rounded-lg bg-rose-950/60 text-rose-300 border border-rose-800/80">
+                    <span className="block font-bold">🔴 Crítica</span>
+                    <span>−25 pontos</span>
+                  </div>
+                  <div className="p-2 rounded-lg bg-orange-950/60 text-orange-300 border border-orange-800/80">
+                    <span className="block font-bold">🟠 Alta</span>
+                    <span>−14 pontos</span>
+                  </div>
+                  <div className="p-2 rounded-lg bg-amber-950/60 text-amber-300 border border-amber-800/80">
+                    <span className="block font-bold">🟡 Média</span>
+                    <span>−7 pontos</span>
+                  </div>
+                  <div className="p-2 rounded-lg bg-slate-850 bg-slate-900 text-slate-300 border border-slate-750 border-slate-700">
+                    <span className="block font-bold">🔵 Baixa</span>
+                    <span>−3 pontos</span>
+                  </div>
+                </div>
+
+                {/* Concrete Worked Example */}
+                <div className="p-3 rounded-lg bg-[#060a14] border border-slate-800/70 space-y-1.5 text-[11px]">
+                  <span className="font-bold text-slate-200 block">Exemplo Prático de Auditoria:</span>
+                  <p className="text-slate-400">
+                    Se uma regulação apresentar <strong>1 Crítica</strong>, <strong>2 Altas</strong>, <strong>1 Média</strong> e <strong>2 Baixas</strong>:
+                  </p>
+                  <div className="font-mono text-cyan-300 bg-[#090e1c] p-2 rounded border border-slate-800">
+                    Score = 100 − (1 × 25) − (2 × 14) − (1 × 7) − (2 × 3)<br/>
+                    Score = 100 − 25 − 28 − 7 − 6 = <strong>34/100</strong>
+                  </div>
+                  <p className="text-emerald-400 text-[10px] italic">
+                    ✓ Regulações sem violações mantêm automaticamente: 100 − 0 − 0 − 0 − 0 = <strong>100/100</strong>.
+                  </p>
+                </div>
               </div>
 
-              {/* Rule 2: Overall Score Weighting */}
-              <div className="p-3.5 rounded-xl bg-surface border border-surface-border space-y-2">
-                <span className="font-bold text-purple-300 block">2. Score Geral Ponderado pelo Contexto do Negócio:</span>
-                <p className="text-[11px] text-slate-400">
-                  O Score Geral reflete a criticidade do domínio (ex: em FinTech, <strong>EU AI Act e BCB 4893</strong> têm peso 3x maior que normas secundárias):
-                </p>
-                <div className="p-2.5 rounded bg-[#090d16] font-mono text-[11px] text-purple-300 border border-slate-800">
-                  Score Geral = Σ(Score_Regulação_i × Peso_i) / Σ(Peso_i)
+              {/* Section 2: Score Geral Ponderado */}
+              <div className="p-4 rounded-xl bg-[#080d1a] border border-surface-border space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-purple-300 text-sm">2. Score Geral Ponderado pelo Contexto do Negócio</span>
+                  <span className="px-2 py-0.5 text-[10px] font-mono bg-purple-950 text-purple-300 rounded border border-purple-800">
+                    Ponderação de Risco
+                  </span>
                 </div>
-                <div className="text-[11px] text-slate-400 space-y-1">
-                  <div><strong>Domínio Detectado:</strong> <span className="text-white font-semibold uppercase">{purpose.domain}</span></div>
-                  <div><strong>Referência Legal EU AI Act:</strong> <span className="text-slate-300">{purpose.annexReference}</span></div>
+                <p className="text-[11px] text-slate-300">
+                  O score geral consolida todas as normas atribuindo pesos contextuais ao domínio de aplicação do sistema:
+                </p>
+
+                <div className="p-3 rounded-lg bg-[#050811] font-mono text-[11px] text-purple-300 border border-slate-800 text-center font-bold">
+                  Score Geral = Σ(Score_Regulação × Peso) / Σ(Peso)
+                </div>
+
+                {/* Finance Domain Worked Example Table */}
+                <div className="overflow-x-auto rounded-lg border border-slate-800">
+                  <table className="w-full text-left text-[11px] font-mono">
+                    <thead className="bg-[#0c1224] text-slate-400 border-b border-slate-800">
+                      <tr>
+                        <th className="py-2 px-3">Regulação</th>
+                        <th className="py-2 px-3 text-center">Score</th>
+                        <th className="py-2 px-3 text-center">Peso</th>
+                        <th className="py-2 px-3 text-right">Score × Peso</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800 bg-[#060a14] text-slate-300">
+                      <tr>
+                        <td className="py-1.5 px-3 font-semibold text-white">EU AI Act</td>
+                        <td className="py-1.5 px-3 text-center">70</td>
+                        <td className="py-1.5 px-3 text-center">3</td>
+                        <td className="py-1.5 px-3 text-right text-cyan-300">210</td>
+                      </tr>
+                      <tr>
+                        <td className="py-1.5 px-3 font-semibold text-white">Res. BCB nº 4.893</td>
+                        <td className="py-1.5 px-3 text-center">80</td>
+                        <td className="py-1.5 px-3 text-center">3</td>
+                        <td className="py-1.5 px-3 text-right text-cyan-300">240</td>
+                      </tr>
+                      <tr>
+                        <td className="py-1.5 px-3 font-semibold text-white">GDPR / LGPD</td>
+                        <td className="py-1.5 px-3 text-center">90</td>
+                        <td className="py-1.5 px-3 text-center">2</td>
+                        <td className="py-1.5 px-3 text-right text-cyan-300">180</td>
+                      </tr>
+                      <tr>
+                        <td className="py-1.5 px-3 font-semibold text-white">ISO/IEC 42001</td>
+                        <td className="py-1.5 px-3 text-center">95</td>
+                        <td className="py-1.5 px-3 text-center">1</td>
+                        <td className="py-1.5 px-3 text-right text-cyan-300">95</td>
+                      </tr>
+                    </tbody>
+                    <tfoot className="bg-[#0c1224] text-white font-bold border-t border-slate-800">
+                      <tr>
+                        <td className="py-2 px-3">Cálculo Consolidado</td>
+                        <td colSpan={2} className="py-2 px-3 text-center text-slate-400">725 / 9 pesos</td>
+                        <td className="py-2 px-3 text-right text-emerald-400">= 80,6 / 100</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+
+                {/* Legal Audit-proof Disclaimer */}
+                <div className="p-3 rounded-lg bg-purple-950/20 border border-purple-900/40 text-[11px] text-purple-200">
+                  <strong>Nota de Conformidade Jurídica:</strong> Os pesos representam <em>relevância contextual para priorização de controles operacionais</em>, não uma afirmação de que uma legislação é hierarquicamente superior a outra.
                 </div>
               </div>
 
-              {/* Rule 3: Purpose-first Annex III Classification */}
-              <div className="p-3.5 rounded-xl bg-surface border border-surface-border space-y-1.5">
-                <span className="font-bold text-rose-300 block">3. Classificação de Risco por Finalidade (Anexo III):</span>
-                <p className="text-[11px] text-slate-400">
-                  Sistemas de concessão de crédito, triagem de saúde ou RH são classificados como <strong>HIGH_RISK</strong> por exigência expressa do Anexo III do EU AI Act, independente do código estar limpo.
+              {/* Section 3: Classificação Regulatória por Finalidade */}
+              <div className="p-4 rounded-xl bg-[#080d1a] border border-surface-border space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-rose-300 text-sm">3. Classificação Regulatória por Finalidade (Anexo III)</span>
+                  <span className="px-2 py-0.5 text-[10px] font-mono bg-rose-950 text-rose-300 rounded border border-rose-800">
+                    EU AI Act Art. 6
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-slate-300">
+                  A pontuação técnica de código e a classificação regulatória de risco são <strong>dimensões distintas</strong>:
+                </p>
+
+                <div className="p-3 rounded-lg bg-[#060a14] border border-slate-800 space-y-2 text-[11px]">
+                  <div className="text-center font-bold text-amber-300 py-1 border-b border-slate-800 font-mono">
+                    Código 100% Seguro ≠ Sistema Automaticamente Desregulado
+                  </div>
+
+                  <p className="text-slate-400 leading-relaxed">
+                    Determinados sistemas utilizados para avaliar a solvabilidade de pessoas singulares (crédito), triagem de candidatos em RH ou apoio ao diagnóstico clínico enquadram-se como <strong>HIGH-RISK</strong> por exigência mandatória do Anexo III do EU AI Act, independentemente de o código estar limpo.
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-2 font-mono text-[10px] pt-1">
+                    <div className="p-2 rounded bg-[#090e1c] border border-slate-800 space-y-0.5">
+                      <span className="text-slate-400 block">Classificação Regulatória:</span>
+                      <strong className="text-rose-400">Responde a "Que obrigações legais se aplicam?"</strong>
+                    </div>
+                    <div className="p-2 rounded bg-[#090e1c] border border-slate-800 space-y-0.5">
+                      <span className="text-slate-400 block">Score de Conformidade:</span>
+                      <strong className="text-emerald-400">Responde a "Quão bem o sistema as cumpre?"</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-slate-400 italic">
+                  Essa separação metodológica permite que CISOs, DPOs e auditores externos distingam claramente <strong>classificação regulatória mandatória</strong>, <strong>exposição a risco</strong> e <strong>nível técnico de conformidade</strong>.
                 </p>
               </div>
 
             </div>
 
-            <div className="pt-2 flex justify-end">
+            {/* Footer */}
+            <div className="pt-2 flex items-center justify-between border-t border-surface-border">
+              <span className="text-[11px] text-slate-400">
+                Padrão de auditoria adotado por ComplyPRO.pt
+              </span>
               <button
                 onClick={() => setShowFormulaModal(false)}
-                className="px-5 py-2 bg-surface hover:bg-slate-800 text-white rounded-xl text-xs font-semibold border border-surface-border cursor-pointer"
+                className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black rounded-xl text-xs font-bold shadow-glow transition-all cursor-pointer"
               >
-                Entendi
+                Entendi e Concordo
               </button>
             </div>
 
