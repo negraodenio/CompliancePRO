@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  AlertTriangle, ShieldAlert, Sparkles, Filter, Code2, 
+  AlertTriangle, ShieldAlert, Filter, Code2, CheckCircle,
   ChevronDown, ExternalLink, ArrowRight, ShieldCheck 
 } from 'lucide-react';
 import type { ScannerResult, CodeViolation } from '../../core/types';
@@ -133,7 +133,7 @@ export const ViolationsList: React.FC<ViolationsListProps> = ({ result }) => {
                   )}
                 </div>
 
-                {/* AI Fix Trigger */}
+                {/* Compliance Remediation Trigger */}
                 <button
                   onClick={() => setSelectedViolationForFix({
                     ruleId: v.rule,
@@ -144,10 +144,10 @@ export const ViolationsList: React.FC<ViolationsListProps> = ({ result }) => {
                     regulation: v.lawArticle,
                     codeSnippet: v.match,
                   })}
-                  className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500/20 to-purple-500/20 hover:from-cyan-500/30 hover:to-purple-500/30 text-cyan-300 hover:text-white border border-cyan-500/40 text-xs font-medium flex items-center space-x-1.5 transition-all shrink-0 cursor-pointer shadow-sm"
+                  className="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700 text-xs font-medium flex items-center space-x-1.5 transition-all shrink-0 cursor-pointer"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-                  <span>Corrigir com IA</span>
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Plano de Conformidade</span>
                 </button>
               </div>
 
