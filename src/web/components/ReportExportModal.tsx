@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import type { ScannerResult } from '../../core/types';
 import { RipdDocumentModal } from './RipdDocumentModal';
+import { getAgentBusinessAndSipoc } from '../services/agent-sipoc-mapper';
 
 interface ReportExportModalProps {
   result: ScannerResult;
@@ -65,8 +66,22 @@ ${applicableRegs.map(reg => {
 
 ---
 
-## 🤖 3. Inventário de Modelos e Agentes
-${models.map((m, i) => `${i + 1}. **${m.provider}** \`${m.modelId || 'Default'}\` — Finalidade: ${m.usage || 'Inference'}`).join('\n')}
+## 🤖 3. Inventário de Modelos e Agentes (Arquitetura SIPOC)
+
+### Modelos LLM Conectados:
+${models.length > 0 ? models.map((m, i) => `${i + 1}. **${m.provider}** \`${m.modelId || 'Default'}\` — Finalidade: ${m.usage || 'Inference'}`).join('\n') : '_Nenhum modelo externo identificado._'}
+
+### Agentes Autônomos e Cadeia SIPOC:
+${agents.length > 0 ? agents.map((a, i) => {
+  const { businessPurpose, sipoc } = getAgentBusinessAndSipoc(a);
+  return `#### ${i + 1}. ${a.name} (${a.framework || 'Framework de IA'}) — [RISCO ${a.riskLevel.toUpperCase()}]
+- **Função de Negócio:** ${businessPurpose}
+- **📥 Entrada (Input):** ${sipoc.input} _(Origem: ${sipoc.supplier})_
+- **⚙️ Processo:** ${sipoc.process} _(Supervisão: ${a.oversightLevel || 'l2_human_review'})_
+- **📤 Saída (Output):** ${sipoc.output} _(Destino: ${sipoc.customer})_
+- **Ferramentas:** ${a.tools && a.tools.length > 0 ? a.tools.join(', ') : 'Inferência Direta'}
+`;
+}).join('\n') : '_Nenhum agente autônomo complexo mapeado._'}
 
 ---
 
@@ -365,8 +380,23 @@ ${violations.slice(0, 15).map((v: any, i: number) => `### ${i + 1}. [${(v.severi
                     </div>
 
                     <div className="p-3.5 bg-[#080d1a] rounded-xl border border-surface-border space-y-2">
-                      <span className="font-bold text-white block text-[11px]">Agentes de IA e Frameworks:</span>
-                      {frameworks.length > 0 ? (
+                      <span className="font-bold text-white block text-[11px]">Agentes de IA & Papel de Negócio:</span>
+                      {agents.length > 0 ? (
+                        <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                          {agents.slice(0, 6).map((a, i) => {
+                            const { sipoc } = getAgentBusinessAndSipoc(a);
+                            return (
+                              <div key={i} className="p-2 rounded bg-surface border border-surface-border text-[10px] space-y-0.5">
+                                <div className="flex items-center justify-between font-mono">
+                                  <span className="font-bold text-cyan-300">🤖 {a.name}</span>
+                                  <span className="text-purple-300">{a.framework || 'LangGraph'}</span>
+                                </div>
+                                <p className="text-slate-400 truncate">{sipoc.businessRole}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : frameworks.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {frameworks.map((f: any, i) => (
                             <span key={i} className="px-2 py-0.5 bg-slate-800 text-slate-200 rounded font-mono text-[10px]">
