@@ -308,7 +308,7 @@ export const App: React.FC = () => {
       <footer className="border-t border-surface-border py-6 px-4 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>
-            CompliancePRO AI • Scanner Independente de Governança & Riscos de IA
+            ComplyPRO.pt • Scanner de Governança, Riscos & Conformidade de IA
           </span>
           <div className="flex items-center space-x-4 text-slate-400">
             <span>Visão CISO</span>

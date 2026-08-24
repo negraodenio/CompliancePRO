@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShieldCheck, Sparkles, Settings, FileText, Github, Terminal, Zap } from 'lucide-react';
+import { Logo } from './Logo';
 import { getSelectedModel, AVAILABLE_MODELS } from '../services/siliconflow';
 
 interface NavbarProps {
@@ -27,28 +28,9 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Brand Logo */}
         <div 
           onClick={() => setActiveTab('scanner')} 
-          className="flex items-center space-x-3 cursor-pointer group"
+          className="cursor-pointer"
         >
-          <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-glow-cyan">
-              <ShieldCheck className="w-6 h-6 text-white" />
-            </div>
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-            </span>
-          </div>
-          <div>
-            <div className="flex items-center space-x-1.5">
-              <span className="text-lg font-bold tracking-tight text-white group-hover:text-cyan-400 transition-colors">
-                Compliance<span className="text-cyan-400">PRO</span>
-              </span>
-              <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-cyan-950/80 text-cyan-400 border border-cyan-800/50 rounded">
-                v1.0
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400">AI & Regulatory Governance Scanner</p>
-          </div>
+          <Logo size="md" showTagline={true} />
         </div>
 
         {/* Center Tabs */}

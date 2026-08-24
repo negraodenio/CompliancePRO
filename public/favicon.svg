@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="50%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0.8" />
+    </linearGradient>
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Shield Outer Glow -->
+  <path d="M50 8 L85 24 V52 C85 74 50 92 50 92 C50 92 15 74 15 52 V24 L50 8 Z" fill="#090d16" stroke="url(#shieldGrad)" stroke-width="4" filter="url(#neonGlow)" />
+  
+  <!-- Neural Circuits Inside Shield -->
+  <path d="M50 20 V42 M50 42 L32 50 M50 42 L68 50 M32 50 V64 M68 50 V64 M50 42 V78" stroke="url(#glowGrad)" stroke-width="2.5" stroke-linecap="round" />
+  
+  <!-- Scale of Justice / AI Nodes -->
+  <!-- Left Pan -->
+  <path d="M24 64 L40 64 L32 72 Z" fill="#06b6d4" fill-opacity="0.4" stroke="#06b6d4" stroke-width="2" />
+  <!-- Right Pan -->
+  <path d="M60 64 L76 64 L68 72 Z" fill="#a855f7" fill-opacity="0.4" stroke="#a855f7" stroke-width="2" />
+  
+  <!-- Central Neural Core Node -->
+  <circle cx="50" cy="42" r="4.5" fill="#22d3ee" stroke="#ffffff" stroke-width="1.5" />
+  <circle cx="32" cy="50" r="3" fill="#06b6d4" />
+  <circle cx="68" cy="50" r="3" fill="#a855f7" />
+  <circle cx="50" cy="78" r="3" fill="#3b82f6" />
+</svg>
