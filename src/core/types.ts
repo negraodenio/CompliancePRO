@@ -146,6 +146,15 @@ export interface DataAssetDetected {
   legalBasis: string[];
 }
 
+export interface AgentSipoc {
+  businessRole: string;
+  supplier: string;
+  input: string;
+  process: string;
+  output: string;
+  customer: string;
+}
+
 export interface DetectedAgent {
   name: string;
   type: 'ai_persona' | 'service' | 'pipeline' | 'custom';
@@ -158,6 +167,8 @@ export interface DetectedAgent {
   isAutonomous?: boolean;
   confidence?: number;
   filePath?: string;
+  businessPurpose?: string;
+  sipoc?: AgentSipoc;
 }
 
 export interface DetectedRisk {
