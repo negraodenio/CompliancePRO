@@ -166,6 +166,16 @@ export function analyzeSourceCode(files: Map<string, string>, fileTree: string[]
         }
 
         // Add agent signals from notebook
+        const nbFramework = nb.frameworks.length > 0 
+          ? nb.frameworks[0].framework 
+          : path.toLowerCase().includes('langgraph') 
+          ? 'LangGraph' 
+          : path.toLowerCase().includes('crewai') 
+          ? 'CrewAI' 
+          : path.toLowerCase().includes('langchain') 
+          ? 'LangChain' 
+          : 'Agentic RAG / LangGraph';
+
         for (const role of nb.agentRoles) {
           result.agents.push({
             name: `${path.split('/').pop()?.replace('.ipynb', '') ?? 'notebook'}:${role}`,
@@ -174,6 +184,8 @@ export function analyzeSourceCode(files: Map<string, string>, fileTree: string[]
             models: nb.frameworks.map(f => f.framework),
             riskLevel: nb.isProduction ? 'medium' : 'low',
             critical: false,
+            framework: nbFramework,
+            filePath: path,
           });
         }
 
@@ -480,6 +492,17 @@ function detectAgents(content: string, result: SourceAnalysis, path: string): vo
   if (hasLLM) tools.push('llm');
   if (/stripe|payment|paddle/i.test(content)) tools.push('payment');
 
+  let framework = 'Python AI Workflow';
+  if (/langgraph|StateGraph/i.test(content) || path.includes('langgraph')) framework = 'LangGraph';
+  else if (/crewai|Crew\s*\(/i.test(content) || path.includes('crewai')) framework = 'CrewAI';
+  else if (/autogen/i.test(content) || path.includes('autogen')) framework = 'AutoGen';
+  else if (/langchain|create_react_agent/i.test(content) || path.includes('langchain')) framework = 'LangChain';
+  else if (/dify/i.test(content) || path.includes('dify')) framework = 'Dify';
+  else if (/llama_index|llamaindex/i.test(content) || path.includes('llama')) framework = 'LlamaIndex';
+  else if (/anthropic|claude/i.test(content)) framework = 'Anthropic Claude';
+  else if (/openai/i.test(content)) framework = 'OpenAI Agents SDK';
+  else if (/mcp/i.test(content)) framework = 'Model Context Protocol (MCP)';
+
   result.agents.push({
     name,
     type,
@@ -487,6 +510,8 @@ function detectAgents(content: string, result: SourceAnalysis, path: string): vo
     models: hasLLM ? ['llm'] : [],
     riskLevel: type === 'service' && !hasAuth ? 'high' : type === 'ai_persona' ? 'medium' : 'low',
     critical: hasLLM && hasAuth,
+    framework,
+    filePath: path,
   });
 }
 

@@ -138,15 +138,68 @@ export function getAgentBusinessAndSipoc(agent: DetectedAgent): {
 
   // 9. Default Fallback (Dynamic & Contextual)
   const cleanName = agent.name.replace(/^lang(chain|graph)_/i, '').replace(/_/g, ' ');
+  const detectedFw = inferAgentFramework(agent);
   return {
     businessPurpose: `Processamento e orquestração de tarefas para o nó [${cleanName}], integrando modelos de linguagem e ferramentas de negócio.`,
     sipoc: {
       businessRole: `Processamento do Nó [${cleanName}]`,
       supplier: 'Pipeline de Execução / Grafo de Estado',
       input: 'Estado atual do fluxo e dados de entrada',
-      process: `Execução de lógica via ${agent.framework || 'Framework de IA'} com verificação de segurança`,
+      process: `Execução de lógica via ${detectedFw} com verificação de segurança`,
       output: 'Estado atualizado e dados processados para a próxima etapa',
       customer: 'Próximo Nó do Grafo / Sistema de Destino',
     },
   };
 }
+
+/**
+ * Accurately infers framework from agent name, tools, and path
+ * avoiding any fallback to 'Framework Genérico'.
+ */
+export function inferAgentFramework(agent: DetectedAgent): string {
+  if (agent.framework && 
+      agent.framework !== 'Framework Genérico' && 
+      agent.framework !== 'Generic' && 
+      agent.framework !== 'Custom Agent') {
+    return agent.framework;
+  }
+  const name = (agent.name || '').toLowerCase();
+  const filePath = (agent.filePath || '').toLowerCase();
+  const tools = (agent.tools || []).join(' ').toLowerCase();
+
+  if (name.includes('langgraph') || filePath.includes('langgraph') || tools.includes('langgraph') || filePath.includes('multi_agent')) {
+    return 'LangGraph';
+  }
+  if (name.includes('crewai') || filePath.includes('crewai') || tools.includes('crewai')) {
+    return 'CrewAI';
+  }
+  if (name.includes('autogen') || filePath.includes('autogen') || tools.includes('autogen')) {
+    return 'AutoGen';
+  }
+  if (name.includes('langchain') || filePath.includes('langchain') || tools.includes('langchain')) {
+    return 'LangChain';
+  }
+  if (name.includes('dify') || filePath.includes('dify') || tools.includes('dify')) {
+    return 'Dify';
+  }
+  if (name.includes('llama_index') || name.includes('llamaindex') || filePath.includes('llama')) {
+    return 'LlamaIndex';
+  }
+  if (name.includes('claude') || name.includes('anthropic') || filePath.includes('claude')) {
+    return 'Anthropic Claude';
+  }
+  if (name.includes('openai') || filePath.includes('openai') || tools.includes('openai')) {
+    return 'OpenAI Agents SDK';
+  }
+  if (name.includes('mcp') || filePath.includes('mcp') || tools.includes('mcp')) {
+    return 'Model Context Protocol (MCP)';
+  }
+  if (name.includes('rag') || name.includes('retriev')) {
+    return 'Agentic RAG Engine';
+  }
+  if (name.includes('react') || name.includes('executor')) {
+    return 'ReAct Agent Pipeline';
+  }
+  return 'Python AI Workflow';
+}
+

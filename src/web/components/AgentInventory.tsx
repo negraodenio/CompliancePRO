@@ -4,7 +4,7 @@ import {
   Zap, Layers, AlertCircle, ArrowRight, ArrowDownRight, Workflow, Briefcase, Eye, ChevronDown, ChevronUp
 } from 'lucide-react';
 import type { ScannerResult } from '../../core/types';
-import { getAgentBusinessAndSipoc } from '../services/agent-sipoc-mapper';
+import { getAgentBusinessAndSipoc, inferAgentFramework } from '../services/agent-sipoc-mapper';
 
 interface AgentInventoryProps {
   result: ScannerResult;
@@ -75,7 +75,7 @@ export const AgentInventory: React.FC<AgentInventoryProps> = ({ result }) => {
                       <div className="flex items-center space-x-2">
                         <h4 className="text-sm font-bold text-white font-mono">{agent.name}</h4>
                         <span className="px-2 py-0.5 text-[10px] font-medium bg-purple-950/70 text-purple-300 border border-purple-800/50 rounded-full">
-                          {agent.framework || 'Framework Genérico'}
+                          {inferAgentFramework(agent)}
                         </span>
                       </div>
                       <span className="text-[11px] text-slate-400 block mt-0.5">

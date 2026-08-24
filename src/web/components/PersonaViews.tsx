@@ -9,6 +9,7 @@ import { RegulationsGrid } from './RegulationsGrid';
 import { AgentInventory } from './AgentInventory';
 import { ViolationsList } from './ViolationsList';
 import { RipdDocumentModal } from './RipdDocumentModal';
+import { inferAgentFramework } from '../services/agent-sipoc-mapper';
 
 interface PersonaViewsProps {
   result: ScannerResult;
@@ -227,7 +228,7 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
                     </div>
                     <div>
                       <span className="text-xs font-bold text-white font-mono block truncate">{agent.name}</span>
-                      <span className="text-[10px] text-purple-300 block">{agent.framework || 'LangChain / Custom'}</span>
+                      <span className="text-[10px] text-purple-300 block">{inferAgentFramework(agent)}</span>
                     </div>
                   </div>
 
