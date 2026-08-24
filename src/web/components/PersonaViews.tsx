@@ -11,6 +11,7 @@ import { AgentInventory } from './AgentInventory';
 import { ViolationsList } from './ViolationsList';
 import { RipdDocumentModal } from './RipdDocumentModal';
 import { inferAgentFramework } from '../services/agent-sipoc-mapper';
+import { runMonteCarloRegulatorySimulation } from '../services/monte-carlo-simulator';
 import { EnterpriseLeadModal } from './EnterpriseLeadModal';
 
 export type ExecutivePersona = 'ciso' | 'dpo' | 'cio' | 'board' | 'cfo';
@@ -38,6 +39,9 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
   const violations = result.violations || [];
   const shadowAI = result.shadowAI || [];
   const externalServices = result.source?.externalServices || [];
+
+  // Automated 10,000-Iteration Monte Carlo Simulation
+  const monteCarlo = runMonteCarloRegulatorySimulation(result);
 
   // Fallback demo agents if none detected to ensure consistent presentation
   const agents = rawAgents.length > 0 ? rawAgents : [
@@ -697,29 +701,29 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
           {/* Blurred Board Highlights Grid */}
           <div className="relative rounded-2xl border border-slate-800 overflow-hidden p-3 bg-[#060a14]">
             
-            {/* Top KPI Cards (Blurred) */}
+            {/* Top KPI Cards (Blurred Monte Carlo Output) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 filter blur-[3.5px] select-none pointer-events-none opacity-40">
               <div className="p-4 rounded-xl bg-surface border border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-400 font-semibold uppercase">Exposição Máxima a Multas</span>
-                <div className="text-xl font-bold text-rose-400 font-mono">€ 35.000.000</div>
-                <p className="text-[10px] text-slate-400">Teto Art. 99 EU AI Act / 7% faturamento</p>
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">VaR 95% (Simulação Monte Carlo)</span>
+                <div className="text-xl font-bold text-rose-400 font-mono">€ {monteCarlo.var95Eur.toLocaleString()}</div>
+                <p className="text-[10px] text-slate-400">R$ {monteCarlo.var95Brl.toLocaleString()} (10.000 iterações)</p>
               </div>
 
               <div className="p-4 rounded-xl bg-surface border border-slate-800 space-y-1">
                 <span className="text-[10px] text-slate-400 font-semibold uppercase">Risco Residual Pós-Controles</span>
-                <div className="text-xl font-bold text-emerald-400 font-mono">18 / 100</div>
-                <p className="text-[10px] text-slate-400">Nível Considerado Baixo / Aceitável</p>
+                <div className="text-xl font-bold text-emerald-400 font-mono">{monteCarlo.residualRiskScore} / 100</div>
+                <p className="text-[10px] text-slate-400">Prob. de Sanção: {monteCarlo.probSanctionPercent}%</p>
               </div>
 
               <div className="p-4 rounded-xl bg-surface border border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-400 font-semibold uppercase">Índice ESG de IA Ética</span>
-                <div className="text-xl font-bold text-amber-400 font-mono">88 / 100</div>
-                <p className="text-[10px] text-slate-400">Aderente aos pilares de equidade e auditabilidade</p>
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">ROI Preventivo de Remediação</span>
+                <div className="text-xl font-bold text-amber-400 font-mono">+{monteCarlo.remediationRoiPercent}%</div>
+                <p className="text-[10px] text-slate-400">Evasão de passivo vs custo de fix</p>
               </div>
 
               <div className="p-4 rounded-xl bg-surface border border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-400 font-semibold uppercase">Parecer para Seguradora Cyber</span>
-                <div className="text-xl font-bold text-cyan-400 font-mono">Apto / Elegível</div>
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">Parecer Seguro Cyber</span>
+                <div className="text-xl font-bold text-cyan-400 font-mono">{monteCarlo.cyberInsuranceEligibility}</div>
                 <p className="text-[10px] text-slate-400">Apólice de Risco Tecnológico</p>
               </div>
             </div>
@@ -729,28 +733,29 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
               <table className="w-full text-left text-xs font-mono">
                 <thead className="bg-[#0c1224] text-slate-400 border-b border-slate-800">
                   <tr>
-                    <th className="py-2.5 px-4">Dimensão de Risco</th>
-                    <th className="py-2.5 px-4">Impacto Potencial</th>
-                    <th className="py-2.5 px-4 text-center">Probabilidade</th>
-                    <th className="py-2.5 px-4 text-center">Controle Mitigatório</th>
-                    <th className="py-2.5 px-4 text-right">Risco Residual</th>
+                    <th className="py-2.5 px-4">Direcionador de Risco (Ontologia)</th>
+                    <th className="py-2.5 px-4 text-center">Contribuição no VaR</th>
+                    <th className="py-2.5 px-4 text-center">Impacto</th>
+                    <th className="py-2.5 px-4 text-right">Ação Recomendada</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800 bg-[#060a14] text-slate-300">
-                  <tr>
-                    <td className="py-2 px-4 font-semibold text-white">Risco Regulatório (Sanções ANPD/EU)</td>
-                    <td className="py-2 px-4">Multas e Suspensão de Atividades</td>
-                    <td className="py-2 px-4 text-center text-amber-400">Média</td>
-                    <td className="py-2 px-4 text-center">Dossiê Art. 11 + RIPD</td>
-                    <td className="py-2 px-4 text-right text-emerald-400">Baixo</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 px-4 font-semibold text-white">Risco Reputacional (Alucinações Públicas)</td>
-                    <td className="py-2 px-4">Perda de Confiança de Clientes</td>
-                    <td className="py-2 px-4 text-center text-rose-400">Alta</td>
-                    <td className="py-2 px-4 text-center">Guardrails em Produção</td>
-                    <td className="py-2 px-4 text-right text-emerald-400">Controlado</td>
-                  </tr>
+                  {monteCarlo.keyRiskDrivers.map((driver, idx) => (
+                    <tr key={idx}>
+                      <td className="py-2 px-4 font-semibold text-white">{driver.factor}</td>
+                      <td className="py-2 px-4 text-center text-amber-400 font-bold">{driver.contributionPercent}%</td>
+                      <td className="py-2 px-4 text-center">
+                        <span className={`px-2 py-0.5 text-[9px] rounded font-bold ${
+                          driver.impact === 'CRITICAL' ? 'bg-rose-950 text-rose-300 border border-rose-800' :
+                          driver.impact === 'HIGH' ? 'bg-amber-950 text-amber-300 border border-amber-800' :
+                          'bg-slate-800 text-slate-300'
+                        }`}>
+                          {driver.impact}
+                        </span>
+                      </td>
+                      <td className="py-2 px-4 text-right text-emerald-400">Plano de Conformidade</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
