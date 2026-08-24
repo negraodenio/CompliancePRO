@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { 
   ShieldAlert, ShieldCheck, AlertTriangle, Bot, Cpu, DollarSign, 
   Sparkles, FileText, CheckCircle2, XCircle, ArrowUpRight, Copy, Check, Info, Calculator, Scale, Lock, ArrowRight, Layers
