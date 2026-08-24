@@ -8,7 +8,7 @@ import type { ScannerResult } from '../../core/types';
 import { RegulationsGrid } from './RegulationsGrid';
 import { AgentInventory } from './AgentInventory';
 import { ViolationsList } from './ViolationsList';
-import { generateRIPD } from '../../regulations/lgpd';
+import { RipdDocumentModal } from './RipdDocumentModal';
 
 interface PersonaViewsProps {
   result: ScannerResult;
@@ -23,6 +23,7 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
   onSelectPersona,
   onOpenExport,
 }) => {
+  const [showRipdModal, setShowRipdModal] = useState(false);
   const [copiedRipd, setCopiedRipd] = useState(false);
   
   // Single Source of Truth for all datasets
@@ -294,18 +295,18 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
 
             <div className="flex items-center space-x-2 shrink-0">
               <button
-                onClick={handleDownloadRipd}
+                onClick={() => setShowRipdModal(true)}
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-black text-xs font-bold flex items-center space-x-1.5 shadow-glow-emerald transition-all cursor-pointer"
               >
-                <FileText className="w-3.5 h-3.5" />
-                <span>{copiedRipd ? 'RIPD Baixado!' : 'Gerar RIPD Oficial (Art. 38 LGPD)'}</span>
+                <FileText className="w-3.5 h-3.5 fill-black" />
+                <span>Gerar RIPD Oficial (Art. 38 LGPD)</span>
               </button>
 
               <button
                 onClick={onOpenExport}
                 className="px-3.5 py-2 rounded-xl bg-surface hover:bg-slate-800 border border-surface-border text-white text-xs font-semibold transition-colors cursor-pointer"
               >
-                Exportar Parecer
+                Exportar Parecer Executivo
               </button>
             </div>
           </div>
@@ -317,6 +318,11 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
           <ViolationsList result={result} />
 
         </div>
+      )}
+
+      {/* Official Visual RIPD Modal */}
+      {showRipdModal && (
+        <RipdDocumentModal result={result} onClose={() => setShowRipdModal(false)} />
       )}
 
     </div>

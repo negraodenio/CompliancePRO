@@ -74,3 +74,26 @@ pre code {
 .animate-pulse-glow {
   animation: pulseGlow 2.5s infinite ease-in-out;
 }
+
+/* Print / PDF Styles for Executive Reports */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+  header, nav, footer, button, .no-print {
+    display: none !important;
+  }
+  .glass-panel, .glass-card, #ripd-document-content, #executive-printable-report {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  #ripd-document-content *, #executive-printable-report * {
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+  }
+}
