@@ -15,6 +15,7 @@ import { CodePlayground } from './components/CodePlayground';
 import { ReportExportModal } from './components/ReportExportModal';
 import { SettingsModal } from './components/SettingsModal';
 import { PersonaViews } from './components/PersonaViews';
+import { AcademyModal } from './components/AcademyModal';
 
 import { fetchGitHubRepo } from './services/github-fetcher';
 import { readZipFile, readFolderFiles } from './services/zip-reader';
@@ -33,6 +34,7 @@ export const App: React.FC = () => {
   
   const [showSettings, setShowSettings] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [showAcademy, setShowAcademy] = useState(false);
 
   // Auto-load demo on first launch to show immediate value
   useEffect(() => {
@@ -154,6 +156,7 @@ export const App: React.FC = () => {
       <Navbar
         onOpenSettings={() => setShowSettings(true)}
         onOpenExport={() => setShowExport(true)}
+        onOpenAcademy={() => setShowAcademy(true)}
         activeTab={activeTab}
         setActiveTab={(t) => setActiveTab(t as any)}
         hasScanResult={Boolean(scanResult)}
@@ -302,6 +305,10 @@ export const App: React.FC = () => {
 
       {showExport && scanResult && (
         <ReportExportModal result={scanResult} onClose={() => setShowExport(false)} />
+      )}
+
+      {showAcademy && (
+        <AcademyModal onClose={() => setShowAcademy(false)} />
       )}
 
       {/* Footer */}

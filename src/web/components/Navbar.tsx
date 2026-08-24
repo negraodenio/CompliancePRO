@@ -1,11 +1,12 @@
 import React from 'react';
-import { ShieldCheck, Sparkles, Settings, FileText, Github, Terminal, Zap } from 'lucide-react';
+import { ShieldCheck, Sparkles, Settings, FileText, Github, Terminal, Zap, GraduationCap } from 'lucide-react';
 import { Logo } from './Logo';
 import { getSelectedModel, AVAILABLE_MODELS } from '../services/siliconflow';
 
 interface NavbarProps {
   onOpenSettings: () => void;
   onOpenExport?: () => void;
+  onOpenAcademy?: () => void;
   activeTab: string;
   setActiveTab: (tab: string) => void;
   hasScanResult: boolean;
@@ -14,6 +15,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   onOpenSettings,
   onOpenExport,
+  onOpenAcademy,
   activeTab,
   setActiveTab,
   hasScanResult,
@@ -58,6 +60,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Terminal className="w-3.5 h-3.5 text-slate-400" />
             <span>Code Playground</span>
           </button>
+
+          {onOpenAcademy && (
+            <button
+              onClick={onOpenAcademy}
+              className="px-3.5 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center space-x-1.5 text-amber-300 hover:text-amber-200 hover:bg-slate-800/80 cursor-pointer border border-amber-500/20"
+            >
+              <GraduationCap className="w-3.5 h-3.5 text-amber-400" />
+              <span>Curso & Certificação</span>
+            </button>
+          )}
         </nav>
 
         {/* Right Actions */}
