@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { 
   ShieldCheck, ShieldAlert, Lock, Bot, Database, Key, 
   FileText, Scale, CheckCircle2, AlertTriangle, Sparkles, 
-  Cpu, Terminal, ArrowRight, Eye, Layers, UserCheck, Shield
+  Cpu, Terminal, ArrowRight, Eye, Layers, UserCheck, Shield,
+  Briefcase, Landmark, TrendingUp, BarChart3, Clock, DollarSign, Activity
 } from 'lucide-react';
 import type { ScannerResult } from '../../core/types';
 import { RegulationsGrid } from './RegulationsGrid';
@@ -12,10 +13,12 @@ import { RipdDocumentModal } from './RipdDocumentModal';
 import { inferAgentFramework } from '../services/agent-sipoc-mapper';
 import { EnterpriseLeadModal } from './EnterpriseLeadModal';
 
+export type ExecutivePersona = 'ciso' | 'dpo' | 'cio' | 'board' | 'cfo';
+
 interface PersonaViewsProps {
   result: ScannerResult;
-  selectedPersona: 'ciso' | 'dpo';
-  onSelectPersona: (persona: 'ciso' | 'dpo') => void;
+  selectedPersona: ExecutivePersona;
+  onSelectPersona: (persona: ExecutivePersona) => void;
   onOpenExport: () => void;
 }
 
@@ -92,44 +95,103 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
     <div className="space-y-6">
       
       {/* Persona Switcher Bar */}
-      <div className="glass-panel p-2 rounded-2xl border border-surface-border flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#0d1322]">
+      <div className="glass-panel p-2 rounded-2xl border border-surface-border flex flex-col xl:flex-row items-center justify-between gap-3 bg-[#0d1322]">
         <div className="flex items-center space-x-2.5 px-3">
           <Eye className="w-4 h-4 text-cyan-400" />
-          <span className="text-xs font-semibold text-slate-300">Lente de Governança Estratégica:</span>
+          <span className="text-xs font-semibold text-slate-300">Lentes de Governança Executiva:</span>
         </div>
 
-        <div className="flex items-center space-x-1.5 w-full sm:w-auto">
-          {/* CISO Persona Button */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5 w-full xl:w-auto">
+          
+          {/* 1. CISO Persona Button */}
           <button
             onClick={() => onSelectPersona('ciso')}
-            className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-2 cursor-pointer ${
+            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
               selectedPersona === 'ciso'
                 ? 'bg-gradient-to-r from-purple-600/30 to-blue-600/30 text-purple-300 border border-purple-500/50 shadow-glow-purple'
                 : 'text-slate-400 hover:text-white hover:bg-surface border border-transparent'
             }`}
           >
-            <Lock className="w-4 h-4 text-purple-400" />
+            <Lock className="w-4 h-4 text-purple-400 shrink-0" />
             <div className="text-left">
-              <span>Visão CISO</span>
-              <span className="block text-[9px] font-normal text-slate-400">Segurança, MCP & Vetores de Ataque</span>
+              <span className="block">Visão CISO</span>
+              <span className="text-[9px] font-normal text-slate-400 block truncate">Segurança & MCP</span>
             </div>
           </button>
 
-          {/* DPO Persona Button */}
+          {/* 2. DPO Persona Button */}
           <button
             onClick={() => onSelectPersona('dpo')}
-            className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-2 cursor-pointer ${
+            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
               selectedPersona === 'dpo'
-                ? 'bg-gradient-to-r from-emerald-600/30 to-cyan-600/30 text-emerald-300 border border-emerald-500/50 shadow-glow-emerald'
+                ? 'bg-gradient-to-r from-emerald-600/30 to-teal-600/30 text-emerald-300 border border-emerald-500/50 shadow-glow-emerald'
                 : 'text-slate-400 hover:text-white hover:bg-surface border border-transparent'
             }`}
           >
-            <Scale className="w-4 h-4 text-emerald-400" />
+            <Scale className="w-4 h-4 text-emerald-400 shrink-0" />
             <div className="text-left">
-              <span>Visão Compliance / DPO</span>
-              <span className="block text-[9px] font-normal text-slate-400">13 Regulações, LGPD & RIPD</span>
+              <span className="block">Visão DPO</span>
+              <span className="text-[9px] font-normal text-slate-400 block truncate">13 Regulações & RIPD</span>
             </div>
           </button>
+
+          {/* 3. CIO Persona Button (Enterprise) */}
+          <button
+            onClick={() => onSelectPersona('cio')}
+            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
+              selectedPersona === 'cio'
+                ? 'bg-gradient-to-r from-cyan-600/30 to-blue-600/30 text-cyan-300 border border-cyan-500/50 shadow-glow'
+                : 'text-slate-400 hover:text-white hover:bg-surface border border-transparent'
+            }`}
+          >
+            <Cpu className="w-4 h-4 text-cyan-400 shrink-0" />
+            <div className="text-left">
+              <div className="flex items-center space-x-1">
+                <span>Visão CIO</span>
+                <span className="text-[8px] font-mono bg-cyan-950 text-cyan-300 px-1 rounded border border-cyan-800">Enterprise</span>
+              </div>
+              <span className="text-[9px] font-normal text-slate-400 block truncate">MLOps & SLAs</span>
+            </div>
+          </button>
+
+          {/* 4. Board / Conselho Button (Enterprise) */}
+          <button
+            onClick={() => onSelectPersona('board')}
+            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
+              selectedPersona === 'board'
+                ? 'bg-gradient-to-r from-amber-600/30 to-yellow-600/30 text-amber-300 border border-amber-500/50'
+                : 'text-slate-400 hover:text-white hover:bg-surface border border-transparent'
+            }`}
+          >
+            <Landmark className="w-4 h-4 text-amber-400 shrink-0" />
+            <div className="text-left">
+              <div className="flex items-center space-x-1">
+                <span>Visão Conselho</span>
+                <span className="text-[8px] font-mono bg-amber-950 text-amber-300 px-1 rounded border border-amber-800">Enterprise</span>
+              </div>
+              <span className="text-[9px] font-normal text-slate-400 block truncate">Risco & Multas</span>
+            </div>
+          </button>
+
+          {/* 5. FinOps & CFO Button (Enterprise) */}
+          <button
+            onClick={() => onSelectPersona('cfo')}
+            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
+              selectedPersona === 'cfo'
+                ? 'bg-gradient-to-r from-teal-600/30 to-emerald-600/30 text-teal-300 border border-teal-500/50'
+                : 'text-slate-400 hover:text-white hover:bg-surface border border-transparent'
+            }`}
+          >
+            <DollarSign className="w-4 h-4 text-teal-400 shrink-0" />
+            <div className="text-left">
+              <div className="flex items-center space-x-1">
+                <span>Visão FinOps</span>
+                <span className="text-[8px] font-mono bg-teal-950 text-teal-300 px-1 rounded border border-teal-800">Enterprise</span>
+              </div>
+              <span className="text-[9px] font-normal text-slate-400 block truncate">Custos & ROI</span>
+            </div>
+          </button>
+
         </div>
       </div>
 
@@ -496,6 +558,370 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
 
           {/* Legal Violations */}
           <ViolationsList result={result} />
+
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* 👔 CIO & HEAD OF AI VIEW (MLOps, SLAs & Catálogo de Modelos)   */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {selectedPersona === 'cio' && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          
+          {/* Executive Header */}
+          <div className="glass-panel p-5 rounded-2xl border border-slate-750 border-slate-700 bg-[#090d18] flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center space-x-2 text-cyan-400">
+                <Cpu className="w-5 h-5" />
+                <h3 className="text-sm font-bold text-white">Painel Estratégico do CIO & Liderança de IA (MLOps & Governança de Modelos)</h3>
+              </div>
+              <p className="text-xs text-slate-300 max-w-2xl">
+                Supervisão consolidada de infraestrutura de IA, SLAs de provedores externos, latência de inferência e esteiras de homologação técnica.
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2 shrink-0">
+              <span className="text-[11px] font-mono text-cyan-300 bg-cyan-950/70 border border-cyan-800/60 px-3 py-1.5 rounded-xl">
+                Módulo Enterprise
+              </span>
+            </div>
+          </div>
+
+          {/* Blurred KPI Highlights Grid */}
+          <div className="relative rounded-2xl border border-slate-800 overflow-hidden p-3 bg-[#060a14]">
+            
+            {/* Top KPI Cards (Blurred) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 filter blur-[3.5px] select-none pointer-events-none opacity-40">
+              <div className="p-4 rounded-xl bg-surface border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">SLA Médio de Provedores</span>
+                <div className="text-xl font-bold text-emerald-400 font-mono">99.98%</div>
+                <p className="text-[10px] text-slate-400">OpenAI, Anthropic & Bedrock</p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-surface border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">Latência Média P95</span>
+                <div className="text-xl font-bold text-cyan-400 font-mono">340 ms</div>
+                <p className="text-[10px] text-slate-400">Tempo de resposta em inferência</p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-surface border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">Economia com Cache Semântico</span>
+                <div className="text-xl font-bold text-purple-400 font-mono">42.5%</div>
+                <p className="text-[10px] text-slate-400">Tokens reutilizados com sucesso</p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-surface border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">Modelos Homologados</span>
+                <div className="text-xl font-bold text-white font-mono">4 Ativos</div>
+                <p className="text-[10px] text-slate-400">100% com chaves gerenciadas</p>
+              </div>
+            </div>
+
+            {/* Model Portfolio Table (Blurred) */}
+            <div className="mt-4 rounded-xl border border-slate-800 overflow-hidden filter blur-[3.5px] select-none pointer-events-none opacity-40">
+              <table className="w-full text-left text-xs font-mono">
+                <thead className="bg-[#0c1224] text-slate-400 border-b border-slate-800">
+                  <tr>
+                    <th className="py-2.5 px-4">Modelo / Endpoint</th>
+                    <th className="py-2.5 px-4">Finalidade</th>
+                    <th className="py-2.5 px-4 text-center">Latência P95</th>
+                    <th className="py-2.5 px-4 text-center">SLA Mensal</th>
+                    <th className="py-2.5 px-4 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 bg-[#060a14] text-slate-300">
+                  <tr>
+                    <td className="py-2 px-4 font-semibold text-white">OpenAI GPT-4o</td>
+                    <td className="py-2 px-4">Raciocínio Complexo & Subscrição</td>
+                    <td className="py-2 px-4 text-center">420ms</td>
+                    <td className="py-2 px-4 text-center text-emerald-400">99.99%</td>
+                    <td className="py-2 px-4 text-right text-emerald-400">Homologado</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 px-4 font-semibold text-white">Anthropic Claude 3.5 Sonnet</td>
+                    <td className="py-2 px-4">Validação Documental & OCR</td>
+                    <td className="py-2 px-4 text-center">310ms</td>
+                    <td className="py-2 px-4 text-center text-emerald-400">99.95%</td>
+                    <td className="py-2 px-4 text-right text-emerald-400">Homologado</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 px-4 font-semibold text-white">Local Qwen 2.5 14B (SLM)</td>
+                    <td className="py-2 px-4">Classificação e Triagem Inicial</td>
+                    <td className="py-2 px-4 text-center">85ms</td>
+                    <td className="py-2 px-4 text-center text-emerald-400">100.0%</td>
+                    <td className="py-2 px-4 text-right text-cyan-400">On-Premises</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Sober Floating Overlay */}
+            <div className="absolute inset-0 bg-[#070b16]/85 backdrop-blur-[2px] flex flex-col sm:flex-row items-center justify-between p-6 gap-4">
+              <div className="flex items-center space-x-3 text-left">
+                <div className="p-2.5 rounded-xl bg-cyan-950 text-cyan-400 border border-cyan-800 shrink-0">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white">
+                    Plataforma Centralizada de Gestão MLOps & SLAs de IA
+                  </h4>
+                  <p className="text-[11px] text-slate-300 max-w-xl">
+                    Monitore a saúde operacional de todos os modelos em produção, aplique cache semântico inteligente e controle latências em tempo real.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setEnterpriseContext('Painel do CIO & Gestão de MLOps / SLAs');
+                  setShowEnterpriseModal(true);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black text-xs font-bold flex items-center space-x-2 shadow-glow cursor-pointer transition-all shrink-0"
+              >
+                <span>Solicitar Demonstração Corporativa</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* 🏛️ BOARD & AUDIT COMMITTEE VIEW (Exposição a Multas & ESG)    */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {selectedPersona === 'board' && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          
+          {/* Executive Header */}
+          <div className="glass-panel p-5 rounded-2xl border border-slate-750 border-slate-700 bg-[#090d18] flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center space-x-2 text-amber-400">
+                <Landmark className="w-5 h-5" />
+                <h3 className="text-sm font-bold text-white">Painel do Conselho de Administração & Comitê de Auditoria (Governança e Risco Residual)</h3>
+              </div>
+              <p className="text-xs text-slate-300 max-w-2xl">
+                Visão macro para diretores e conselheiros: exposição financeira máxima a penalidades legais, seguros de responsabilidade civil e índice ESG de IA ética.
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2 shrink-0">
+              <span className="text-[11px] font-mono text-amber-300 bg-amber-950/70 border border-amber-800/60 px-3 py-1.5 rounded-xl">
+                Módulo Board / C-Level
+              </span>
+            </div>
+          </div>
+
+          {/* Blurred Board Highlights Grid */}
+          <div className="relative rounded-2xl border border-slate-800 overflow-hidden p-3 bg-[#060a14]">
+            
+            {/* Top KPI Cards (Blurred) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 filter blur-[3.5px] select-none pointer-events-none opacity-40">
+              <div className="p-4 rounded-xl bg-surface border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">Exposição Máxima a Multas</span>
+                <div className="text-xl font-bold text-rose-400 font-mono">€ 35.000.000</div>
+                <p className="text-[10px] text-slate-400">Teto Art. 99 EU AI Act / 7% faturamento</p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-surface border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">Risco Residual Pós-Controles</span>
+                <div className="text-xl font-bold text-emerald-400 font-mono">18 / 100</div>
+                <p className="text-[10px] text-slate-400">Nível Considerado Baixo / Aceitável</p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-surface border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">Índice ESG de IA Ética</span>
+                <div className="text-xl font-bold text-amber-400 font-mono">88 / 100</div>
+                <p className="text-[10px] text-slate-400">Aderente aos pilares de equidade e auditabilidade</p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-surface border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">Parecer para Seguradora Cyber</span>
+                <div className="text-xl font-bold text-cyan-400 font-mono">Apto / Elegível</div>
+                <p className="text-[10px] text-slate-400">Apólice de Risco Tecnológico</p>
+              </div>
+            </div>
+
+            {/* Risk Categories Table (Blurred) */}
+            <div className="mt-4 rounded-xl border border-slate-800 overflow-hidden filter blur-[3.5px] select-none pointer-events-none opacity-40">
+              <table className="w-full text-left text-xs font-mono">
+                <thead className="bg-[#0c1224] text-slate-400 border-b border-slate-800">
+                  <tr>
+                    <th className="py-2.5 px-4">Dimensão de Risco</th>
+                    <th className="py-2.5 px-4">Impacto Potencial</th>
+                    <th className="py-2.5 px-4 text-center">Probabilidade</th>
+                    <th className="py-2.5 px-4 text-center">Controle Mitigatório</th>
+                    <th className="py-2.5 px-4 text-right">Risco Residual</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 bg-[#060a14] text-slate-300">
+                  <tr>
+                    <td className="py-2 px-4 font-semibold text-white">Risco Regulatório (Sanções ANPD/EU)</td>
+                    <td className="py-2 px-4">Multas e Suspensão de Atividades</td>
+                    <td className="py-2 px-4 text-center text-amber-400">Média</td>
+                    <td className="py-2 px-4 text-center">Dossiê Art. 11 + RIPD</td>
+                    <td className="py-2 px-4 text-right text-emerald-400">Baixo</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 px-4 font-semibold text-white">Risco Reputacional (Alucinações Públicas)</td>
+                    <td className="py-2 px-4">Perda de Confiança de Clientes</td>
+                    <td className="py-2 px-4 text-center text-rose-400">Alta</td>
+                    <td className="py-2 px-4 text-center">Guardrails em Produção</td>
+                    <td className="py-2 px-4 text-right text-emerald-400">Controlado</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Sober Floating Overlay */}
+            <div className="absolute inset-0 bg-[#070b16]/85 backdrop-blur-[2px] flex flex-col sm:flex-row items-center justify-between p-6 gap-4">
+              <div className="flex items-center space-x-3 text-left">
+                <div className="p-2.5 rounded-xl bg-amber-950 text-amber-400 border border-amber-800 shrink-0">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white">
+                    Relatórios Executivos Trimestrais para Conselhos de Administração
+                  </h4>
+                  <p className="text-[11px] text-slate-300 max-w-xl">
+                    Gere apresentações prontas em PDF para o comitê de auditoria com pareceres formais de risco residual e exposição financeira a multas.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setEnterpriseContext('Painel do Conselho de Administração & Riscos Corporativos');
+                  setShowEnterpriseModal(true);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black text-xs font-bold flex items-center space-x-2 shadow-glow cursor-pointer transition-all shrink-0"
+              >
+                <span>Solicitar Demonstração Corporativa</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* 💰 FINOPS & CFO VIEW (Orçamento de IA, Custos & Projeções)     */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {selectedPersona === 'cfo' && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          
+          {/* Executive Header */}
+          <div className="glass-panel p-5 rounded-2xl border border-slate-750 border-slate-700 bg-[#090d18] flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center space-x-2 text-teal-400">
+                <DollarSign className="w-5 h-5" />
+                <h3 className="text-sm font-bold text-white">Painel FinOps & CFO (Gestão Orçamentária e Eficiência de Tokens)</h3>
+              </div>
+              <p className="text-xs text-slate-300 max-w-2xl">
+                Alocação de centros de custo por squad de engenharia, previsão de burn rate de inferência e prevenção de desperdício em chamadas de LLM.
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2 shrink-0">
+              <span className="text-[11px] font-mono text-teal-300 bg-teal-950/70 border border-teal-800/60 px-3 py-1.5 rounded-xl">
+                Módulo FinOps Enterprise
+              </span>
+            </div>
+          </div>
+
+          {/* Blurred FinOps Highlights Grid */}
+          <div className="relative rounded-2xl border border-slate-800 overflow-hidden p-3 bg-[#060a14]">
+            
+            {/* Top KPI Cards (Blurred) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 filter blur-[3.5px] select-none pointer-events-none opacity-40">
+              <div className="p-4 rounded-xl bg-surface border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">Orçamento Mensal (Budget)</span>
+                <div className="text-xl font-bold text-white font-mono">$ 5.000,00</div>
+                <p className="text-[10px] text-slate-400">Limite contratual contratado</p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-surface border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">Consumo Estimado (MoM)</span>
+                <div className="text-xl font-bold text-emerald-400 font-mono">$ 1.840,20</div>
+                <p className="text-[10px] text-slate-400">36.8% do teto orçamentário</p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-surface border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">Desperdício por Alucinação/Loops</span>
+                <div className="text-xl font-bold text-teal-400 font-mono">&lt; 0.8% ($14,20)</div>
+                <p className="text-[10px] text-slate-400">Protegido por Circuit Breaker</p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-surface border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">Potencial de Economia (SLMs)</span>
+                <div className="text-xl font-bold text-cyan-400 font-mono">Até 64%</div>
+                <p className="text-[10px] text-slate-400">Migração de prompts simples</p>
+              </div>
+            </div>
+
+            {/* Squad Cost Allocation Table (Blurred) */}
+            <div className="mt-4 rounded-xl border border-slate-800 overflow-hidden filter blur-[3.5px] select-none pointer-events-none opacity-40">
+              <table className="w-full text-left text-xs font-mono">
+                <thead className="bg-[#0c1224] text-slate-400 border-b border-slate-800">
+                  <tr>
+                    <th className="py-2.5 px-4">Centro de Custo / Squad</th>
+                    <th className="py-2.5 px-4 text-center">Consumo de Tokens</th>
+                    <th className="py-2.5 px-4 text-center">Custo Mensal Est.</th>
+                    <th className="py-2.5 px-4 text-center">% do Budget</th>
+                    <th className="py-2.5 px-4 text-right">Tendência (MoM)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 bg-[#060a14] text-slate-300">
+                  <tr>
+                    <td className="py-2 px-4 font-semibold text-white">Squad Atendimento & Chatbot</td>
+                    <td className="py-2 px-4 text-center">4.2M tokens</td>
+                    <td className="py-2 px-4 text-center text-emerald-400">$ 420,00</td>
+                    <td className="py-2 px-4 text-center">22.8%</td>
+                    <td className="py-2 px-4 text-right text-emerald-400">Estável (-3%)</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 px-4 font-semibold text-white">Squad Mesa de Crédito (RAG)</td>
+                    <td className="py-2 px-4 text-center">8.8M tokens</td>
+                    <td className="py-2 px-4 text-center text-emerald-400">$ 880,00</td>
+                    <td className="py-2 px-4 text-center">47.8%</td>
+                    <td className="py-2 px-4 text-right text-cyan-400">+12% Expansão</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Sober Floating Overlay */}
+            <div className="absolute inset-0 bg-[#070b16]/85 backdrop-blur-[2px] flex flex-col sm:flex-row items-center justify-between p-6 gap-4">
+              <div className="flex items-center space-x-3 text-left">
+                <div className="p-2.5 rounded-xl bg-teal-950 text-teal-400 border border-teal-800 shrink-0">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white">
+                    Gestão Centralizada de FinOps & Otimização de Custos de IA
+                  </h4>
+                  <p className="text-[11px] text-slate-300 max-w-xl">
+                    Controle o consumo de tokens em nível de projeto, defina tetos orçamentários por equipe e evite cobranças inesperadas em APIs de LLMs.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setEnterpriseContext('Painel FinOps & Otimização de Custos de IA');
+                  setShowEnterpriseModal(true);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-black text-xs font-bold flex items-center space-x-2 shadow-glow cursor-pointer transition-all shrink-0"
+              >
+                <span>Solicitar Demonstração Corporativa</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+          </div>
 
         </div>
       )}

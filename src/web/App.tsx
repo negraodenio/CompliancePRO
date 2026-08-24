@@ -25,7 +25,7 @@ import type { ScannerResult } from '../core/types';
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'scanner' | 'playground'>('scanner');
   const [viewSection, setViewSection] = useState<'overview' | 'personas' | 'regulations' | 'agents' | 'violations'>('overview');
-  const [selectedPersona, setSelectedPersona] = useState<'ciso' | 'dpo'>('ciso');
+  const [selectedPersona, setSelectedPersona] = useState<'ciso' | 'dpo' | 'cio' | 'board' | 'cfo'>('ciso');
   
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState({ message: '', percent: 0 });
