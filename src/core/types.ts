@@ -153,6 +153,9 @@ export interface AgentSipoc {
   process: string;
   output: string;
   customer: string;
+  processOwner?: string;
+  technicalCustodian?: string;
+  governanceStatus?: 'HOMOLOGADO' | 'PENDENTE_COMITE' | 'NAO_CATALOGADO';
 }
 
 export interface DetectedAgent {

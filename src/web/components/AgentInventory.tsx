@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import type { ScannerResult } from '../../core/types';
 import { getAgentBusinessAndSipoc, inferAgentFramework } from '../services/agent-sipoc-mapper';
+import { EnterpriseLeadModal } from './EnterpriseLeadModal';
 
 interface AgentInventoryProps {
   result: ScannerResult;
@@ -12,6 +13,7 @@ interface AgentInventoryProps {
 
 export const AgentInventory: React.FC<AgentInventoryProps> = ({ result }) => {
   const [expandedAgentIndex, setExpandedAgentIndex] = useState<number | null>(null);
+  const [showEnterpriseModal, setShowEnterpriseModal] = useState(false);
 
   const agents = result.source?.agents || [];
   const costEstimate = (result as any)._costEstimate || { totalMonthlyUsd: 0, estimatedMonthlyTokens: 0, modelCount: 0 };
@@ -116,6 +118,28 @@ export const AgentInventory: React.FC<AgentInventoryProps> = ({ result }) => {
                   </p>
                 </div>
 
+                {/* RACI Ownership & Governance Bar (ISO 42001) */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] p-2.5 rounded-xl bg-[#080d1a] border border-surface-border">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-semibold">Dono do Processo (Business Owner):</span>
+                    <span className="font-semibold text-white truncate block">{sipoc.processOwner}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-semibold">Guardião Técnico (Tech Lead):</span>
+                    <span className="font-semibold text-purple-300 truncate block">{sipoc.technicalCustodian}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-semibold">Status de Homologação:</span>
+                    <span className={`inline-block px-2 py-0.5 text-[10px] font-mono font-bold rounded ${
+                      sipoc.governanceStatus === 'HOMOLOGADO' 
+                        ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' 
+                        : 'bg-amber-950 text-amber-300 border border-amber-800'
+                    }`}>
+                      {sipoc.governanceStatus === 'HOMOLOGADO' ? '✓ HOMOLOGADO' : '🟡 PENDENTE DE COMITÊ'}
+                    </span>
+                  </div>
+                </div>
+
                 {/* SIPOC Flow (Input ➔ Process ➔ Output) */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs">
                   
@@ -158,6 +182,46 @@ export const AgentInventory: React.FC<AgentInventoryProps> = ({ result }) => {
                     </span>
                   </div>
 
+                </div>
+
+                {/* 🔒 Blurred Enterprise Feature Card (Teaser) */}
+                <div className="relative rounded-xl border border-purple-500/30 bg-[#090d18] overflow-hidden p-3 group">
+                  {/* Blurred Background Content */}
+                  <div className="filter blur-[3px] select-none pointer-events-none opacity-50 space-y-1 text-[11px] text-slate-400">
+                    <div className="flex items-center justify-between font-mono">
+                      <span>Telemetria de Tokens em Tempo Real: 142.420 tokens/dia</span>
+                      <span className="text-emerald-400">Drift: 0.04% (Estável)</span>
+                    </div>
+                    <div className="flex items-center justify-between font-mono">
+                      <span>Workflow de Aprovação de Deploy: 2/2 Aprovadores (CISO + DPO)</span>
+                      <span>Logs Imutáveis: SHA-256 Validado</span>
+                    </div>
+                  </div>
+
+                  {/* Floating Overlay with Lock */}
+                  <div className="absolute inset-0 bg-[#070b16]/75 backdrop-blur-[2px] flex items-center justify-between px-4 py-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="p-1.5 rounded-lg bg-purple-950 text-purple-400 border border-purple-800">
+                        <Lock className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-white block">
+                          Gestão Contínua do Ciclo de Vida & Drift de Modelo
+                        </span>
+                        <span className="text-[10px] text-purple-300 block">
+                          Workflow de aprovação, telemetria em produção e guardrails ativos
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setShowEnterpriseModal(true)}
+                      className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white text-[11px] font-bold flex items-center space-x-1 shadow-glow-purple cursor-pointer transition-all shrink-0"
+                    >
+                      <span>Desbloquear no Enterprise</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Expanded Technical Details (Tools & Governance) */}
@@ -225,6 +289,32 @@ export const AgentInventory: React.FC<AgentInventoryProps> = ({ result }) => {
             })}
           </div>
         </div>
+      )}
+
+      {/* Enterprise Suite Upsell Banner */}
+      <div className="glass-panel p-6 rounded-2xl border border-purple-500/40 bg-gradient-to-r from-purple-950/20 via-[#0d1326] to-cyan-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xl">
+        <div className="space-y-1">
+          <div className="flex items-center space-x-2 text-purple-400">
+            <Sparkles className="w-4 h-4" />
+            <h4 className="text-sm font-bold text-white">ComplyPRO Enterprise Governance Suite</h4>
+          </div>
+          <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+            Deseja orquestrar esteiras de aprovação de deploy, monitoramento de deriva de modelo (Drift) e inventário ativo de agentes em tempo real com auditoria ISO 42001?
+          </p>
+        </div>
+
+        <button
+          onClick={() => setShowEnterpriseModal(true)}
+          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white text-xs font-bold flex items-center space-x-2 shadow-glow-purple cursor-pointer transition-all shrink-0"
+        >
+          <span>Agendar Demonstração Executiva</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Enterprise Lead Modal */}
+      {showEnterpriseModal && (
+        <EnterpriseLeadModal onClose={() => setShowEnterpriseModal(false)} featureContext="Gestão do Ciclo de Vida de Agentes & RACI" />
       )}
 
     </div>

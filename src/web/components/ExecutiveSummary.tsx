@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
 import { 
   ShieldAlert, ShieldCheck, AlertTriangle, Bot, Cpu, DollarSign, 
-  Sparkles, FileText, CheckCircle2, XCircle, ArrowUpRight, Copy, Check, Info, Calculator, Scale
+  Sparkles, FileText, CheckCircle2, XCircle, ArrowUpRight, Copy, Check, Info, Calculator, Scale, Lock, ArrowRight, Layers
 } from 'lucide-react';
 import type { ScannerResult } from '../../core/types';
 import { generateExecutiveSummaryWithAI } from '../services/siliconflow';
@@ -10,6 +9,7 @@ import {
   calculateOverallScore, 
   classifySystemPurpose 
 } from '../services/regulation-mapper';
+import { EnterpriseLeadModal } from './EnterpriseLeadModal';
 
 interface ExecutiveSummaryProps {
   result: ScannerResult;
@@ -34,6 +34,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
   const [aiReport, setAiReport] = useState<string | null>(null);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [showFormulaModal, setShowFormulaModal] = useState(false);
+  const [showEnterpriseModal, setShowEnterpriseModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const violations = result.violations || [];
@@ -210,7 +211,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
               {isGeneratingReport ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Consultando DeepSeek-V3...</span>
+                  <span>Gerando Parecer Executivo...</span>
                 </>
               ) : (
                 <>
@@ -223,6 +224,125 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
         </div>
 
       </div>
+
+      {/* 🌟 Termômetro de Maturidade de Governança de IA (Framework ComplyPRO) */}
+      <div className="glass-panel p-6 rounded-2xl border border-surface-border bg-[#090d1a] space-y-5 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-surface-border">
+          <div className="flex items-center space-x-2.5">
+            <div className="p-2 rounded-xl bg-gradient-to-tr from-purple-600 to-cyan-500 text-black font-bold">
+              <Layers className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center space-x-2">
+                <span>Nível de Maturidade de Governança de IA (AI Governance Maturity Level)</span>
+                <span className="px-2 py-0.5 text-[10px] bg-purple-950 text-purple-300 border border-purple-800 rounded font-mono">
+                  ISO 42001 & NIST AI RMF
+                </span>
+              </h3>
+              <p className="text-[11px] text-slate-400">Classificação da postura corporativa de conformidade e gestão de ciclo de vida</p>
+            </div>
+          </div>
+
+          <span className="text-[11px] font-mono text-cyan-300 bg-cyan-950/70 border border-cyan-800/60 px-3 py-1 rounded-lg">
+            Diagnóstico Atual: <strong>NÍVEL 2 (EMERGENTE)</strong>
+          </span>
+        </div>
+
+        {/* 5 Levels Step Progress Bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5 text-xs">
+          
+          {/* Level 1 */}
+          <div className="p-3 rounded-xl bg-[#060a14] border border-slate-800 opacity-60 space-y-1">
+            <span className="text-[10px] font-mono text-slate-500 block uppercase font-bold">Nível 1</span>
+            <span className="font-bold text-slate-300 block text-[11px]">Ad-Hoc / Não Gerenciado</span>
+            <p className="text-[10px] text-slate-500">Shadow AI dispersa e sem controle de chaves ou logs.</p>
+          </div>
+
+          {/* Level 2 (ACTIVE) */}
+          <div className="p-3.5 rounded-xl bg-gradient-to-b from-cyan-950/70 to-blue-950/40 border-2 border-cyan-500 shadow-glow space-y-1 relative">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono text-cyan-400 block uppercase font-bold">Nível 2</span>
+              <span className="px-1.5 py-0.2 bg-cyan-400 text-black text-[9px] font-black rounded uppercase">Atual</span>
+            </div>
+            <span className="font-bold text-white block text-[11px]">Emergente / Mapeamento Estático</span>
+            <p className="text-[10px] text-slate-300">Auditoria de código, detecção de 13 regulações e matriz SIPOC.</p>
+          </div>
+
+          {/* Level 3 */}
+          <div className="p-3 rounded-xl bg-[#060a14] border border-slate-800 space-y-1">
+            <span className="text-[10px] font-mono text-purple-400 block uppercase font-bold">Nível 3</span>
+            <span className="font-bold text-slate-200 block text-[11px]">Definido & Estruturado</span>
+            <p className="text-[10px] text-slate-400">Process Owners e esteira RACI homologados formalmente.</p>
+          </div>
+
+          {/* Level 4 */}
+          <div className="p-3 rounded-xl bg-[#060a14] border border-slate-800 space-y-1">
+            <span className="text-[10px] font-mono text-purple-400 block uppercase font-bold">Nível 4</span>
+            <span className="font-bold text-slate-200 block text-[11px]">Gerenciado em Produção</span>
+            <p className="text-[10px] text-slate-400">Monitoramento de drift, telemetria de tokens e guardrails.</p>
+          </div>
+
+          {/* Level 5 */}
+          <div className="p-3 rounded-xl bg-[#060a14] border border-slate-800 space-y-1">
+            <span className="text-[10px] font-mono text-emerald-400 block uppercase font-bold">Nível 5</span>
+            <span className="font-bold text-slate-200 block text-[11px]">Otimizado & Preditivo</span>
+            <p className="text-[10px] text-slate-400">Auto-remediação contínua e trilhas imutáveis para ANPD/EU.</p>
+          </div>
+
+        </div>
+
+        {/* 🔒 Blurred Enterprise Evolution Roadmap (Teaser) */}
+        <div className="relative rounded-2xl border border-purple-500/30 bg-[#060a14] overflow-hidden p-4 group">
+          {/* Blurred Dummy Content */}
+          <div className="filter blur-[3.5px] select-none pointer-events-none opacity-40 space-y-2 text-xs text-slate-300">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-2.5 rounded bg-surface border border-slate-700">
+                <span className="font-bold block">Controle de Deriva (Model Drift Engine)</span>
+                <span>Alerta automático de alucinação de agentes em tempo real (tolerância &lt; 0.05%)</span>
+              </div>
+              <div className="p-2.5 rounded bg-surface border border-slate-700">
+                <span className="font-bold block">Approval Gate CI/CD</span>
+                <span>Bloqueio mandatório de merges que violem o Anexo III do EU AI Act</span>
+              </div>
+              <div className="p-2.5 rounded bg-surface border border-slate-700">
+                <span className="font-bold block">Notificação de Incidentes à ANPD</span>
+                <span>Workflow automatizado de geração de relatório de incidente em 72 horas</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Floating Action Overlay with Lock */}
+          <div className="absolute inset-0 bg-[#070b16]/80 backdrop-blur-[2px] flex flex-col sm:flex-row items-center justify-between p-5 gap-3">
+            <div className="flex items-center space-x-3 text-left">
+              <div className="p-2.5 rounded-xl bg-purple-950 text-purple-400 border border-purple-800 shrink-0">
+                <Lock className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white">
+                  Roadmap de Evolução de Governança para Nível 4 & 5 (Enterprise)
+                </h4>
+                <p className="text-[11px] text-slate-300 max-w-xl">
+                  Desbloqueie monitoramento contínuo de drift em produção, esteira CI/CD com portão de aprovação e governança de ciclo de vida completo.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowEnterpriseModal(true)}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white text-xs font-bold flex items-center space-x-2 shadow-glow-purple cursor-pointer transition-all shrink-0"
+            >
+              <span>Conhecer ComplyPRO Enterprise</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Enterprise Lead Capture Modal */}
+      {showEnterpriseModal && (
+        <EnterpriseLeadModal onClose={() => setShowEnterpriseModal(false)} featureContext="Roadmap de Maturidade de Governança de IA (Nível 4 e 5)" />
+      )}
 
       {/* Formula & Calculation Modal */}
       {showFormulaModal && (

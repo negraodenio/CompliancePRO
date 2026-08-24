@@ -24,6 +24,9 @@ export function getAgentBusinessAndSipoc(agent: DetectedAgent): {
         process: 'Verificação de alucinações, tom de voz e conformidade com políticas',
         output: 'Parecer de aprovação (Pass/Fail) e feedback de correção',
         customer: 'Agente Finalizador ou Usuário Solicitante',
+        processOwner: 'Gerência de Qualidade, Ética & Risco de IA',
+        technicalCustodian: 'Engenharia de Prompt & Avaliação de Modelos',
+        governanceStatus: 'PENDENTE_COMITE',
       },
     };
   }
@@ -39,6 +42,9 @@ export function getAgentBusinessAndSipoc(agent: DetectedAgent): {
         process: 'Classificação de intenção via embeddings e regras de negócio',
         output: 'Roteamento com payload JSON para o agente de destino',
         customer: 'Agentes Especialistas do Grafo de Atendimento',
+        processOwner: 'Operações & Experiência do Cliente (CX)',
+        technicalCustodian: 'Arquitetura de Sistemas & Orquestração',
+        governanceStatus: 'HOMOLOGADO',
       },
     };
   }
@@ -54,6 +60,9 @@ export function getAgentBusinessAndSipoc(agent: DetectedAgent): {
         process: 'Recuperação semântica de contexto relevante em cache/vetores',
         output: 'Sumário contextual estruturado injetado no prompt',
         customer: 'Agentes de Raciocínio e Tomada de Decisão',
+        processOwner: 'Encarregado de Proteção de Dados (DPO) & Privacidade',
+        technicalCustodian: 'Engenharia de Dados & Cache Vetorial',
+        governanceStatus: 'PENDENTE_COMITE',
       },
     };
   }
@@ -69,6 +78,9 @@ export function getAgentBusinessAndSipoc(agent: DetectedAgent): {
         process: 'Busca por similaridade vetorial e re-ranking de trechos relevantes',
         output: 'Trechos de documentos citados e referências fáticas em JSON',
         customer: 'Agente de Síntese e Geração de Respostas',
+        processOwner: 'Gestão de Conhecimento & Operações de IA',
+        technicalCustodian: 'Engenharia de MLOps & Base Vetorial',
+        governanceStatus: 'PENDENTE_COMITE',
       },
     };
   }
@@ -87,6 +99,9 @@ export function getAgentBusinessAndSipoc(agent: DetectedAgent): {
           : 'Chamada a endpoints de API externa e tratamento de respostas',
         output: 'Status de execução e dados sincronizados/gravados com sucesso',
         customer: 'Banco de Dados da Empresa / Sistema Transacional',
+        processOwner: 'Segurança da Informação (CISO) & Infraestrutura',
+        technicalCustodian: 'Engenharia de Backend & Integrações',
+        governanceStatus: 'HOMOLOGADO',
       },
     };
   }
@@ -102,6 +117,9 @@ export function getAgentBusinessAndSipoc(agent: DetectedAgent): {
         process: 'Rodadas de validação cruzada e alinhamento de premissas',
         output: 'Decisão consolidada e fundamentada em evidências',
         customer: 'Diretoria / Usuário Final da Aplicação',
+        processOwner: 'Comitê Executivo de Ética & Risco de IA',
+        technicalCustodian: 'Pesquisa & Desenvolvimento em IA (R&D)',
+        governanceStatus: 'PENDENTE_COMITE',
       },
     };
   }
@@ -117,6 +135,9 @@ export function getAgentBusinessAndSipoc(agent: DetectedAgent): {
         process: 'Modelagem preditiva e cálculo de risco de inadimplência',
         output: 'Parecer técnico de crédito com recomendação de taxa e limite',
         customer: 'Mesa de Crédito (Human-in-the-Loop) e Core Bancário',
+        processOwner: 'Diretoria de Risco de Crédito & Compliance Regulatório',
+        technicalCustodian: 'Modelagem Estatística & Engenharia de Risco',
+        governanceStatus: 'PENDENTE_COMITE',
       },
     };
   }
@@ -132,6 +153,9 @@ export function getAgentBusinessAndSipoc(agent: DetectedAgent): {
         process: 'Loop de raciocínio (Thought ➔ Action ➔ Observation)',
         output: 'Resposta clara em linguagem natural e ações disparadas',
         customer: 'Cliente Final no Canal de Atendimento',
+        processOwner: 'Gerência de Atendimento & Canais Digitais',
+        technicalCustodian: 'Engenharia de Chatbots & Aplicações Conversacionais',
+        governanceStatus: 'HOMOLOGADO',
       },
     };
   }
@@ -148,6 +172,9 @@ export function getAgentBusinessAndSipoc(agent: DetectedAgent): {
       process: `Execução de lógica via ${detectedFw} com verificação de segurança`,
       output: 'Estado atualizado e dados processados para a próxima etapa',
       customer: 'Próximo Nó do Grafo / Sistema de Destino',
+      processOwner: 'Liderança de Produto & Engenharia de IA',
+      technicalCustodian: 'Time de Desenvolvimento de IA',
+      governanceStatus: 'PENDENTE_COMITE',
     },
   };
 }
