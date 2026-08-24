@@ -93,12 +93,11 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
 
   return (
     <div className="space-y-6">
-      
-      {/* Persona Switcher Bar */}
-      <div className="glass-panel p-2 rounded-2xl border border-surface-border flex flex-col xl:flex-row items-center justify-between gap-3 bg-[#0d1322]">
+           {/* Persona Switcher Bar */}
+      <div className="bg-white p-2.5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col xl:flex-row items-center justify-between gap-3">
         <div className="flex items-center space-x-2.5 px-3">
-          <Eye className="w-4 h-4 text-cyan-400" />
-          <span className="text-xs font-semibold text-slate-300">Lentes de Governança Executiva:</span>
+          <Eye className="w-4 h-4 text-slate-700" />
+          <span className="text-xs font-bold text-slate-900">Lentes de Governança Executiva:</span>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5 w-full xl:w-auto">
@@ -108,14 +107,14 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
             onClick={() => onSelectPersona('ciso')}
             className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
               selectedPersona === 'ciso'
-                ? 'bg-gradient-to-r from-purple-600/30 to-blue-600/30 text-purple-300 border border-purple-500/50 shadow-glow-purple'
-                : 'text-slate-400 hover:text-white hover:bg-surface border border-transparent'
+                ? 'bg-slate-900 text-white border border-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
             }`}
           >
-            <Lock className="w-4 h-4 text-purple-400 shrink-0" />
+            <Lock className="w-4 h-4 shrink-0" />
             <div className="text-left">
               <span className="block">Visão CISO</span>
-              <span className="text-[9px] font-normal text-slate-400 block truncate">Segurança & MCP</span>
+              <span className={`text-[9px] font-normal block truncate ${selectedPersona === 'ciso' ? 'text-slate-300' : 'text-slate-500'}`}>Segurança & MCP</span>
             </div>
           </button>
 
@@ -124,14 +123,14 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
             onClick={() => onSelectPersona('dpo')}
             className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
               selectedPersona === 'dpo'
-                ? 'bg-gradient-to-r from-emerald-600/30 to-teal-600/30 text-emerald-300 border border-emerald-500/50 shadow-glow-emerald'
-                : 'text-slate-400 hover:text-white hover:bg-surface border border-transparent'
+                ? 'bg-slate-900 text-white border border-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
             }`}
           >
-            <Scale className="w-4 h-4 text-emerald-400 shrink-0" />
+            <Scale className="w-4 h-4 shrink-0" />
             <div className="text-left">
               <span className="block">Visão DPO</span>
-              <span className="text-[9px] font-normal text-slate-400 block truncate">13 Regulações & RIPD</span>
+              <span className={`text-[9px] font-normal block truncate ${selectedPersona === 'dpo' ? 'text-slate-300' : 'text-slate-500'}`}>13 Regulações & RIPD</span>
             </div>
           </button>
 
@@ -140,17 +139,17 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
             onClick={() => onSelectPersona('cio')}
             className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
               selectedPersona === 'cio'
-                ? 'bg-gradient-to-r from-cyan-600/30 to-blue-600/30 text-cyan-300 border border-cyan-500/50 shadow-glow'
-                : 'text-slate-400 hover:text-white hover:bg-surface border border-transparent'
+                ? 'bg-slate-900 text-white border border-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
             }`}
           >
-            <Cpu className="w-4 h-4 text-cyan-400 shrink-0" />
+            <Cpu className="w-4 h-4 shrink-0" />
             <div className="text-left">
               <div className="flex items-center space-x-1">
                 <span>Visão CIO</span>
-                <span className="text-[8px] font-mono bg-cyan-950 text-cyan-300 px-1 rounded border border-cyan-800">Enterprise</span>
+                <span className="text-[8px] font-mono bg-slate-800 text-slate-300 px-1 rounded">Enterprise</span>
               </div>
-              <span className="text-[9px] font-normal text-slate-400 block truncate">MLOps & SLAs</span>
+              <span className={`text-[9px] font-normal block truncate ${selectedPersona === 'cio' ? 'text-slate-300' : 'text-slate-500'}`}>MLOps & SLAs</span>
             </div>
           </button>
 
@@ -159,17 +158,17 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
             onClick={() => onSelectPersona('board')}
             className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
               selectedPersona === 'board'
-                ? 'bg-gradient-to-r from-amber-600/30 to-yellow-600/30 text-amber-300 border border-amber-500/50'
-                : 'text-slate-400 hover:text-white hover:bg-surface border border-transparent'
+                ? 'bg-slate-900 text-white border border-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
             }`}
           >
-            <Landmark className="w-4 h-4 text-amber-400 shrink-0" />
+            <Landmark className="w-4 h-4 shrink-0" />
             <div className="text-left">
               <div className="flex items-center space-x-1">
                 <span>Visão Conselho</span>
-                <span className="text-[8px] font-mono bg-amber-950 text-amber-300 px-1 rounded border border-amber-800">Enterprise</span>
+                <span className="text-[8px] font-mono bg-slate-800 text-slate-300 px-1 rounded">Enterprise</span>
               </div>
-              <span className="text-[9px] font-normal text-slate-400 block truncate">Risco & Multas</span>
+              <span className={`text-[9px] font-normal block truncate ${selectedPersona === 'board' ? 'text-slate-300' : 'text-slate-500'}`}>Risco & Multas</span>
             </div>
           </button>
 
@@ -178,17 +177,17 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
             onClick={() => onSelectPersona('cfo')}
             className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
               selectedPersona === 'cfo'
-                ? 'bg-gradient-to-r from-teal-600/30 to-emerald-600/30 text-teal-300 border border-teal-500/50'
-                : 'text-slate-400 hover:text-white hover:bg-surface border border-transparent'
+                ? 'bg-slate-900 text-white border border-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
             }`}
           >
-            <DollarSign className="w-4 h-4 text-teal-400 shrink-0" />
+            <DollarSign className="w-4 h-4 shrink-0" />
             <div className="text-left">
               <div className="flex items-center space-x-1">
                 <span>Visão FinOps</span>
-                <span className="text-[8px] font-mono bg-teal-950 text-teal-300 px-1 rounded border border-teal-800">Enterprise</span>
+                <span className="text-[8px] font-mono bg-slate-800 text-slate-300 px-1 rounded">Enterprise</span>
               </div>
-              <span className="text-[9px] font-normal text-slate-400 block truncate">Custos & ROI</span>
+              <span className={`text-[9px] font-normal block truncate ${selectedPersona === 'cfo' ? 'text-slate-300' : 'text-slate-500'}`}>Budget & Tokens</span>
             </div>
           </button>
 
