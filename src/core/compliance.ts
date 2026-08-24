@@ -419,7 +419,8 @@ export async function analyzeCompliance(pkg: PackageAnalysis, source: SourceAnal
 
     if (source.aiModels.length > 0 || source.agents.length > 0) {
       if (source.frameworks.length > 0 || source.apiRoutes.length > 0) {
-        aimsEvidence.push(`Contexto da organização mapeado: ${source.frameworks.join(', ')} frameworks, ${source.apiRoutes.length} rotas`);
+        const fwNames = source.frameworks.map((f: any) => typeof f === 'string' ? f : f.framework).join(', ');
+        aimsEvidence.push(`Contexto da organização mapeado: ${fwNames || 'IA'} frameworks, ${source.apiRoutes.length} rotas`);
       } else {
         aimsGaps.push('Escopo do sistema de IA não definido (ISO 42001 Cláusula 4)');
       }

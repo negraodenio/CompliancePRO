@@ -12,43 +12,78 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({ result, on
   const [copiedType, setCopiedType] = useState<string | null>(null);
 
   const handleDownloadMarkdown = () => {
+    const applicableRegs = result.compliance?.applicableRegulations || [];
+    const models = result.source?.aiModels || [];
+    const agents = result.source?.agents || [];
+    const frameworks = result.source?.frameworks || [];
+    const violations = result.violations || [];
+
     const md = `# 🛡️ Relatório de Auditoria de Governança e Conformidade de IA
 **Projeto / Repositório:** ${result.repo?.name || 'Projeto IA'}  
 **Data da Auditoria:** ${new Date().toLocaleString('pt-BR')}  
 **Score Geral de Conformidade:** ${result.compliance?.overallScore ?? 78}/100  
 **EU AI Act Risk Tier:** ${result.aiActSummary?.overallRiskTier || 'LIMITED_RISK'}  
+**Domínio Classificado:** ${result.compliance?.summary || 'Geral'}
 
 ---
 
 ## 📊 1. Resumo Executivo
-- **Total de Arquivos:** ${result.repo?.fileCount || 0}
-- **Agentes de IA Mapeados:** ${result.source?.agents?.length || 0}
+- **Total de Arquivos Auditados:** ${result.repo?.fileCount || 0}
+- **Modelos LLM / IA Detectados:** ${models.length}
+- **Agentes de IA Mapeados:** ${agents.length}
 - **Ocorrências de Shadow AI:** ${result.shadowAI?.length || 0}
-- **Total de Violações:** ${result.violations?.length || 0}
+- **Total de Violações Identificadas:** ${violations.length}
 
 ---
 
 ## 📜 2. Status das 13 Regulações Globais
-${Object.entries(result.compliance?.regulations || {})
-  .map(([k, v]: [string, any]) => `- **${k.toUpperCase()}**: Status: ${v.status} (Score: ${v.score ?? 'N/A'})`)
-  .join('\n')}
+
+| Regulação | Autoridade | Status | Principais Requisitos / Evidências |
+| :--- | :---: | :---: | :--- |
+${applicableRegs.map(reg => {
+  const statusLabel = reg.status === 'compliant' ? '✅ Conforme' : reg.status === 'partial' ? '⚠️ Parcial' : reg.status === 'non_compliant' ? '❌ Não Conforme' : '⚪ Não Aplicável';
+  const evidence = reg.evidenceFound?.slice(0, 2).join('; ') || 'Em avaliação';
+  return `| **${reg.name}** | ${reg.authority} | ${statusLabel} | ${evidence} |`;
+}).join('\n')}
 
 ---
 
-## 🤖 3. Inventário de Agentes e Modelos
-${(result.source?.agents || []).map((a, i) => `${i + 1}. **${a.name}** (${a.framework || 'Custom'}) - Risco: ${a.riskLevel} - Autônomo: ${a.isAutonomous ? 'Sim' : 'Não'}`).join('\n')}
+## 🤖 3. Inventário de Agentes, Modelos e Frameworks
+
+### 🧠 Modelos de IA Detectados (${models.length}):
+${models.length > 0
+  ? models.map((m, i) => `${i + 1}. **${m.provider}** \`${m.modelId || 'Default'}\` — Finalidade: *${m.usage || 'Inference / Chat'}*`).join('\n')
+  : '- Nenhum modelo LLM externo identificado.'}
+
+### 🤖 Agentes de IA (${agents.length}):
+${agents.length > 0
+  ? agents.map((a, i) => `${i + 1}. **${a.name}** (${a.framework || 'Custom'}) — Nível de Risco: **${a.riskLevel?.toUpperCase()}** — Decisão Autônoma: ${a.isAutonomous ? 'Sim (HITL Requerido)' : 'Não'}`).join('\n')
+  : '- Nenhum agente autônomo específico registrado.'}
+
+### 🔌 Frameworks e Ferramentas:
+${frameworks.length > 0
+  ? frameworks.map((f: any) => `- **${typeof f === 'string' ? f : f.framework}** (Confiança: ${typeof f === 'string' ? 'Alta' : f.confidence})`).join('\n')
+  : '- Sem frameworks adicionais detectados.'}
 
 ---
 
-## ⚠️ 4. Violações e Riscos Encontrados
-${(result.violations || []).map((v, i) => `### ${i + 1}. [${v.severity?.toUpperCase()}] ${v.ruleId}
-- **Regulação:** ${v.regulation || 'Geral'}
-- **Arquivo:** ${v.file || 'N/A'}${v.line ? `:${v.line}` : ''}
-- **Mensagem:** ${v.message}
-`).join('\n')}
+## ⚠️ 4. Violações e Riscos Encontrados (${violations.length})
+${violations.length > 0
+  ? violations.map((v: any, i: number) => {
+      const ruleCode = v.rule || v.ruleId || v.id || 'VIOLATION_DETECTED';
+      const regCategory = v.regulation || v.category?.toUpperCase() || 'Geral / OWASP';
+      const fileLoc = v.file ? `${v.file}${v.line ? `:${v.line}` : ''}` : 'Configuração Global';
+      return `### ${i + 1}. [${(v.severity || 'HIGH').toUpperCase()}] ${ruleCode}
+- **Regulação / Categoria:** ${regCategory}
+- **Localização:** \`${fileLoc}\`
+- **Mensagem:** ${v.message || v.description || 'Risco de conformidade identificado'}
+- **Recomendação:** ${v.recommendation || 'Adequar implementação aos padrões de conformidade.'}
+`;
+    }).join('\n')
+  : 'Nenhuma violação crítica encontrada. Código em total conformidade!'}
 
 ---
-*Gerado automaticamente pelo CompliancePRO AI Scanner.*
+*Gerado automaticamente por ComplyPRO.pt — AI & Regulatory Governance Platform.*
 `;
 
     const blob = new Blob([md], { type: 'text/markdown' });

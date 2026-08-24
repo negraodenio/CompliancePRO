@@ -134,7 +134,7 @@ export async function runLocalScan(
   const ownerInfo: OwnerInfo = {
     id: 'scanner-local-owner',
     label: 'AI Governance Board',
-    email: 'compliance@aegisgov.ai',
+    email: 'compliance@complypro.pt',
     role: 'head_ai',
     teams: ['AI Ethics', 'Security', 'Legal'],
   };
@@ -142,7 +142,7 @@ export async function runLocalScan(
   const result: ScannerResult = {
     repo: {
       name: repoName,
-      owner: 'CompliancePRO',
+      owner: 'ComplyPRO',
       fullName: `${repoName}`,
       description: 'Audited AI Repository & Agent Pipeline',
       homepage: repoUrl,
