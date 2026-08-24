@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { 
   Bot, Cpu, DollarSign, Database, ShieldAlert, CheckCircle, 
-  Zap, Layers, AlertCircle, ArrowRight, ArrowDownRight, Workflow, Briefcase, Eye, ChevronDown, ChevronUp
+  Zap, Layers, AlertCircle, ArrowRight, ArrowDownRight, Workflow, Briefcase, Eye, ChevronDown, ChevronUp,
+  Sparkles, Lock
 } from 'lucide-react';
 import type { ScannerResult } from '../../core/types';
 import { getAgentBusinessAndSipoc, inferAgentFramework } from '../services/agent-sipoc-mapper';
