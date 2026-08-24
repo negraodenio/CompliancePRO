@@ -214,7 +214,15 @@ export function enrichViolationWithLaw(violation: CodeViolation): {
   }
 
   // 4. OWASP & OWASP Top 10 for LLMs
-  if (rule.includes('OWASP') || rule.includes('PROMPT') || rule.includes('INJECTION') || rule.includes('SQL') || rule.includes('XSS') || rule.includes('AUTH')) {
+  if (rule.includes('OWASP') || rule.includes('PROMPT') || rule.includes('INJECTION') || rule.includes('SQL') || rule.includes('XSS') || rule.includes('AUTH') || rule.includes('DEBUG') || rule.includes('SECRET') || rule.includes('CREDENTIAL')) {
+    if (rule.includes('DEBUG') || msg.includes('debug') || rule.includes('A05')) {
+      return {
+        regulationName: 'OWASP Top 10',
+        lawArticle: 'OWASP A05:2021 (Security Misconfiguration)',
+        ruleTitle: 'Modo de Depuração (Debug Mode) Ativo em Produção',
+        regIds: ['OWASP_LLM_TOP_10', 'ISO_42001', 'NIS2'],
+      };
+    }
     if (rule.includes('PROMPT') || msg.includes('prompt')) {
       return {
         regulationName: 'OWASP LLM Top 10',
@@ -229,6 +237,22 @@ export function enrichViolationWithLaw(violation: CodeViolation): {
         lawArticle: 'OWASP A03:2021 (Injection Flaws) & LLM02',
         ruleTitle: 'Consulta SQL Não Parametrizada em Fluxo de IA',
         regIds: ['OWASP_LLM_TOP_10', 'BCB_4893', 'PCI_DSS'],
+      };
+    }
+    if (rule.includes('SECRET') || rule.includes('CREDENTIAL') || rule.includes('PASSWORD') || rule.includes('API_KEY') || rule.includes('A07')) {
+      return {
+        regulationName: 'OWASP Security & ISO 42001',
+        lawArticle: 'OWASP A07:2021 (Identification & Auth Failures) / NIST MANAGE 3.1',
+        ruleTitle: 'Credencial / Chave Secreta Hardcoded no Código',
+        regIds: ['OWASP_LLM_TOP_10', 'ISO_42001', 'NIS2'],
+      };
+    }
+    if (rule.includes('CRYPTO') || rule.includes('SSL') || rule.includes('TLS') || rule.includes('A02')) {
+      return {
+        regulationName: 'OWASP Security',
+        lawArticle: 'OWASP A02:2021 (Cryptographic Failures)',
+        ruleTitle: 'Falha Criptográfica / Transporte Inseguro',
+        regIds: ['OWASP_LLM_TOP_10', 'PCI_DSS', 'LGPD'],
       };
     }
     return {
