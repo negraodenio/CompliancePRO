@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { 
   Scale, ChevronRight, CheckCircle2, AlertTriangle, ShieldCheck, 
-  ShieldAlert, ExternalLink, FileText 
+  ShieldAlert, ExternalLink, FileText, Lock, ArrowRight, Sparkles
 } from 'lucide-react';
 import type { ScannerResult } from '../../core/types';
 import { calculateRegulationScores, RegulationScoreInfo } from '../services/regulation-mapper';
+import { EnterpriseLeadModal } from './EnterpriseLeadModal';
 
 interface RegulationsGridProps {
   result: ScannerResult;
@@ -111,6 +112,8 @@ const REGULATION_DEFINITIONS = [
 
 export const RegulationsGrid: React.FC<RegulationsGridProps> = ({ result }) => {
   const [selectedReg, setSelectedReg] = useState<RegulationScoreInfo | null>(null);
+  const [showEnterpriseModal, setShowEnterpriseModal] = useState(false);
+  const [enterpriseContext, setEnterpriseContext] = useState('');
 
   // Dynamic real score calculation connected directly to the code violations
   const regulationScores = calculateRegulationScores(result.violations || [], REGULATION_DEFINITIONS);
@@ -185,6 +188,81 @@ export const RegulationsGrid: React.FC<RegulationsGridProps> = ({ result }) => {
           );
         })}
       </div>
+
+      {/* 🔒 Gerador Automatizado de Dossiê Técnico EU AI Act (Art. 11 & Anexo IV) - Blurred Enterprise Teaser */}
+      <div className="glass-panel p-6 rounded-2xl border border-purple-500/30 bg-[#090d18] space-y-4 shadow-xl mt-6">
+        <div className="flex items-center justify-between pb-3 border-b border-surface-border">
+          <div className="flex items-center space-x-2.5">
+            <div className="p-2 rounded-xl bg-purple-950 text-purple-400 border border-purple-800">
+              <FileText className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center space-x-2">
+                <span>Gerador Automatizado de Dossiê Técnico EU AI Act (Art. 11 & Anexo IV)</span>
+                <span className="px-2 py-0.5 text-[10px] bg-purple-950 text-purple-300 border border-purple-800 rounded font-mono">
+                  Enterprise
+                </span>
+              </h3>
+              <p className="text-[11px] text-slate-400">Documentação técnica oficial probatória para organismos notificados e auditorias da União Europeia</p>
+            </div>
+          </div>
+
+          <span className="text-[10px] font-mono text-purple-300 bg-purple-950/60 border border-purple-800/50 px-2.5 py-1 rounded-lg">
+            Conformidade Art. 11
+          </span>
+        </div>
+
+        {/* Blurred Technical Dossier Sections */}
+        <div className="relative rounded-2xl border border-slate-800 overflow-hidden p-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs filter blur-[3.5px] select-none pointer-events-none opacity-40">
+            <div className="p-3 rounded-lg bg-[#060a14] border border-slate-800 space-y-1">
+              <span className="font-bold text-white block">1. Arquitetura & Especificação do Sistema</span>
+              <p className="text-[10px] text-slate-400">Diagrama de nós, fluxos de inferência, versões de pesos e hiperparâmetros de base.</p>
+            </div>
+            <div className="p-3 rounded-lg bg-[#060a14] border border-slate-800 space-y-1">
+              <span className="font-bold text-white block">2. Ficha de Dados & Bias Mitigation</span>
+              <p className="text-[10px] text-slate-400">Auditoria de vieses, proveniência de dados e medidas de desidentificação de PII.</p>
+            </div>
+            <div className="p-3 rounded-lg bg-[#060a14] border border-slate-800 space-y-1">
+              <span className="font-bold text-white block">3. Plano de Vigilância Pós-Mercado</span>
+              <p className="text-[10px] text-slate-400">Monitoramento de drift contínuo, relatórios de acidentes graves e plano de contingência.</p>
+            </div>
+          </div>
+
+          {/* Floating Action Overlay with Lock */}
+          <div className="absolute inset-0 bg-[#070b16]/80 backdrop-blur-[2px] flex flex-col sm:flex-row items-center justify-between p-5 gap-3">
+            <div className="flex items-center space-x-3 text-left">
+              <div className="p-2.5 rounded-xl bg-purple-950 text-purple-400 border border-purple-800 shrink-0">
+                <Lock className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white">
+                  Exportação Completa do Dossiê Técnico para Conformidade CE
+                </h4>
+                <p className="text-[11px] text-slate-300 max-w-xl">
+                  Gere o dossiê formal de conformidade de alta complexidade exigido pelo Anexo IV do EU AI Act com um único clique.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setEnterpriseContext('Gerador de Dossiê Técnico EU AI Act (Art. 11 & Anexo IV)');
+                setShowEnterpriseModal(true);
+              }}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white text-xs font-bold flex items-center space-x-2 shadow-glow-purple cursor-pointer transition-all shrink-0"
+            >
+              <span>Desbloquear Dossiê EU AI Act no Enterprise</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Enterprise Lead Capture Modal */}
+      {showEnterpriseModal && (
+        <EnterpriseLeadModal onClose={() => setShowEnterpriseModal(false)} featureContext={enterpriseContext} />
+      )}
 
       {/* Detail Modal */}
       {selectedReg && (

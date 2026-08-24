@@ -10,6 +10,7 @@ import { AgentInventory } from './AgentInventory';
 import { ViolationsList } from './ViolationsList';
 import { RipdDocumentModal } from './RipdDocumentModal';
 import { inferAgentFramework } from '../services/agent-sipoc-mapper';
+import { EnterpriseLeadModal } from './EnterpriseLeadModal';
 
 interface PersonaViewsProps {
   result: ScannerResult;
@@ -25,6 +26,8 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
   onOpenExport,
 }) => {
   const [showRipdModal, setShowRipdModal] = useState(false);
+  const [showEnterpriseModal, setShowEnterpriseModal] = useState(false);
+  const [enterpriseContext, setEnterpriseContext] = useState('');
   const [copiedRipd, setCopiedRipd] = useState(false);
   
   // Single Source of Truth for all datasets
@@ -270,6 +273,104 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
             </div>
           </div>
 
+          {/* 🔒 Framework CG-AG: Matriz de 12 Controles de Agentes Autônomos (Blurred Enterprise Teaser) */}
+          <div className="glass-panel p-6 rounded-2xl border border-cyan-500/30 bg-[#090e1c] space-y-4 shadow-xl">
+            <div className="flex items-center justify-between pb-3 border-b border-surface-border">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 rounded-xl bg-cyan-950 text-cyan-400 border border-cyan-800">
+                  <Shield className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center space-x-2">
+                    <span>Framework CG-AG: Matriz de 12 Controles de Agentes Autônomos</span>
+                    <span className="px-2 py-0.5 text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800 rounded font-mono">
+                      Enterprise Suite
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">Postura de segurança defensiva para arquiteturas Multi-Agente em produção</p>
+                </div>
+              </div>
+
+              <span className="text-[10px] font-mono text-cyan-300 bg-cyan-950/60 border border-cyan-800/50 px-2.5 py-1 rounded-lg">
+                Padrão CISO Enterprise
+              </span>
+            </div>
+
+            {/* Blurred Grid of 12 Controls */}
+            <div className="relative rounded-2xl border border-slate-800 overflow-hidden p-2">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs filter blur-[3.5px] select-none pointer-events-none opacity-40">
+                <div className="p-2.5 rounded-lg bg-[#060a14] border border-slate-800">
+                  <span className="font-mono text-cyan-400 font-bold block text-[10px]">CG-AG-01</span>
+                  <span className="font-semibold text-white block">Sandboxing de Execução</span>
+                  <span className="text-[10px] text-slate-400">Isolamento de containers para nós de código</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-[#060a14] border border-slate-800">
+                  <span className="font-mono text-cyan-400 font-bold block text-[10px]">CG-AG-02</span>
+                  <span className="font-semibold text-white block">Escopos de MCP / Tools</span>
+                  <span className="text-[10px] text-slate-400">Princípio do menor privilégio em conexões</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-[#060a14] border border-slate-800">
+                  <span className="font-mono text-cyan-400 font-bold block text-[10px]">CG-AG-03</span>
+                  <span className="font-semibold text-white block">Imutabilidade de Prompts</span>
+                  <span className="text-[10px] text-slate-400">Assinatura HMAC de System Prompts</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-[#060a14] border border-slate-800">
+                  <span className="font-mono text-cyan-400 font-bold block text-[10px]">CG-AG-04</span>
+                  <span className="font-semibold text-white block">Circuit Breaker FinOps</span>
+                  <span className="text-[10px] text-slate-400">Corte automático de loops infinitos</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-[#060a14] border border-slate-800">
+                  <span className="font-mono text-cyan-400 font-bold block text-[10px]">CG-AG-05</span>
+                  <span className="font-semibold text-white block">Anti-Prompt Injection</span>
+                  <span className="text-[10px] text-slate-400">Filtragem semântica em tempo real</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-[#060a14] border border-slate-800">
+                  <span className="font-mono text-cyan-400 font-bold block text-[10px]">CG-AG-06</span>
+                  <span className="font-semibold text-white block">Trilha Forense SHA-256</span>
+                  <span className="text-[10px] text-slate-400">Logs imutáveis auditáveis por reguladores</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-[#060a14] border border-slate-800">
+                  <span className="font-mono text-cyan-400 font-bold block text-[10px]">CG-AG-07</span>
+                  <span className="font-semibold text-white block">HITL em Ações Críticas</span>
+                  <span className="text-[10px] text-slate-400">Validação humana em deletes/updates</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-[#060a14] border border-slate-800">
+                  <span className="font-mono text-cyan-400 font-bold block text-[10px]">CG-AG-08</span>
+                  <span className="font-semibold text-white block">Kill Switch Remoto</span>
+                  <span className="text-[10px] text-slate-400">Desativação instantânea de agentes</span>
+                </div>
+              </div>
+
+              {/* Floating Action Overlay with Lock */}
+              <div className="absolute inset-0 bg-[#070b16]/80 backdrop-blur-[2px] flex flex-col sm:flex-row items-center justify-between p-5 gap-3">
+                <div className="flex items-center space-x-3 text-left">
+                  <div className="p-2.5 rounded-xl bg-cyan-950 text-cyan-400 border border-cyan-800 shrink-0">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white">
+                      Matriz Completa de 12 Controles CG-AG em Produção
+                    </h4>
+                    <p className="text-[11px] text-slate-300 max-w-xl">
+                      Ative a validação em tempo real dos 12 controles de segurança de agentes autônomos com telemetria contínua e bloqueio ativo de ataques.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setEnterpriseContext('Framework CG-AG (12 Controles de Agentes Autônomos)');
+                    setShowEnterpriseModal(true);
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black text-xs font-bold flex items-center space-x-2 shadow-glow cursor-pointer transition-all shrink-0"
+                >
+                  <span>Desbloquear Matriz CG-AG no Enterprise</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Technical Violations Feed */}
           <ViolationsList result={result} />
 
@@ -312,6 +413,84 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
             </div>
           </div>
 
+          {/* 🔒 Módulo de Gestão de Incidentes com IA & Notificação ANPD em 72h (Blurred Enterprise Teaser) */}
+          <div className="glass-panel p-6 rounded-2xl border border-emerald-500/30 bg-[#061410] space-y-4 shadow-xl">
+            <div className="flex items-center justify-between pb-3 border-b border-surface-border">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 rounded-xl bg-emerald-950 text-emerald-400 border border-emerald-800">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center space-x-2">
+                    <span>Módulo de Resposta a Incidentes de IA & Notificação à ANPD em 72h</span>
+                    <span className="px-2 py-0.5 text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 rounded font-mono">
+                      LGPD Art. 48 & Art. 52
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">Workflow automatizado de contenção, mensuração de impacto a titulares e geração de ofício</p>
+                </div>
+              </div>
+
+              <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950/60 border border-emerald-800/50 px-2.5 py-1 rounded-lg">
+                Auditoria Legal 24/7
+              </span>
+            </div>
+
+            {/* Blurred Incident Workflow */}
+            <div className="relative rounded-2xl border border-slate-800 overflow-hidden p-2">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5 text-xs filter blur-[3.5px] select-none pointer-events-none opacity-40">
+                <div className="p-3 rounded-lg bg-[#040c0a] border border-slate-800">
+                  <span className="font-mono text-emerald-400 font-bold block text-[10px]">Etapa 1</span>
+                  <span className="font-semibold text-white block">Detecção de Deriva de PII</span>
+                  <span className="text-[10px] text-slate-400">Alerta de vazamento de CPF/dados bancários</span>
+                </div>
+                <div className="p-3 rounded-lg bg-[#040c0a] border border-slate-800">
+                  <span className="font-mono text-emerald-400 font-bold block text-[10px]">Etapa 2</span>
+                  <span className="font-semibold text-white block">Avaliação de Risco & Dano</span>
+                  <span className="text-[10px] text-slate-400">Cálculo de gravidade e número de titulares</span>
+                </div>
+                <div className="p-3 rounded-lg bg-[#040c0a] border border-slate-800">
+                  <span className="font-mono text-emerald-400 font-bold block text-[10px]">Etapa 3</span>
+                  <span className="font-semibold text-white block">Ofício Pré-Formatado ANPD</span>
+                  <span className="text-[10px] text-slate-400">Minuta jurídica no padrão regulatório</span>
+                </div>
+                <div className="p-3 rounded-lg bg-[#040c0a] border border-slate-800">
+                  <span className="font-mono text-emerald-400 font-bold block text-[10px]">Etapa 4</span>
+                  <span className="font-semibold text-white block">Registro de Trilha RIPD</span>
+                  <span className="text-[10px] text-slate-400">Anexação probatória ao livro de incidentes</span>
+                </div>
+              </div>
+
+              {/* Floating Action Overlay with Lock */}
+              <div className="absolute inset-0 bg-[#040c0a]/80 backdrop-blur-[2px] flex flex-col sm:flex-row items-center justify-between p-5 gap-3">
+                <div className="flex items-center space-x-3 text-left">
+                  <div className="p-2.5 rounded-xl bg-emerald-950 text-emerald-400 border border-emerald-800 shrink-0">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white">
+                      Automação de Resposta a Incidentes de Privacidade (LGPD & GDPR)
+                    </h4>
+                    <p className="text-[11px] text-slate-300 max-w-xl">
+                      Garanta o cumprimento do prazo legal de 72 horas para comunicação de incidentes de IA com geração automática de dossiês probatórios.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setEnterpriseContext('Resposta a Incidentes ANPD em 72h & Trilha RIPD');
+                    setShowEnterpriseModal(true);
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black text-xs font-bold flex items-center space-x-2 shadow-glow-emerald cursor-pointer transition-all shrink-0"
+                >
+                  <span>Ativar Módulo ANPD no Enterprise</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* 13 Regulations Grid */}
           <RegulationsGrid result={result} />
 
@@ -324,6 +503,11 @@ export const PersonaViews: React.FC<PersonaViewsProps> = ({
       {/* Official Visual RIPD Modal */}
       {showRipdModal && (
         <RipdDocumentModal result={result} onClose={() => setShowRipdModal(false)} />
+      )}
+
+      {/* Enterprise Lead Capture Modal */}
+      {showEnterpriseModal && (
+        <EnterpriseLeadModal onClose={() => setShowEnterpriseModal(false)} featureContext={enterpriseContext} />
       )}
 
     </div>
