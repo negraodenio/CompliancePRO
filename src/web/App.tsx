@@ -15,6 +15,7 @@ import { DecisionsPipelineView } from './views/DecisionsPipelineView';
 import { HitlApprovalsView } from './views/HitlApprovalsView';
 import { RemediationActionsView } from './views/RemediationActionsView';
 import { IncidentsFailsafeView } from './views/IncidentsFailsafeView';
+import { RuntimeFinOpsView } from './views/RuntimeFinOpsView';
 import { HeroScanner } from './components/HeroScanner';
 import { AgentInventory } from './components/AgentInventory';
 import { RegulationsGrid } from './components/RegulationsGrid';
@@ -229,6 +230,12 @@ export const App: React.FC = () => {
                 </div>
               )}
             </div>
+          )}
+
+          {activeView === 'operate-runtime' && (
+            <RuntimeFinOpsView 
+              result={scanResult}
+            />
           )}
 
           {activeView === 'operate-incidents' && (
