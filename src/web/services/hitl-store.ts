@@ -1,6 +1,6 @@
 /**
  * Authoritative Store for Runtime Human-in-the-Loop (HITL) Gate Approvals
- * Causal Pipeline: Policy Trigger -> Requested Action -> Runtime Gate -> Human Sign-off -> Token Dispatch -> Evidence
+ * Causal Pipeline: Policy Trigger -> Requested Action -> Runtime Gate -> Human Sign-off -> Authorization Recorded -> Evidence
  */
 
 import { DecisionStore } from './decision-store';
@@ -33,12 +33,12 @@ export interface HITLApprovalRequest {
     decidedAt: string;
     decision: 'APPROVE' | 'REJECT';
     rationale: string;
-    executionState: 'TOKEN_DISPATCHED' | 'EXECUTION_TERMINATED';
+    executionState: 'AUTHORIZATION_GRANTED' | 'EXECUTION_BLOCKED';
     evidenceDigest: string;
   };
 }
 
-const STORAGE_KEY_HITL = 'cg_ag_hitl_gates_v1';
+const STORAGE_KEY_HITL = 'cg_ag_hitl_gates_v2';
 
 const BASELINE_GATES: HITLApprovalRequest[] = [
   {
@@ -122,7 +122,7 @@ const BASELINE_GATES: HITLApprovalRequest[] = [
       decidedAt: '2026-08-27T14:15:00Z',
       decision: 'REJECT',
       rationale: 'Unscheduled table reindex on production database blocked. Must be performed during designated maintenance window.',
-      executionState: 'EXECUTION_TERMINATED',
+      executionState: 'EXECUTION_BLOCKED',
       evidenceDigest: 'DIGEST-GATE-8799-REJECT-SHA256'
     }
   }
@@ -182,7 +182,7 @@ export class HitlStore {
         decidedAt: new Date().toISOString(),
         decision,
         rationale,
-        executionState: decision === 'APPROVE' ? 'TOKEN_DISPATCHED' : 'EXECUTION_TERMINATED',
+        executionState: decision === 'APPROVE' ? 'AUTHORIZATION_GRANTED' : 'EXECUTION_BLOCKED',
         evidenceDigest: digest
       }
     };
@@ -201,7 +201,7 @@ export class HitlStore {
       eventType: 'DECISION_EXECUTION',
       timestamp: new Date().toISOString(),
       tamperEvidentSignature: digest,
-      payloadSummary: `Runtime HITL Gate [${decision}] on ${targetGate.actionTitle} by ${decidedBy}`,
+      payloadSummary: `Runtime Human Gate [${decision}] on ${targetGate.actionTitle} by ${decidedBy}`,
       retentionDays: 1825
     };
 

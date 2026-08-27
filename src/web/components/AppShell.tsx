@@ -27,6 +27,7 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { useIndustry, INDUSTRY_PROFILES } from '../context/IndustryContext';
 import { DecisionStore } from '../services/decision-store';
+import { HitlStore } from '../services/hitl-store';
 
 export type ActiveNavView = 
   | 'overview-center'
@@ -69,16 +70,24 @@ export const AppShell: React.FC<AppShellProps> = ({
   const { activeProfile, setActiveProfile, environment, setEnvironment } = useIndustry();
   const [isIndustryMenuOpen, setIsIndustryMenuOpen] = useState(false);
   const [pendingDecisionsCount, setPendingDecisionsCount] = useState(3);
+  const [pendingHitlCount, setPendingHitlCount] = useState(2);
 
-  const refreshBadge = () => {
-    const list = DecisionStore.getFindings();
-    const count = list.filter(f => f.status === 'PENDING_DECISION').length;
-    setPendingDecisionsCount(count);
+  const refreshBadges = () => {
+    const findings = DecisionStore.getFindings();
+    setPendingDecisionsCount(findings.filter(f => f.status === 'PENDING_DECISION').length);
+
+    const gates = HitlStore.getGates();
+    setPendingHitlCount(gates.filter(g => g.status === 'PENDING_REVIEW').length);
   };
 
   useEffect(() => {
-    refreshBadge();
-    return DecisionStore.subscribe(refreshBadge);
+    refreshBadges();
+    const unsub1 = DecisionStore.subscribe(refreshBadges);
+    const unsub2 = HitlStore.subscribe(refreshBadges);
+    return () => {
+      unsub1();
+      unsub2();
+    };
   }, []);
 
   const navItems = [
@@ -110,7 +119,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       group: 'OPERATE',
       items: [
         { id: 'operate-decisions', label: 'Decisions Pipeline', icon: Scale, badge: null },
-        { id: 'operate-approvals', label: 'HITL Approvals', icon: LockKeyhole, badge: pendingDecisionsCount > 0 ? `${pendingDecisionsCount} Pending` : null },
+        { id: 'operate-approvals', label: 'HITL Approvals', icon: LockKeyhole, badge: pendingHitlCount > 0 ? `${pendingHitlCount} Pending` : null },
         { id: 'operate-actions', label: 'Remediation Actions', icon: CheckCircle2, badge: null },
         { id: 'operate-incidents', label: 'Incidents & Failsafe', icon: Zap, badge: null },
         { id: 'operate-runtime', label: 'Runtime FinOps', icon: Activity, badge: null }

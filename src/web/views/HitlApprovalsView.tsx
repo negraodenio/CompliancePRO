@@ -71,7 +71,7 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
 
     setApprovalRationale('');
     setFeedback({
-      message: `Runtime Human Gate [${decision}] executed on ${selectedGate.gateId}. Token ${res.gate.approvalOutcome?.executionState}.`,
+      message: `Runtime Human Gate [${decision}] executed on ${selectedGate.gateId}. ${res.gate.approvalOutcome?.executionState === 'AUTHORIZATION_GRANTED' ? 'Execution Authorization Granted' : 'Execution Formally Blocked'}.`,
       gateId: res.gate.gateId,
       digest: res.evidence.tamperEvidentSignature
     });
@@ -144,7 +144,7 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
         </div>
       )}
 
-      {/* MISSION CONTROL STATS */}
+      {/* MISSION CONTROL STATS (Strictly consistent with state: 2 Pending, 0 Authorized, 1 Blocked) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
         <div className="p-4 rounded-xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 elevation-card">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
@@ -152,7 +152,7 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
             <LockKeyhole className="w-4 h-4 text-rose-500" />
           </div>
           <div className="mt-2 text-2xl font-bold text-rose-600 dark:text-rose-400">{pendingCount}</div>
-          <div className="text-[11px] text-slate-500 mt-1">Autonomous Execution Intercepted</div>
+          <div className="text-[11px] text-slate-500 mt-1">Autonomous Actions Intercepted</div>
         </div>
 
         <div className="p-4 rounded-xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 elevation-card">
@@ -161,7 +161,7 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
             <Ban className="w-4 h-4 text-amber-500" />
           </div>
           <div className="mt-2 text-2xl font-bold text-amber-600 dark:text-amber-400">{blockedCount}</div>
-          <div className="text-[11px] text-slate-500 mt-1">Human Rejections & Failures</div>
+          <div className="text-[11px] text-slate-500 mt-1">Human Rejections & Interventions</div>
         </div>
 
         <div className="p-4 rounded-xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 elevation-card">
@@ -170,7 +170,7 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
           </div>
           <div className="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{approvedTodayCount}</div>
-          <div className="text-[11px] text-slate-500 mt-1">Signed Tokens Dispatched</div>
+          <div className="text-[11px] text-slate-500 mt-1">Execution Authorizations Granted</div>
         </div>
 
         <div className="p-4 rounded-xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 elevation-card">
@@ -205,7 +205,7 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
           >
             <option value="ALL">All Gate Statuses</option>
             <option value="PENDING_REVIEW">⚠️ Pending Review (Blocked)</option>
-            <option value="APPROVED">🟢 Authorized / Dispatched</option>
+            <option value="APPROVED">🟢 Authorized</option>
             <option value="REJECTED">🔴 Rejected / Terminated</option>
           </select>
 
@@ -398,7 +398,7 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Execution State:</span>
-                        <span className="font-bold text-rose-600 dark:text-rose-400">BLOCKED (Awaiting Token Dispatch)</span>
+                        <span className="font-bold text-rose-600 dark:text-rose-400">BLOCKED (Awaiting Human Authorization)</span>
                       </div>
                     </div>
                   </div>
@@ -410,7 +410,7 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
                     {selectedGate.status === 'PENDING_REVIEW' ? (
                       <div className="space-y-4">
                         <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-amber-900 dark:text-amber-200 leading-relaxed text-[11px]">
-                          ⚠️ <strong>Action Execution Intercepted:</strong> The agent cannot continue until an authorized human signs off or rejects the tool execution request.
+                          ⚠️ <strong>Action Execution Intercepted:</strong> The agent cannot continue until an authorized human grants or rejects the tool execution request.
                         </div>
 
                         <div>
@@ -435,7 +435,7 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
                             className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5"
                           >
                             <CheckCircle2 className="w-4 h-4" />
-                            <span>Authorize & Dispatch Token</span>
+                            <span>Authorize Action Execution</span>
                           </button>
 
                           <button
