@@ -67,25 +67,24 @@ export interface AgentGovernancePassport {
 }
 
 export class AgentPassportGenerator {
-  /**
-   * Generates a formal Agent Governance Passport from static analysis findings.
-   */
   static generatePassport(
     agent: DetectedAgent,
     repoName = 'Enterprise System',
     violations: CodeViolation[] = []
   ): AgentGovernancePassport {
-    const rawId = `CG-AG-${agent.framework.toUpperCase()}-${agent.name.toUpperCase().replace(/\s+/g, '_')}`;
-    const hash = crypto.createHash('sha256').update(rawId + agent.file + Date.now()).digest('hex').substring(0, 12);
+    const fw = (agent.framework || 'AI_AGENT').toUpperCase();
+    const rawId = `CG-AG-${fw}-${agent.name.toUpperCase().replace(/\s+/g, '_')}`;
+    const hash = crypto.createHash('sha256').update(rawId + (agent.filePath || '') + Date.now()).digest('hex').substring(0, 12);
     const agentId = `${rawId}-${hash.substring(0, 4).toUpperCase()}`;
 
-    const agentViolations = violations.filter(v => v.file === agent.file);
+    const agentViolations = violations.filter(v => v.file === (agent.filePath || ''));
     const hasPii = agentViolations.some(v => v.rule.includes('PII') || v.rule.includes('LGPD'));
-    const isHighRisk = agent.riskLevel === 'HIGH' || agentViolations.some(v => v.severity === 'CRITICAL');
+    const rLower = (agent.riskLevel || 'medium').toLowerCase();
+    const isHighRisk = rLower === 'high' || rLower === 'critical' || agentViolations.some(v => v.severity === 'critical');
 
     const capabilities: string[] = [
-      `Agentic orchestration via ${agent.framework}`,
-      `Task execution: ${agent.type || 'Workflow processing'}`
+      `Agentic orchestration via ${agent.framework || 'Generative Engine'}`,
+      `Task execution: ${agent.businessPurpose || agent.type || 'Workflow processing'}`
     ];
     if (agent.tools && agent.tools.length > 0) {
       capabilities.push(`Tool augmentation (${agent.tools.length} tools registered)`);
@@ -96,18 +95,18 @@ export class AgentPassportGenerator {
       passportVersion: '1.0.0',
       issuedAt: new Date().toISOString(),
       name: agent.name,
-      purpose: agent.type ? `Executes ${agent.type} within ${repoName}` : 'Autonomous task execution and orchestration',
+      purpose: agent.businessPurpose || (agent.type ? `Executes ${agent.type} within ${repoName}` : 'Autonomous task execution and orchestration'),
       owner: {
         name: 'Accountable Technical Lead',
         role: 'AI System Deployer (EU AI Act Art. 26 / DPO LGPD)',
         accountableUnit: repoName
       },
-      riskLevel: isHighRisk ? 'HIGH' : (agent.riskLevel === 'MEDIUM' ? 'MEDIUM' : 'LOW'),
+      riskLevel: isHighRisk ? 'HIGH' : (rLower === 'medium' ? 'MEDIUM' : 'LOW'),
       autonomyLevel: isHighRisk ? 'L3 (Autonomous Bounded)' : 'L2 (Supervised / HITL)',
       model: {
-        framework: agent.framework,
-        declaredModel: 'LLM Orchestrated Engine',
-        provider: agent.framework
+        framework: agent.framework || 'LLM Engine',
+        declaredModel: (agent.models && agent.models[0]) || 'LLM Orchestrated Engine',
+        provider: agent.framework || 'Standard Provider'
       },
       capabilities,
       tools: agent.tools || ['Standard Context Buffer'],
@@ -153,9 +152,6 @@ export class AgentPassportGenerator {
     return passport;
   }
 
-  /**
-   * Renders the Passport as human-readable Markdown for compliance dossiers.
-   */
   static toMarkdown(passport: AgentGovernancePassport): string {
     const statusEmoji = passport.executionStatus === 'ACTIVE_GOVERNED' ? '🟢' : '🟡';
     
@@ -202,7 +198,7 @@ ${passport.guardrails.map(g => `- 🛡️ ${g}`).join('\n')}
 - **Emergency Kill Switch:** ${passport.incidentHistory.killSwitchReady ? '🟢 PRONTO / TESTADO' : '🔴 AUSENTE'}
 
 ---
-*Governed under the CodeGuard Agent Governance Standard (CG-AG). Every Agent Action Must Be Governable and Evidenced.*
+*Governed under the CodeGuard Agent Governance Standard (CG-AG). Principle: Every Agent Action Must Be Governable and Evidenced.*
 `;
   }
 }

@@ -2,8 +2,22 @@ import { Router, Request, Response } from 'express';
 import { CodebaseAnalyzer } from '../../core/analyzer';
 import { AgenticLightAssessment } from '../../core/agentic-light';
 import { AgentPassportGenerator } from '../../core/agent-passport';
+import { GovernanceControlPlane } from '../../core/governance-control-plane';
 
 export const agenticRouter = Router();
+
+/**
+ * GET /api/v1/agentic/control-plane/mappings
+ * Returns the formal mapping of 12 controls to Control Plane modules.
+ */
+agenticRouter.get('/control-plane/mappings', (req: Request, res: Response) => {
+  const mappings = GovernanceControlPlane.getControlEngineMappings();
+  return res.status(200).json({
+    ok: true,
+    totalControlsMapped: mappings.length,
+    mappings
+  });
+});
 
 /**
  * POST /api/v1/agentic/light

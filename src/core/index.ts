@@ -17,3 +17,4 @@ export * from './graphos-mapper';
 export * from './agentic-lifecycle';
 export * from './agent-passport';
 export * from './agentic-light';
+export * from './governance-control-plane';

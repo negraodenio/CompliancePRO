@@ -40,9 +40,6 @@ export interface AgenticLightResult {
 }
 
 export class AgenticLightAssessment {
-  /**
-   * Executes the 10-Dimension Rapid Agent Governance Assessment on scanner results.
-   */
   static assess(scanResult: ScannerResult): AgenticLightResult {
     const agents = scanResult.source?.agents || [];
     const violations = scanResult.violations || [];
@@ -62,7 +59,7 @@ export class AgenticLightAssessment {
     };
 
     // 2. Ownership
-    const hasOwnerExplicit = agents.some(a => a.systemPrompt && /owner|responsavel|gestor/i.test(a.systemPrompt));
+    const hasOwnerExplicit = agents.some(a => a.businessPurpose && /owner|responsavel|gestor/i.test(a.businessPurpose));
     const dim2: AgenticLightDimension = {
       id: 2,
       name: 'Ownership',
@@ -75,7 +72,7 @@ export class AgenticLightAssessment {
     };
 
     // 3. Autonomy
-    const hasHighAutonomy = agents.some(a => a.riskLevel === 'HIGH');
+    const hasHighAutonomy = agents.some(a => (a.riskLevel || '').toLowerCase() === 'high' || (a.riskLevel || '').toLowerCase() === 'critical');
     const dim3: AgenticLightDimension = {
       id: 3,
       name: 'Autonomy',
@@ -200,7 +197,6 @@ export class AgenticLightAssessment {
       }))
       .sort((a, b) => a.priority.localeCompare(b.priority));
 
-    // Generate passports and lifecycle audits for all detected agents
     const passports = agents.map(a => AgentPassportGenerator.generatePassport(a, projectName, violations));
     const lifecycleAudits = agents.map(a => AgenticLifecycleEngine.auditAgent(a, violations, risks));
 
@@ -223,9 +219,6 @@ export class AgenticLightAssessment {
     };
   }
 
-  /**
-   * Renders the Assessment as a clean C-Level Markdown brief.
-   */
   static toMarkdown(result: AgenticLightResult): string {
     return `# 🎯 CG-AG AGENTIC LIGHT ASSESSMENT
 ## Rapid Agent Governance Diagnostic (10 Dimensions)

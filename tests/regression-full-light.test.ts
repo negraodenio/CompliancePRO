@@ -1,6 +1,6 @@
 /**
  * ComplyPRO Comprehensive Regression & Parity Test Suite
- * Validates Core Scanning, CG-AG Controls, Agentic Lifecycle, Passports, Agentic Light, SecurityGuard, and MCP.
+ * Validates Core Scanning, CG-AG Controls, Control Plane Mappings, Passports, Agentic Light, SecurityGuard, and MCP.
  */
 
 import { CodebaseAnalyzer } from '../src/core/analyzer';
@@ -11,6 +11,7 @@ import { GraphOSMapper } from '../src/core/graphos-mapper';
 import { AgenticLightAssessment } from '../src/core/agentic-light';
 import { AgentPassportGenerator } from '../src/core/agent-passport';
 import { AgenticLifecycleEngine } from '../src/core/agentic-lifecycle';
+import { GovernanceControlPlane } from '../src/core/governance-control-plane';
 import { executeMcpTool } from '../src/mcp/tools';
 
 async function runTests() {
@@ -34,7 +35,7 @@ async function runTests() {
   // -------------------------------------------------------------
   // TEST 1: CORE SCANNER ENGINE & AGENT DETECTION
   // -------------------------------------------------------------
-  console.log('[TEST 1/8] Testing Core Scanner & Agent/Shadow AI Detection...');
+  console.log('[TEST 1/9] Testing Core Scanner & Agent/Shadow AI Detection...');
   const sampleFiles: Record<string, string> = {
     'agents/credit_agent.py': `
 from crewai import Agent, Task, Crew
@@ -73,7 +74,7 @@ def direct_llm_call(prompt):
   // -------------------------------------------------------------
   // TEST 2: CG-AG CONTROLS & TRACEABILITY MATRIX
   // -------------------------------------------------------------
-  console.log('\n[TEST 2/8] Testing CG-AG 24/12 Controls & Regulatory Traceability...');
+  console.log('\n[TEST 2/9] Testing CG-AG 24/12 Controls & Regulatory Traceability...');
   const spec = buildCGAGSpecification();
   assert(spec.controls.length === 12, 'Exposed all 12 CG-AG standard controls');
   assert(spec.principle === AGENTIC_CORE_PRINCIPLE, 'Asserted core principle: "Every Agent Action Must Be Governable and Evidenced."');
@@ -95,9 +96,26 @@ def direct_llm_call(prompt):
   assert(cgagScore > 0 && cgagScore <= 100, `Calculated CG-AG score: ${cgagScore}%`);
 
   // -------------------------------------------------------------
-  // TEST 3: AGENTIC GOVERNANCE LIFECYCLE (5 STAGES)
+  // TEST 3: GOVERNANCE CONTROL PLANE & 12 CONTROLS MAPPING
   // -------------------------------------------------------------
-  console.log('\n[TEST 3/8] Testing Agentic Governance Lifecycle (5 Stages)...');
+  console.log('\n[TEST 3/9] Testing Governance Control Plane & 12 Controls Engine...');
+  const mappings = GovernanceControlPlane.getControlEngineMappings();
+  assert(mappings.length === 12, 'Mapped all 12 controls to Control Plane modules');
+  assert(mappings.some(m => m.controlPlaneModule === 'AI_AGENT_REGISTRY'), 'AI_AGENT_REGISTRY mapped to CG-AG-01');
+  assert(mappings.some(m => m.controlPlaneModule === 'AUDIT_LEDGER_EVIDENCE'), 'AUDIT_LEDGER_EVIDENCE mapped to CG-AG-08');
+
+  const pipeline = GovernanceControlPlane.resolveGovernancePipeline('HIGH', 'Implement HITL validation checkpoint', {
+    name: 'CISO Officer',
+    role: 'Security & Governance Lead',
+    stakeholderGroup: 'CISO'
+  });
+  assert(pipeline.decision.decision === 'MITIGATE', 'Resolved Decision -> Action pipeline');
+  assert(pipeline.evidenceRequired === true, 'Protected Evidence requirement asserted');
+
+  // -------------------------------------------------------------
+  // TEST 4: AGENTIC GOVERNANCE LIFECYCLE (5 STAGES)
+  // -------------------------------------------------------------
+  console.log('\n[TEST 4/9] Testing Agentic Governance Lifecycle (5 Stages)...');
   const agent = scanResult.source.agents[0];
   const lifecycleAudit = AgenticLifecycleEngine.auditAgent(agent, scanResult.violations, scanResult.risks);
   assert(lifecycleAudit.stages.DEFINE !== undefined, 'Stage DEFINE evaluated');
@@ -108,9 +126,9 @@ def direct_llm_call(prompt):
   assert(lifecycleAudit.closedLoopVerified === true, 'Closed loop DEFINE->BUILD->GOVERN->OBSERVE->RESPOND verified');
 
   // -------------------------------------------------------------
-  // TEST 4: AGENT GOVERNANCE PASSPORT
+  // TEST 5: AGENT GOVERNANCE PASSPORT
   // -------------------------------------------------------------
-  console.log('\n[TEST 4/8] Testing Agent Governance Passport Generation...');
+  console.log('\n[TEST 5/9] Testing Agent Governance Passport Generation...');
   const passport = AgentPassportGenerator.generatePassport(agent, 'FinTech-Credit-Pipeline', scanResult.violations);
   assert(passport.agentId.startsWith('CG-AG-'), `Passport ID generated: ${passport.agentId}`);
   assert(passport.owner.role.includes('Deployer'), 'Accountable owner assigned');
@@ -121,9 +139,9 @@ def direct_llm_call(prompt):
   assert(mdPassport.includes('AGENT GOVERNANCE PASSPORT'), 'Markdown Passport rendering verified');
 
   // -------------------------------------------------------------
-  // TEST 5: CG-AG AGENTIC LIGHT (10 DIMENSIONS)
+  // TEST 6: CG-AG AGENTIC LIGHT (10 DIMENSIONS)
   // -------------------------------------------------------------
-  console.log('\n[TEST 5/8] Testing CG-AG Agentic Light (10 Dimensions Assessment)...');
+  console.log('\n[TEST 6/9] Testing CG-AG Agentic Light (10 Dimensions Assessment)...');
   const lightAssessment = AgenticLightAssessment.assess(scanResult);
   assert(lightAssessment.dimensions.length === 10, 'Evaluated all 10 dimensions');
   assert(lightAssessment.agenticGovernanceScore > 0, `Agentic Governance Score: ${lightAssessment.agenticGovernanceScore}% (${lightAssessment.ratingEmoji} ${lightAssessment.rating})`);
@@ -134,9 +152,9 @@ def direct_llm_call(prompt):
   assert(mdLight.includes('10-DIMENSION SCORECARD'), 'Agentic Light Markdown Brief generated');
 
   // -------------------------------------------------------------
-  // TEST 6: IN-MEMORY GRAPHOS & REPORT GENERATOR
+  // TEST 7: IN-MEMORY GRAPHOS & RIPD REPORT
   // -------------------------------------------------------------
-  console.log('\n[TEST 6/8] Testing In-Memory GraphOS & RIPD Report...');
+  console.log('\n[TEST 7/9] Testing In-Memory GraphOS & RIPD Report...');
   const mapper = new GraphOSMapper();
   const graph = mapper.mapScanResult(scanResult);
   assert(graph.entities.length > 0, `Generated ${graph.entities.length} GraphOS entity nodes`);
@@ -148,9 +166,9 @@ def direct_llm_call(prompt):
   assert(ripd.includes('RELATORIO DE IMPACTO A PROTECAO DE DADOS PESSOAIS'), 'Generated formal RIPD (Art. 38 LGPD)');
 
   // -------------------------------------------------------------
-  // TEST 7: SECURITYGUARD SANDBOXING
+  // TEST 8: SECURITYGUARD SANDBOXING
   // -------------------------------------------------------------
-  console.log('\n[TEST 7/8] Testing SecurityGuard Sandboxing & Secret Redaction...');
+  console.log('\n[TEST 8/9] Testing SecurityGuard Sandboxing & Secret Redaction...');
   const safeRoot = process.cwd();
   const safePath = SecurityGuard.resolveSafePath('src', safeRoot);
   assert(safePath.startsWith(safeRoot), 'Resolved safe relative path within workspace');
@@ -165,9 +183,9 @@ def direct_llm_call(prompt):
   assert(blocked, 'Path traversal attack successfully prevented');
 
   // -------------------------------------------------------------
-  // TEST 8: MCP TOOLS EXECUTION
+  // TEST 9: MCP TOOLS EXECUTION
   // -------------------------------------------------------------
-  console.log('\n[TEST 8/8] Testing Universal MCP Server Tool Handlers...');
+  console.log('\n[TEST 9/9] Testing Universal MCP Server Tool Handlers...');
   const mcpStatus = await executeMcpTool('scanner_status', {});
   assert(mcpStatus.status === 'operational', 'MCP scanner_status returned operational');
   assert(mcpStatus.capabilities.agenticLightAssessment !== undefined, 'MCP agentic light capability confirmed');

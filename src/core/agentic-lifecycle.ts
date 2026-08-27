@@ -31,21 +31,21 @@ export interface AgenticLifecycleAudit {
 }
 
 export class AgenticLifecycleEngine {
-  /**
-   * Audits an agent across the 5 lifecycle governance stages.
-   */
   static auditAgent(
     agent: DetectedAgent,
     violations: CodeViolation[] = [],
     risks: DetectedRisk[] = []
   ): AgenticLifecycleAudit {
     const agentViolations = violations.filter(v => 
-      v.file === agent.file || (v.message && v.message.toLowerCase().includes(agent.name.toLowerCase()))
+      v.file === (agent.filePath || '') || (v.message && v.message.toLowerCase().includes(agent.name.toLowerCase()))
     );
 
     // 1. DEFINE (Purpose, Owner, Risk classification, Autonomy level)
-    const hasOwner = Boolean(agent.systemPrompt && /owner|responsavel|gestor/i.test(agent.systemPrompt));
+    const hasOwner = Boolean(agent.businessPurpose && /owner|responsavel|gestor/i.test(agent.businessPurpose));
     const defineScore = hasOwner ? 90 : 60;
+    const rLower = (agent.riskLevel || 'medium').toLowerCase();
+    const isHigh = rLower === 'high' || rLower === 'critical';
+
     const defineDetail: LifecycleStageDetail = {
       stage: 'DEFINE',
       title: 'Define (Purpose, Owner & Autonomy)',
@@ -53,8 +53,8 @@ export class AgenticLifecycleEngine {
       status: defineScore >= 80 ? 'SATISFIED' : 'PARTIAL',
       score: defineScore,
       findings: [
-        `Purpose declared: ${agent.type || 'General Agent'}`,
-        `Autonomy level: ${agent.riskLevel === 'HIGH' ? 'L3 (High Autonomy)' : 'L2 (Supervised)'}`,
+        `Purpose declared: ${agent.businessPurpose || agent.type || 'General Agent'}`,
+        `Autonomy level: ${isHigh ? 'L3 (High Autonomy)' : 'L2 (Supervised)'}`,
         hasOwner ? 'Accountable owner defined in agent declaration' : 'Owner not explicitly attributed in metadata'
       ],
       recommendations: hasOwner ? [] : ['Formally assign an accountable business owner (CG-AG-002 / EU AI Act Art. 26).']
@@ -71,7 +71,7 @@ export class AgenticLifecycleEngine {
       status: buildScore >= 80 ? 'SATISFIED' : (buildScore >= 50 ? 'PARTIAL' : 'EXPOSED'),
       score: buildScore,
       findings: [
-        `Model framework: ${agent.framework}`,
+        `Model framework: ${agent.framework || 'Generative Engine'}`,
         `Connected tools: ${toolsCount > 0 ? agent.tools?.join(', ') : 'None detected'}`,
         hasBroadTools ? 'CRITICAL: High-privilege execution tools attached to agent' : 'Tool access bounded'
       ],
@@ -95,7 +95,7 @@ export class AgenticLifecycleEngine {
     };
 
     // 4. OBSERVE (Behavior, Decisions, Actions, Performance, Evidence)
-    const observeScore = 70; // Static baseline
+    const observeScore = 70;
     const observeDetail: LifecycleStageDetail = {
       stage: 'OBSERVE',
       title: 'Observe (Behavior, Decisions & Evidence)',
