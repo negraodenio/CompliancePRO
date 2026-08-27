@@ -20,6 +20,7 @@ import { ProtectedEvidenceView } from './views/ProtectedEvidenceView';
 import { AuditLedgerView } from './views/AuditLedgerView';
 import { RegulatoryDossiersView } from './views/RegulatoryDossiersView';
 import { GovernanceSimulatorView } from './views/GovernanceSimulatorView';
+import { OperationsCenterView } from './views/OperationsCenterView';
 import { SystemReadinessView } from './views/SystemReadinessView';
 import { HeroScanner } from './components/HeroScanner';
 import { AgentInventory } from './components/AgentInventory';
@@ -202,6 +203,7 @@ export const App: React.FC = () => {
             />
           )}
 
+                    {activeView === 'tools-operations' && <OperationsCenterView />}
           {activeView === 'tools-scanner' && (
             <div className="space-y-6">
               <div className="pb-3 border-b border-slate-200 dark:border-slate-800">

@@ -52,6 +52,7 @@ export type ActiveNavView =
   | 'assure-simulator'
   | 'assure-readiness'
   | 'tools-scanner'
+  | 'tools-operations'
   | 'tools-integrations'
   | 'settings';
 
