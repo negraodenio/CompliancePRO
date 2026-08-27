@@ -29,6 +29,7 @@ import { useIndustry, INDUSTRY_PROFILES } from '../context/IndustryContext';
 import { DecisionStore } from '../services/decision-store';
 import { HitlStore } from '../services/hitl-store';
 import { RemediationStore } from '../services/remediation-store';
+import { IncidentStore } from '../services/incident-store';
 
 export type ActiveNavView = 
   | 'overview-center'
@@ -73,6 +74,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   const [pendingDecisionsCount, setPendingDecisionsCount] = useState(3);
   const [pendingHitlCount, setPendingHitlCount] = useState(2);
   const [pendingRemedCount, setPendingRemedCount] = useState(1);
+  const [activeIncidentsCount, setActiveIncidentsCount] = useState(2);
 
   const refreshBadges = () => {
     const findings = DecisionStore.getFindings();
@@ -83,6 +85,9 @@ export const AppShell: React.FC<AppShellProps> = ({
 
     const actions = RemediationStore.getActions();
     setPendingRemedCount(actions.filter(a => a.status === 'PENDING_VERIFICATION').length);
+
+    const incidents = IncidentStore.getIncidents();
+    setActiveIncidentsCount(incidents.filter(i => i.containmentStatus === 'CONTAINED' || i.containmentStatus === 'RECOVERY_PENDING').length);
   };
 
   useEffect(() => {
@@ -90,10 +95,12 @@ export const AppShell: React.FC<AppShellProps> = ({
     const unsub1 = DecisionStore.subscribe(refreshBadges);
     const unsub2 = HitlStore.subscribe(refreshBadges);
     const unsub3 = RemediationStore.subscribe(refreshBadges);
+    const unsub4 = IncidentStore.subscribe(refreshBadges);
     return () => {
       unsub1();
       unsub2();
       unsub3();
+      unsub4();
     };
   }, []);
 
@@ -128,7 +135,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         { id: 'operate-decisions', label: 'Decisions Pipeline', icon: Scale, badge: null },
         { id: 'operate-approvals', label: 'HITL Approvals', icon: LockKeyhole, badge: pendingHitlCount > 0 ? `${pendingHitlCount} Pending` : null },
         { id: 'operate-actions', label: 'Remediation Actions', icon: CheckCircle2, badge: pendingRemedCount > 0 ? `${pendingRemedCount} Verify` : null },
-        { id: 'operate-incidents', label: 'Incidents & Failsafe', icon: Zap, badge: null },
+        { id: 'operate-incidents', label: 'Incidents & Failsafe', icon: Zap, badge: activeIncidentsCount > 0 ? `${activeIncidentsCount} Contained` : null },
         { id: 'operate-runtime', label: 'Runtime FinOps', icon: Activity, badge: null }
       ]
     },

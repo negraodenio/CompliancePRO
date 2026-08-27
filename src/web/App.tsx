@@ -14,6 +14,7 @@ import { ComplianceFrameworksView } from './views/ComplianceFrameworksView';
 import { DecisionsPipelineView } from './views/DecisionsPipelineView';
 import { HitlApprovalsView } from './views/HitlApprovalsView';
 import { RemediationActionsView } from './views/RemediationActionsView';
+import { IncidentsFailsafeView } from './views/IncidentsFailsafeView';
 import { HeroScanner } from './components/HeroScanner';
 import { AgentInventory } from './components/AgentInventory';
 import { RegulationsGrid } from './components/RegulationsGrid';
@@ -228,6 +229,12 @@ export const App: React.FC = () => {
                 </div>
               )}
             </div>
+          )}
+
+          {activeView === 'operate-incidents' && (
+            <IncidentsFailsafeView 
+              result={scanResult}
+            />
           )}
 
           {activeView === 'operate-actions' && (
