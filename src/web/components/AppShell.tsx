@@ -14,7 +14,7 @@ import {
   Zap, 
   FolderCheck, 
   BookOpen, 
-  FileDown, 
+  FileDown, Crosshair, 
   Terminal, 
   Share2, 
   ChevronDown, 
@@ -144,7 +144,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       items: [
         { id: 'assure-evidence', label: 'Protected Evidence', icon: FolderCheck, badge: 'Secured' },
         { id: 'assure-audit', label: 'Audit Ledger', icon: BookOpen, badge: null },
-        { id: 'assure-reports', label: 'Regulatory Dossiers', icon: FileDown, badge: 'RIPD' }
+        { id: 'assure-reports', label: 'Regulatory Dossiers', icon: FileDown, Crosshair, badge: 'RIPD' }
       ]
     },
     {
