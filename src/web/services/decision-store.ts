@@ -1,71 +1,218 @@
 /**
- * Real-time Reactive Governance Decision & Protected Evidence Store
- * Implements causal pipeline: Risk -> Decision -> Action -> Evidence -> Audit
+ * Single Authoritative Source of Truth for Governance Decisions, Risks & Evidence
+ * Causal Pipeline: Control -> Finding -> Risk -> Decision -> Action -> Evidence -> Audit
  */
 
 import { GovernanceDecision, ProtectedEvidenceRecord, GovernanceControlPlane } from '../../core/governance-control-plane';
 
-const STORAGE_KEY_DECISIONS = 'cg_ag_decisions_v1';
-const STORAGE_KEY_EVIDENCE = 'cg_ag_evidence_v1';
-
 export interface OperationalFinding {
   id: string;
+  riskId: string;
   finding: string;
   sourceTarget: string;
+  systemId: string;
+  agentId?: string;
+  agentName?: string;
+  team?: string;
+  model?: string;
+  toolsAffected?: string[];
   severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-  owner: string;
-  status: 'PENDING_DECISION' | 'IN_REMEDIATION' | 'ACCEPTED' | 'ESCALATED';
+  likelihood: 'HIGH' | 'MEDIUM' | 'LOW';
+  impact: 'HIGH' | 'MEDIUM' | 'LOW';
+  category: 'AUTONOMY_OVERSIGHT' | 'PRIVACY_DATA' | 'TOOL_AUTHORIZATION' | 'RESILIENCE' | 'AI_SECURITY';
+  owner: {
+    name: string;
+    role: string;
+    department: string;
+  };
+  status: 'PENDING_DECISION' | 'IN_TREATMENT' | 'ACCEPTED' | 'ESCALATED' | 'RESOLVED';
+  decisionType: 'PENDING_DECISION' | 'MITIGATE' | 'ACCEPT' | 'TRANSFER' | 'AVOID' | 'ESCALATE';
   recommendedAction: string;
   controlId: string;
+  controlName: string;
+  treatment: {
+    actionRequired: string;
+    assignedTo: string;
+    targetDueDate: string;
+    status: 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED';
+  };
+  evidenceDigest: string;
+  createdAt: string;
+  updatedAt: string;
   decision?: GovernanceDecision;
 }
 
-const INITIAL_FINDINGS: OperationalFinding[] = [
+const STORAGE_KEY_FINDINGS = 'cg_ag_unified_findings_v2';
+const STORAGE_KEY_EVIDENCE = 'cg_ag_unified_evidence_v2';
+
+const BASELINE_FINDINGS: OperationalFinding[] = [
   {
     id: 'FIND-001',
+    riskId: 'RISK-2026-0042',
     finding: 'Credit Scoring Agent operates autonomous loan approvals without Tier-2 HITL oversight',
     sourceTarget: 'agents/credit_agent.py (Credit Evaluator)',
+    systemId: 'SYS-CREDIT-001',
+    agentId: 'AGT-CREDIT-911E',
+    agentName: 'Credit Risk Evaluator',
+    team: 'Credit Underwriting Squad',
+    model: 'gpt-4-turbo (CrewAI 0.1.x)',
+    toolsAffected: ['LoanOfferGenerator'],
     severity: 'CRITICAL',
-    owner: 'Roberto Silva (CISO & Credit Risk Lead)',
+    likelihood: 'HIGH',
+    impact: 'HIGH',
+    category: 'AUTONOMY_OVERSIGHT',
+    owner: {
+      name: 'Roberto Silva',
+      role: 'CISO & Credit Risk Lead',
+      department: 'Risk & Compliance'
+    },
     status: 'PENDING_DECISION',
+    decisionType: 'PENDING_DECISION',
     recommendedAction: 'Enforce mandatory Human-in-the-Loop checkpoint for loans > R$ 50,000',
-    controlId: 'CG-AG-03'
+    controlId: 'CG-AG-03',
+    controlName: 'Human-in-the-Loop Oversight',
+    treatment: {
+      actionRequired: 'Enforce mandatory Human-in-the-Loop checkpoint for loans > R$ 50,000',
+      assignedTo: 'AppSec & Risk Engineering',
+      targetDueDate: '2026-09-05',
+      status: 'PLANNED'
+    },
+    evidenceDigest: 'DIGEST-RISK-0042-SHA256',
+    createdAt: '2026-08-25T10:00:00Z',
+    updatedAt: '2026-08-27T17:00:00Z'
   },
   {
     id: 'FIND-002',
+    riskId: 'RISK-2026-0043',
     finding: 'Direct unmonitored LLM invocation detected bypassing PII de-identification filter',
     sourceTarget: 'services/direct_llm.py (Shadow AI Endpoint)',
+    systemId: 'SYS-SHADOW-003',
+    team: 'Growth Marketing',
+    model: 'gpt-4-0613 (OpenAI SDK Direct)',
     severity: 'HIGH',
-    owner: 'Carlos DPO (Data Protection Officer)',
+    likelihood: 'HIGH',
+    impact: 'HIGH',
+    category: 'PRIVACY_DATA',
+    owner: {
+      name: 'Carlos DPO',
+      role: 'Data Protection Officer',
+      department: 'Privacy Office'
+    },
     status: 'PENDING_DECISION',
+    decisionType: 'PENDING_DECISION',
     recommendedAction: 'Route through SecurityGuard sanitization pipeline (LGPD Art. 38)',
-    controlId: 'CG-AG-06'
+    controlId: 'CG-AG-06',
+    controlName: 'Data Privacy & PII Protection',
+    treatment: {
+      actionRequired: 'Route through SecurityGuard sanitization pipeline (LGPD Art. 38)',
+      assignedTo: 'Growth Tech Team',
+      targetDueDate: '2026-09-02',
+      status: 'PLANNED'
+    },
+    evidenceDigest: 'DIGEST-RISK-0043-SHA256',
+    createdAt: '2026-08-26T14:30:00Z',
+    updatedAt: '2026-08-27T17:00:00Z'
   },
   {
     id: 'FIND-003',
+    riskId: 'RISK-2026-0044',
     finding: 'High-privilege execution tool attached without least-privilege boundary',
     sourceTarget: 'tools/system_executor.ts (BashTool)',
+    systemId: 'SYS-MAINT-007',
+    agentId: 'AGT-OPS-1102',
+    agentName: 'Ops Executor',
+    team: 'Platform Engineering',
+    model: 'claude-3-5-sonnet',
+    toolsAffected: ['BashTool', 'SystemExecutor'],
     severity: 'HIGH',
-    owner: 'Security Engineering Lead',
+    likelihood: 'MEDIUM',
+    impact: 'HIGH',
+    category: 'TOOL_AUTHORIZATION',
+    owner: {
+      name: 'Security Engineering Lead',
+      role: 'AppSec Architect',
+      department: 'Cybersecurity'
+    },
     status: 'PENDING_DECISION',
+    decisionType: 'PENDING_DECISION',
     recommendedAction: 'Restrict to read-only tool boundary with explicit whitelist',
-    controlId: 'CG-AG-02'
+    controlId: 'CG-AG-02',
+    controlName: 'Agent & Tool Scoping',
+    treatment: {
+      actionRequired: 'Restrict to read-only tool boundary with explicit whitelist',
+      assignedTo: 'DevOps Security',
+      targetDueDate: '2026-09-08',
+      status: 'PLANNED'
+    },
+    evidenceDigest: 'DIGEST-RISK-0044-SHA256',
+    createdAt: '2026-08-27T08:00:00Z',
+    updatedAt: '2026-08-27T17:00:00Z'
   },
   {
     id: 'FIND-004',
-    finding: 'Missing automated Circuit Breaker timeout on multi-agent execution loop',
+    riskId: 'RISK-2026-0045',
+    finding: 'Multi-agent orchestration crew lacks automated max_iterations limit and execution timeout',
     sourceTarget: 'crew/orchestration.py (CrewAI Team)',
+    systemId: 'SYS-INVEST-005',
+    team: 'Wealth Management AI Team',
+    model: 'claude-3-5-sonnet (AutoGen)',
     severity: 'MEDIUM',
-    owner: 'AI Platform Engineering',
-    status: 'PENDING_DECISION',
+    likelihood: 'LOW',
+    impact: 'MEDIUM',
+    category: 'RESILIENCE',
+    owner: {
+      name: 'AI Platform Engineering',
+      role: 'Platform Lead',
+      department: 'Core Engineering'
+    },
+    status: 'IN_TREATMENT',
+    decisionType: 'MITIGATE',
     recommendedAction: 'Configure max_iterations=5 and timeout=120s guardrails',
-    controlId: 'CG-AG-04'
+    controlId: 'CG-AG-04',
+    controlName: 'Runtime Safety & Circuit Breakers',
+    treatment: {
+      actionRequired: 'Configure max_iterations=5 and timeout=120s guardrails',
+      assignedTo: 'AI Core Team',
+      targetDueDate: '2026-09-15',
+      status: 'IN_PROGRESS'
+    },
+    evidenceDigest: 'DIGEST-RISK-0045-SHA256',
+    createdAt: '2026-08-27T09:30:00Z',
+    updatedAt: '2026-08-27T17:00:00Z',
+    decision: {
+      decisionId: 'DEC-2026-0012',
+      targetId: 'SYS-INVEST-005',
+      riskCategory: 'RESILIENCE',
+      severity: 'MEDIUM',
+      decision: 'MITIGATE',
+      decidedBy: {
+        name: 'AI Platform Engineering Lead',
+        role: 'Platform Architect',
+        stakeholderGroup: 'CISO'
+      },
+      rationale: 'Automated circuit breaker guardrails scheduled for deployment in sprint 14.',
+      actionRequired: 'Configure max_iterations=5 and timeout=120s guardrails',
+      decidedAt: '2026-08-27T12:00:00Z'
+    }
   }
 ];
 
 export class DecisionStore {
+  private static listeners: Array<() => void> = [];
+
+  static subscribe(fn: () => void) {
+    this.listeners.push(fn);
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== fn);
+    };
+  }
+
+  private static notify() {
+    this.listeners.forEach(fn => fn());
+  }
+
   static getFindings(): OperationalFinding[] {
-    const saved = localStorage.getItem('cg_ag_findings_state');
+    const saved = localStorage.getItem(STORAGE_KEY_FINDINGS);
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -73,7 +220,7 @@ export class DecisionStore {
         // fallback
       }
     }
-    return INITIAL_FINDINGS;
+    return BASELINE_FINDINGS;
   }
 
   static getEvidenceLedger(): ProtectedEvidenceRecord[] {
@@ -113,30 +260,36 @@ export class DecisionStore {
 
   static recordDecision(
     findingId: string,
-    decisionType: 'MITIGATE' | 'ACCEPT' | 'ESCALATE',
+    decisionType: 'MITIGATE' | 'ACCEPT' | 'TRANSFER' | 'AVOID' | 'ESCALATE',
     decider = { name: 'Roberto Silva', role: 'CISO & Accountable Lead', stakeholderGroup: 'CISO' as const }
   ): { finding: OperationalFinding; decision: GovernanceDecision; evidence: ProtectedEvidenceRecord } {
     const findings = this.getFindings();
-    const targetIndex = findings.findIndex(f => f.id === findingId);
-    const target = targetIndex >= 0 ? findings[targetIndex] : INITIAL_FINDINGS[0];
+    const targetIndex = findings.findIndex(f => f.id === findingId || f.riskId === findingId);
+    const target = targetIndex >= 0 ? findings[targetIndex] : BASELINE_FINDINGS[0];
 
     const pipelineResult = GovernanceControlPlane.resolveGovernancePipeline(target.severity, target.recommendedAction, decider);
-    const decision = { ...pipelineResult.decision, decision: decisionType };
+    const decision: GovernanceDecision = { 
+      ...pipelineResult.decision, 
+      decision: decisionType as any,
+      decisionId: `DEC-2026-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
+    };
 
-    let newStatus: OperationalFinding['status'] = 'IN_REMEDIATION';
+    let newStatus: OperationalFinding['status'] = 'IN_TREATMENT';
     if (decisionType === 'ACCEPT') newStatus = 'ACCEPTED';
     if (decisionType === 'ESCALATE') newStatus = 'ESCALATED';
 
     const updatedFinding: OperationalFinding = {
       ...target,
       status: newStatus,
-      decision
+      decisionType,
+      decision,
+      updatedAt: new Date().toISOString()
     };
 
     if (targetIndex >= 0) {
       findings[targetIndex] = updatedFinding;
     }
-    localStorage.setItem('cg_ag_findings_state', JSON.stringify(findings));
+    localStorage.setItem(STORAGE_KEY_FINDINGS, JSON.stringify(findings));
 
     // Emit real protected evidence record into ledger
     const hash = Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -147,14 +300,15 @@ export class DecisionStore {
       controlId: target.controlId,
       eventType: 'DECISION_EXECUTION',
       timestamp: new Date().toISOString(),
-      tamperEvidentSignature: `SIG-${hash}`,
-      payloadSummary: `Decision [${decisionType}] recorded on ${target.finding.substring(0, 48)}... by ${decider.name}`,
+      tamperEvidentSignature: `DIGEST-${hash}-SHA256`,
+      payloadSummary: `Governance Decision [${decisionType}] recorded on ${target.finding.substring(0, 42)}... by ${decider.name}`,
       retentionDays: 1825
     };
 
     const ledger = [evidence, ...this.getEvidenceLedger()];
     localStorage.setItem(STORAGE_KEY_EVIDENCE, JSON.stringify(ledger.slice(0, 30)));
 
+    this.notify();
     return { finding: updatedFinding, decision, evidence };
   }
 }

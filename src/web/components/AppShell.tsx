@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Shield, 
   LayoutDashboard, 
@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useIndustry, INDUSTRY_PROFILES } from '../context/IndustryContext';
+import { DecisionStore } from '../services/decision-store';
 
 export type ActiveNavView = 
   | 'overview-center'
@@ -67,6 +68,18 @@ export const AppShell: React.FC<AppShellProps> = ({
   const { theme, toggleTheme } = useTheme();
   const { activeProfile, setActiveProfile, environment, setEnvironment } = useIndustry();
   const [isIndustryMenuOpen, setIsIndustryMenuOpen] = useState(false);
+  const [pendingDecisionsCount, setPendingDecisionsCount] = useState(3);
+
+  const refreshBadge = () => {
+    const list = DecisionStore.getFindings();
+    const count = list.filter(f => f.status === 'PENDING_DECISION').length;
+    setPendingDecisionsCount(count);
+  };
+
+  useEffect(() => {
+    refreshBadge();
+    return DecisionStore.subscribe(refreshBadge);
+  }, []);
 
   const navItems = [
     {
@@ -88,7 +101,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       group: 'GOVERN',
       items: [
         { id: 'govern-controls', label: '12 CG-AG Controls', icon: CheckSquare, badge: '12/12' },
-        { id: 'govern-risk', label: 'Risk Engine', icon: AlertTriangle, badge: criticalGapsCount > 0 ? `${criticalGapsCount} High` : null },
+        { id: 'govern-risk', label: 'Risk Engine', icon: AlertTriangle, badge: pendingDecisionsCount > 0 ? `${pendingDecisionsCount} Pending` : null },
         { id: 'govern-policies', label: 'Policy Engine', icon: FileText, badge: null },
         { id: 'govern-compliance', label: 'Compliance Frameworks', icon: Scale, badge: 'AI Act' }
       ]
@@ -97,7 +110,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       group: 'OPERATE',
       items: [
         { id: 'operate-decisions', label: 'Decisions Pipeline', icon: Scale, badge: null },
-        { id: 'operate-approvals', label: 'HITL Approvals', icon: LockKeyhole, badge: '2 Pending' },
+        { id: 'operate-approvals', label: 'HITL Approvals', icon: LockKeyhole, badge: pendingDecisionsCount > 0 ? `${pendingDecisionsCount} Pending` : null },
         { id: 'operate-actions', label: 'Remediation Actions', icon: CheckCircle2, badge: null },
         { id: 'operate-incidents', label: 'Incidents & Failsafe', icon: Zap, badge: null },
         { id: 'operate-runtime', label: 'Runtime FinOps', icon: Activity, badge: null }
@@ -187,7 +200,6 @@ export const AppShell: React.FC<AppShellProps> = ({
 
         {/* Right: Environment, Audit Badge & User Profile */}
         <div className="flex items-center space-x-3">
-          {/* Environment Switcher */}
           <div className="hidden sm:flex items-center space-x-1 bg-slate-100 dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px]">
             {(['Production', 'Staging', 'Sandbox'] as const).map((env) => (
               <button
@@ -204,13 +216,11 @@ export const AppShell: React.FC<AppShellProps> = ({
             ))}
           </div>
 
-          {/* Tamper-Evident Status */}
           <div className="hidden md:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/70 text-xs">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-semibold text-[11px]">Tamper-Evident Active</span>
+            <span className="font-semibold text-[11px]">Evidence Integrity Active</span>
           </div>
 
-          {/* Theme Switcher */}
           <button 
             onClick={toggleTheme}
             title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
@@ -219,7 +229,6 @@ export const AppShell: React.FC<AppShellProps> = ({
             {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
 
-          {/* User / Stakeholder Avatar */}
           <div className="flex items-center space-x-2 pl-2 border-l border-slate-200 dark:border-slate-800">
             <div className="w-7 h-7 rounded-full bg-slate-800 text-sky-400 border border-slate-700 flex items-center justify-center font-bold text-xs">
               RA
@@ -277,7 +286,6 @@ export const AppShell: React.FC<AppShellProps> = ({
             ))}
           </div>
 
-          {/* Sidebar Footer */}
           <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
             <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
               <span className="font-mono-code text-[10px]">CG-AG OS v1.2.0</span>

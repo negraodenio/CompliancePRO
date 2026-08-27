@@ -26,303 +26,63 @@ import {
 import type { ScannerResult } from '../../core/types';
 import { useIndustry } from '../context/IndustryContext';
 import { DecisionStore, OperationalFinding } from '../services/decision-store';
-import { ProtectedEvidenceRecord } from '../../core/governance-control-plane';
-
-export type RiskCategory = 
-  | 'AI_SECURITY'
-  | 'PRIVACY_DATA'
-  | 'AUTONOMY_OVERSIGHT'
-  | 'MODEL_RISK'
-  | 'TOOL_AUTHORIZATION'
-  | 'RESILIENCE'
-  | 'FINOPS_COST'
-  | 'SUPPLY_CHAIN';
-
-export type RiskSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-export type DecisionType = 'PENDING_DECISION' | 'MITIGATE' | 'ACCEPT' | 'TRANSFER' | 'AVOID' | 'ESCALATE';
-
-export interface GovernanceRiskRecord {
-  id: string;
-  title: string;
-  description: string;
-  category: RiskCategory;
-  severity: RiskSeverity;
-  likelihood: 'HIGH' | 'MEDIUM' | 'LOW';
-  impact: 'HIGH' | 'MEDIUM' | 'LOW';
-  riskLevel: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-  affectedTarget: {
-    systemName: string;
-    systemId: string;
-    agentName?: string;
-    agentId?: string;
-    team?: string;
-    model?: string;
-    toolsAffected?: string[];
-  };
-  controlId: string;
-  controlName: string;
-  findingId: string;
-  findingSummary: string;
-  accountableOwner: {
-    name: string;
-    role: string;
-    department: string;
-  };
-  status: 'OPEN' | 'IN_TREATMENT' | 'ACCEPTED' | 'ESCALATED' | 'RESOLVED';
-  decisionStatus: DecisionType;
-  decisionId?: string;
-  treatment: {
-    actionRequired: string;
-    assignedTo: string;
-    targetDueDate: string;
-    status: 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED';
-  };
-  evidenceDigest: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-const INITIAL_RISKS: GovernanceRiskRecord[] = [
-  {
-    id: 'RISK-2026-0042',
-    title: 'Autonomous Loan Approval without Tier-2 HITL Checkpoint',
-    description: 'Credit Risk Agent autonomously executes underwriting decisions exceeding R$ 50,000 without mandatory human sign-off trigger, creating regulatory exposure under EU AI Act Art. 14 and credit model risk.',
-    category: 'AUTONOMY_OVERSIGHT',
-    severity: 'CRITICAL',
-    likelihood: 'HIGH',
-    impact: 'HIGH',
-    riskLevel: 'CRITICAL',
-    affectedTarget: {
-      systemName: 'Credit Risk Scoring Orchestrator',
-      systemId: 'SYS-CREDIT-001',
-      agentName: 'Credit Risk Evaluator',
-      agentId: 'AGT-CREDIT-911E',
-      team: 'Credit Underwriting Squad',
-      model: 'gpt-4-turbo (CrewAI 0.1.x)',
-      toolsAffected: ['LoanOfferGenerator']
-    },
-    controlId: 'CG-AG-03',
-    controlName: 'Human-in-the-Loop Oversight',
-    findingId: 'FIND-001',
-    findingSummary: 'Credit Scoring Agent operates autonomous loan approvals without Tier-2 HITL oversight',
-    accountableOwner: {
-      name: 'Roberto Silva',
-      role: 'CISO & Credit Risk Lead',
-      department: 'Risk & Compliance'
-    },
-    status: 'OPEN',
-    decisionStatus: 'PENDING_DECISION',
-    treatment: {
-      actionRequired: 'Enforce mandatory Human-in-the-Loop checkpoint for loans > R$ 50,000',
-      assignedTo: 'AppSec & Risk Engineering',
-      targetDueDate: '2026-09-05',
-      status: 'PLANNED'
-    },
-    evidenceDigest: 'DIGEST-RISK-0042-SHA256',
-    createdAt: '2026-08-25T10:00:00Z',
-    updatedAt: '2026-08-27T17:00:00Z'
-  },
-  {
-    id: 'RISK-2026-0043',
-    title: 'Unmonitored Shadow LLM Endpoint Processing PII',
-    description: 'Direct uncataloged OpenAI API invocation detected in marketing service, bypassing corporate SecurityGuard proxies and data anonymization filters (LGPD Art. 38 & 46).',
-    category: 'PRIVACY_DATA',
-    severity: 'HIGH',
-    likelihood: 'HIGH',
-    impact: 'HIGH',
-    riskLevel: 'HIGH',
-    affectedTarget: {
-      systemName: 'Direct Marketing Prompt Service',
-      systemId: 'SYS-SHADOW-003',
-      team: 'Growth Marketing',
-      model: 'gpt-4-0613 (OpenAI SDK Direct)'
-    },
-    controlId: 'CG-AG-06',
-    controlName: 'Data Privacy & PII Protection',
-    findingId: 'FIND-002',
-    findingSummary: 'Direct unmonitored LLM invocation detected bypassing PII de-identification filter',
-    accountableOwner: {
-      name: 'Carlos DPO',
-      role: 'Data Protection Officer',
-      department: 'Privacy Office'
-    },
-    status: 'OPEN',
-    decisionStatus: 'PENDING_DECISION',
-    treatment: {
-      actionRequired: 'Route through SecurityGuard sanitization pipeline (LGPD Art. 38)',
-      assignedTo: 'Growth Tech Team',
-      targetDueDate: '2026-09-02',
-      status: 'PLANNED'
-    },
-    evidenceDigest: 'DIGEST-RISK-0043-SHA256',
-    createdAt: '2026-08-26T14:30:00Z',
-    updatedAt: '2026-08-27T17:00:00Z'
-  },
-  {
-    id: 'RISK-2026-0044',
-    title: 'Unbounded High-Privilege Execution Tool Attached to Agent',
-    description: 'High-privilege bash execution tool attached without least-privilege boundary or explicit whitelist, exposing agent to potential prompt injection tool misuse (OWASP LLM06).',
-    category: 'TOOL_AUTHORIZATION',
-    severity: 'HIGH',
-    likelihood: 'MEDIUM',
-    impact: 'HIGH',
-    riskLevel: 'HIGH',
-    affectedTarget: {
-      systemName: 'System Maintenance Bot',
-      systemId: 'SYS-MAINT-007',
-      agentName: 'Ops Executor',
-      agentId: 'AGT-OPS-1102',
-      team: 'Platform Engineering',
-      model: 'claude-3-5-sonnet',
-      toolsAffected: ['BashTool', 'SystemExecutor']
-    },
-    controlId: 'CG-AG-02',
-    controlName: 'Agent & Tool Scoping',
-    findingId: 'FIND-003',
-    findingSummary: 'High-privilege execution tool attached without least-privilege boundary',
-    accountableOwner: {
-      name: 'Security Engineering Lead',
-      role: 'AppSec Architect',
-      department: 'Cybersecurity'
-    },
-    status: 'OPEN',
-    decisionStatus: 'PENDING_DECISION',
-    treatment: {
-      actionRequired: 'Restrict to read-only tool boundary with explicit whitelist',
-      assignedTo: 'DevOps Security',
-      targetDueDate: '2026-09-08',
-      status: 'PLANNED'
-    },
-    evidenceDigest: 'DIGEST-RISK-0044-SHA256',
-    createdAt: '2026-08-27T08:00:00Z',
-    updatedAt: '2026-08-27T17:00:00Z'
-  },
-  {
-    id: 'RISK-2026-0045',
-    title: 'Multi-Agent Execution Loop Lacks Circuit Breaker Timeout',
-    description: 'Multi-agent orchestration crew lacks automated max_iterations limit and execution timeout, risking unbounded loops and operational denial-of-service.',
-    category: 'RESILIENCE',
-    severity: 'MEDIUM',
-    likelihood: 'LOW',
-    impact: 'MEDIUM',
-    riskLevel: 'MEDIUM',
-    affectedTarget: {
-      systemName: 'Multi-Agent Wealth Management Group',
-      systemId: 'SYS-INVEST-005',
-      team: 'Wealth Management AI Team',
-      model: 'claude-3-5-sonnet (AutoGen)'
-    },
-    controlId: 'CG-AG-04',
-    controlName: 'Runtime Safety & Circuit Breakers',
-    findingId: 'FIND-004',
-    findingSummary: 'Missing automated Circuit Breaker timeout on multi-agent execution loop',
-    accountableOwner: {
-      name: 'AI Platform Engineering',
-      role: 'Platform Lead',
-      department: 'Core Engineering'
-    },
-    status: 'OPEN',
-    decisionStatus: 'PENDING_DECISION',
-    treatment: {
-      actionRequired: 'Configure max_iterations=5 and timeout=120s guardrails',
-      assignedTo: 'AI Core Team',
-      targetDueDate: '2026-09-15',
-      status: 'PLANNED'
-    },
-    evidenceDigest: 'DIGEST-RISK-0045-SHA256',
-    createdAt: '2026-08-27T09:30:00Z',
-    updatedAt: '2026-08-27T17:00:00Z'
-  }
-];
 
 export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ result }) => {
   const { activeProfile } = useIndustry();
-  const [risks, setRisks] = useState<GovernanceRiskRecord[]>(INITIAL_RISKS);
+  const [findings, setFindings] = useState<OperationalFinding[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSeverity, setFilterSeverity] = useState<string>('ALL');
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
   const [filterDecision, setFilterDecision] = useState<string>('ALL');
-  const [selectedRisk, setSelectedRisk] = useState<GovernanceRiskRecord | null>(null);
+  const [selectedFinding, setSelectedFinding] = useState<OperationalFinding | null>(null);
   const [activeDrawerTab, setActiveDrawerTab] = useState<'overview' | 'exposure' | 'control' | 'decision' | 'treatment' | 'evidence'>('overview');
   const [feedback, setFeedback] = useState<{ message: string; decisionId: string; hash: string } | null>(null);
 
-  // Sync with real DecisionStore on mount
+  const refreshState = () => {
+    const list = DecisionStore.getFindings();
+    setFindings(list);
+    if (selectedFinding) {
+      const updated = list.find(f => f.id === selectedFinding.id);
+      if (updated) setSelectedFinding(updated);
+    }
+  };
+
   useEffect(() => {
-    const findings = DecisionStore.getFindings();
-    setRisks((prev) =>
-      prev.map((r) => {
-        const matchingFinding = findings.find((f) => f.id === r.findingId);
-        if (matchingFinding && matchingFinding.decision) {
-          return {
-            ...r,
-            decisionStatus: matchingFinding.decision.decision as DecisionType,
-            decisionId: matchingFinding.decision.decisionId,
-            status: matchingFinding.decision.decision === 'ACCEPT' ? 'ACCEPTED' : (matchingFinding.decision.decision === 'ESCALATE' ? 'ESCALATED' : 'IN_TREATMENT')
-          };
-        }
-        return r;
-      })
-    );
+    refreshState();
+    return DecisionStore.subscribe(refreshState);
   }, []);
 
-  const handleExecuteDecision = (risk: GovernanceRiskRecord, decisionType: 'MITIGATE' | 'ACCEPT' | 'TRANSFER' | 'AVOID' | 'ESCALATE') => {
-    // Map to DecisionStore action
-    const mappedStoreType: 'MITIGATE' | 'ACCEPT' | 'ESCALATE' = 
-      decisionType === 'TRANSFER' || decisionType === 'AVOID' ? 'MITIGATE' : decisionType;
-
-    const res = DecisionStore.recordDecision(risk.findingId, mappedStoreType);
-
-    const updated = risks.map((r) => {
-      if (r.id === risk.id) {
-        return {
-          ...r,
-          decisionStatus: decisionType,
-          decisionId: res.decision.decisionId,
-          status: decisionType === 'ACCEPT' ? 'ACCEPTED' as const : (decisionType === 'ESCALATE' ? 'ESCALATED' as const : 'IN_TREATMENT' as const),
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return r;
-    });
-
-    setRisks(updated);
-    if (selectedRisk && selectedRisk.id === risk.id) {
-      setSelectedRisk({
-        ...selectedRisk,
-        decisionStatus: decisionType,
-        decisionId: res.decision.decisionId,
-        status: decisionType === 'ACCEPT' ? 'ACCEPTED' : (decisionType === 'ESCALATE' ? 'ESCALATED' : 'IN_TREATMENT')
-      });
-    }
+  const handleExecuteDecision = (finding: OperationalFinding, decisionType: 'MITIGATE' | 'ACCEPT' | 'TRANSFER' | 'AVOID' | 'ESCALATE') => {
+    const res = DecisionStore.recordDecision(finding.id, decisionType);
 
     setFeedback({
-      message: `Human Governance Decision [${decisionType}] recorded on ${risk.id}.`,
+      message: `Human Governance Decision [${decisionType}] recorded on ${finding.riskId}.`,
       decisionId: res.decision.decisionId,
       hash: res.evidence.tamperEvidentSignature
     });
     setTimeout(() => setFeedback(null), 6000);
   };
 
-  const filteredRisks = useMemo(() => {
-    return risks.filter((r) => {
-      const matchSearch = r.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          r.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          r.affectedTarget.systemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          r.controlId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          r.accountableOwner.name.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredFindings = useMemo(() => {
+    return findings.filter((f) => {
+      const matchSearch = f.finding.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          f.riskId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          f.systemId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          f.controlId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          f.owner.name.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchSeverity = filterSeverity === 'ALL' || r.severity === filterSeverity;
-      const matchCategory = filterCategory === 'ALL' || r.category === filterCategory;
-      const matchDecision = filterDecision === 'ALL' || r.decisionStatus === filterDecision;
+      const matchSeverity = filterSeverity === 'ALL' || f.severity === filterSeverity;
+      const matchCategory = filterCategory === 'ALL' || f.category === filterCategory;
+      const matchDecision = filterDecision === 'ALL' || f.decisionType === filterDecision;
 
       return matchSearch && matchSeverity && matchCategory && matchDecision;
     });
-  }, [risks, searchTerm, filterSeverity, filterCategory, filterDecision]);
+  }, [findings, searchTerm, filterSeverity, filterCategory, filterDecision]);
 
-  const criticalCount = risks.filter((r) => r.severity === 'CRITICAL').length;
-  const highCount = risks.filter((r) => r.severity === 'HIGH').length;
-  const pendingDecisionsCount = risks.filter((r) => r.decisionStatus === 'PENDING_DECISION').length;
-  const inTreatmentCount = risks.filter((r) => r.status === 'IN_TREATMENT').length;
+  const criticalCount = findings.filter((f) => f.severity === 'CRITICAL').length;
+  const highCount = findings.filter((f) => f.severity === 'HIGH').length;
+  const pendingDecisionsCount = findings.filter((f) => f.status === 'PENDING_DECISION').length;
+  const inTreatmentCount = findings.filter((f) => f.status === 'IN_TREATMENT' || f.status === 'ACCEPTED' || f.status === 'ESCALATED').length;
 
   return (
     <div className="space-y-5">
@@ -370,7 +130,7 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
         </div>
       )}
 
-      {/* SUMMARY COUNTERS */}
+      {/* SUMMARY COUNTERS (Derived directly from authoritative DecisionStore) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
         <div className="p-4 rounded-xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 elevation-card">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
@@ -423,7 +183,6 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          {/* Severity Filter */}
           <select
             value={filterSeverity}
             onChange={(e) => setFilterSeverity(e.target.value)}
@@ -436,7 +195,6 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
             <option value="LOW">🔵 Low</option>
           </select>
 
-          {/* Category Filter */}
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
@@ -449,7 +207,6 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
             <option value="RESILIENCE">Resilience & Failsafe</option>
           </select>
 
-          {/* Decision Status Filter */}
           <select
             value={filterDecision}
             onChange={(e) => setFilterDecision(e.target.value)}
@@ -470,7 +227,7 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 dark:bg-slate-900/80 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 text-[11px] font-semibold">
               <tr>
-                <th className="py-3 px-4">Risk ID & Title</th>
+                <th className="py-3 px-4">Risk ID & Finding</th>
                 <th className="py-3 px-4">Severity</th>
                 <th className="py-3 px-4">Affected Target</th>
                 <th className="py-3 px-4">CG-AG Control</th>
@@ -481,24 +238,24 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-              {filteredRisks.map((risk) => {
-                const isCritical = risk.severity === 'CRITICAL';
-                const isHigh = risk.severity === 'HIGH';
-                const isPending = risk.decisionStatus === 'PENDING_DECISION';
+              {filteredFindings.map((item) => {
+                const isCritical = item.severity === 'CRITICAL';
+                const isHigh = item.severity === 'HIGH';
+                const isPending = item.status === 'PENDING_DECISION';
 
                 return (
                   <tr
-                    key={risk.id}
-                    onClick={() => setSelectedRisk(risk)}
+                    key={item.id}
+                    onClick={() => setSelectedFinding(item)}
                     className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition cursor-pointer group"
                   >
                     {/* ID & Title */}
                     <td className="py-3.5 px-4">
                       <div className="font-bold text-slate-900 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors flex items-center gap-1.5">
                         <AlertTriangle className={`w-3.5 h-3.5 shrink-0 ${isCritical ? 'text-rose-500' : (isHigh ? 'text-amber-500' : 'text-blue-500')}`} />
-                        <span>{risk.title}</span>
+                        <span>{item.finding}</span>
                       </div>
-                      <div className="font-mono-code text-[10px] text-slate-400 mt-0.5">{risk.id} · {risk.category.replace(/_/g, ' ')}</div>
+                      <div className="font-mono-code text-[10px] text-slate-400 mt-0.5">{item.riskId} · {item.category.replace(/_/g, ' ')}</div>
                     </td>
 
                     {/* Severity */}
@@ -510,30 +267,28 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
                             ? 'bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
                             : 'bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800')
                       }`}>
-                        {risk.severity}
+                        {item.severity}
                       </span>
                     </td>
 
                     {/* Affected Target */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="font-medium text-slate-800 dark:text-slate-200">{risk.affectedTarget.systemName}</div>
-                      <div className="text-[10px] text-slate-400 font-mono-code">
-                        {risk.affectedTarget.agentName ? `Agent: ${risk.affectedTarget.agentName}` : `System: ${risk.affectedTarget.systemId}`}
-                      </div>
+                      <div className="font-medium text-slate-800 dark:text-slate-200">{item.agentName || item.systemId}</div>
+                      <div className="text-[10px] text-slate-400 font-mono-code">{item.sourceTarget}</div>
                     </td>
 
                     {/* CG-AG Control */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <span className="font-mono-code font-bold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950 px-2 py-0.5 rounded border border-sky-200 dark:border-sky-800">
-                        {risk.controlId}
+                        {item.controlId}
                       </span>
-                      <div className="text-[10px] text-slate-400 mt-0.5">{risk.controlName}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">{item.controlName}</div>
                     </td>
 
                     {/* Owner */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="font-medium text-slate-800 dark:text-slate-200">{risk.accountableOwner.name}</div>
-                      <div className="text-[10px] text-slate-400">{risk.accountableOwner.role}</div>
+                      <div className="font-medium text-slate-800 dark:text-slate-200">{item.owner.name}</div>
+                      <div className="text-[10px] text-slate-400">{item.owner.role}</div>
                     </td>
 
                     {/* Decision Status */}
@@ -544,14 +299,14 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
                           : 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${isPending ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-                        {risk.decisionStatus.replace(/_/g, ' ')}
+                        {item.decisionType.replace(/_/g, ' ')}
                       </span>
                     </td>
 
                     {/* Treatment Action */}
                     <td className="py-3.5 px-4">
-                      <div className="text-[11px] text-slate-700 dark:text-slate-300 truncate max-w-xs">{risk.treatment.actionRequired}</div>
-                      <div className="text-[10px] text-slate-400">Due: {risk.treatment.targetDueDate}</div>
+                      <div className="text-[11px] text-slate-700 dark:text-slate-300 truncate max-w-xs">{item.treatment.actionRequired}</div>
+                      <div className="text-[10px] text-slate-400">Due: {item.treatment.targetDueDate}</div>
                     </td>
 
                     {/* Action Button */}
@@ -559,7 +314,7 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedRisk(risk);
+                          setSelectedFinding(item);
                         }}
                         className="text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 font-semibold text-xs inline-flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform"
                       >
@@ -575,7 +330,7 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
       </div>
 
       {/* RIGHT-SIDE SLIDE-OVER RISK INVESTIGATION DRAWER */}
-      {selectedRisk && (
+      {selectedFinding && (
         <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/60 backdrop-blur-xs flex justify-end animate-fadeIn">
           <div className="w-full max-w-2xl bg-white dark:bg-[#0f172a] border-l border-slate-200 dark:border-slate-800 h-full shadow-2xl flex flex-col justify-between overflow-y-auto">
             <div>
@@ -584,24 +339,24 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
                 <div>
                   <div className="flex items-center space-x-2">
                     <span className="font-mono-code text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950 px-2 py-0.5 rounded border border-rose-200 dark:border-rose-800">
-                      {selectedRisk.id}
+                      {selectedFinding.riskId}
                     </span>
                     <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                      {selectedRisk.category.replace(/_/g, ' ')}
+                      {selectedFinding.category.replace(/_/g, ' ')}
                     </span>
                     <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300">
-                      {selectedRisk.severity}
+                      {selectedFinding.severity}
                     </span>
                   </div>
                   <h2 className="text-lg font-bold text-slate-900 dark:text-white mt-2">
-                    {selectedRisk.title}
+                    {selectedFinding.finding}
                   </h2>
                   <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                    {selectedRisk.description}
+                    Target: {selectedFinding.sourceTarget}
                   </p>
                 </div>
                 <button
-                  onClick={() => setSelectedRisk(null)}
+                  onClick={() => setSelectedFinding(null)}
                   className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                 >
                   <X className="w-5 h-5" />
@@ -630,7 +385,6 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
                 {/* 1. OVERVIEW */}
                 {activeDrawerTab === 'overview' && (
                   <div className="space-y-4">
-                    {/* Methodology Breakdown */}
                     <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
                       <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
                         <span>Deterministic Risk Methodology</span>
@@ -639,15 +393,15 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
                       <div className="grid grid-cols-3 gap-2 text-center">
                         <div className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-lg">
                           <span className="text-[10px] text-slate-400">Likelihood:</span>
-                          <div className="font-bold text-slate-900 dark:text-slate-100">{selectedRisk.likelihood}</div>
+                          <div className="font-bold text-slate-900 dark:text-slate-100">{selectedFinding.likelihood}</div>
                         </div>
                         <div className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-lg">
                           <span className="text-[10px] text-slate-400">Impact:</span>
-                          <div className="font-bold text-slate-900 dark:text-slate-100">{selectedRisk.impact}</div>
+                          <div className="font-bold text-slate-900 dark:text-slate-100">{selectedFinding.impact}</div>
                         </div>
                         <div className="p-2.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-lg">
                           <span className="text-[10px] text-rose-500 font-semibold">Calculated Level:</span>
-                          <div className="font-bold text-rose-600 dark:text-rose-400">{selectedRisk.riskLevel}</div>
+                          <div className="font-bold text-rose-600 dark:text-rose-400">{selectedFinding.severity}</div>
                         </div>
                       </div>
                     </div>
@@ -655,20 +409,20 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
                     <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
                       <div>
                         <span className="text-slate-400 text-[11px]">Accountable Owner:</span>
-                        <div className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{selectedRisk.accountableOwner.name}</div>
-                        <div className="text-[10px] text-slate-400">{selectedRisk.accountableOwner.role}</div>
+                        <div className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{selectedFinding.owner.name}</div>
+                        <div className="text-[10px] text-slate-400">{selectedFinding.owner.role}</div>
                       </div>
                       <div>
                         <span className="text-slate-400 text-[11px]">Department / Unit:</span>
-                        <div className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{selectedRisk.accountableOwner.department}</div>
+                        <div className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{selectedFinding.owner.department}</div>
                       </div>
                       <div>
                         <span className="text-slate-400 text-[11px]">Governance Decision State:</span>
-                        <div className="font-bold text-sky-600 dark:text-sky-400 mt-0.5">{selectedRisk.decisionStatus.replace(/_/g, ' ')}</div>
+                        <div className="font-bold text-sky-600 dark:text-sky-400 mt-0.5">{selectedFinding.decisionType.replace(/_/g, ' ')}</div>
                       </div>
                       <div>
                         <span className="text-slate-400 text-[11px]">Operational Status:</span>
-                        <div className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{selectedRisk.status}</div>
+                        <div className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{selectedFinding.status}</div>
                       </div>
                     </div>
                   </div>
@@ -683,37 +437,25 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
                     </div>
                     <div className="space-y-2 text-slate-700 dark:text-slate-300">
                       <div className="flex justify-between">
-                        <span className="text-slate-400">Target AI System:</span>
-                        <span className="font-semibold text-slate-900 dark:text-slate-100">{selectedRisk.affectedTarget.systemName}</span>
+                        <span className="text-slate-400">Target System Reference:</span>
+                        <span className="font-semibold text-slate-900 dark:text-slate-100">{selectedFinding.systemId}</span>
                       </div>
-                      {selectedRisk.affectedTarget.agentName && (
+                      {selectedFinding.agentName && (
                         <div className="flex justify-between">
                           <span className="text-slate-400">Autonomous Agent:</span>
-                          <span className="font-mono-code font-bold text-sky-600 dark:text-sky-400">{selectedRisk.affectedTarget.agentName} ({selectedRisk.affectedTarget.agentId})</span>
+                          <span className="font-mono-code font-bold text-sky-600 dark:text-sky-400">{selectedFinding.agentName} ({selectedFinding.agentId})</span>
                         </div>
                       )}
-                      {selectedRisk.affectedTarget.team && (
+                      {selectedFinding.team && (
                         <div className="flex justify-between">
                           <span className="text-slate-400">Squad / Team:</span>
-                          <span>{selectedRisk.affectedTarget.team}</span>
+                          <span>{selectedFinding.team}</span>
                         </div>
                       )}
-                      {selectedRisk.affectedTarget.model && (
+                      {selectedFinding.model && (
                         <div className="flex justify-between">
                           <span className="text-slate-400">Foundation Model:</span>
-                          <span className="font-mono-code">{selectedRisk.affectedTarget.model}</span>
-                        </div>
-                      )}
-                      {selectedRisk.affectedTarget.toolsAffected && (
-                        <div>
-                          <span className="text-slate-400">Tools in Scope:</span>
-                          <div className="flex flex-wrap gap-1.5 mt-1">
-                            {selectedRisk.affectedTarget.toolsAffected.map((t) => (
-                              <span key={t} className="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono-code text-[10px]">
-                                {t}
-                              </span>
-                            ))}
-                          </div>
+                          <span className="font-mono-code">{selectedFinding.model}</span>
                         </div>
                       )}
                     </div>
@@ -728,7 +470,7 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
                       <div className="space-y-3">
                         <div className="p-3 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-lg">
                           <div className="text-[10px] text-slate-400 uppercase font-bold">1. Governance Control In Scope</div>
-                          <div className="font-bold text-sky-600 dark:text-sky-400 mt-0.5">{selectedRisk.controlId} · {selectedRisk.controlName}</div>
+                          <div className="font-bold text-sky-600 dark:text-sky-400 mt-0.5">{selectedFinding.controlId} · {selectedFinding.controlName}</div>
                         </div>
 
                         <div className="flex justify-center">
@@ -737,8 +479,8 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
 
                         <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg">
                           <div className="text-[10px] text-amber-600 dark:text-amber-400 uppercase font-bold">2. Observed Finding / Gap</div>
-                          <div className="font-semibold text-amber-900 dark:text-amber-200 mt-0.5">{selectedRisk.findingSummary}</div>
-                          <div className="text-[10px] font-mono-code text-slate-400 mt-1">Ref: {selectedRisk.findingId}</div>
+                          <div className="font-semibold text-amber-900 dark:text-amber-200 mt-0.5">{selectedFinding.finding}</div>
+                          <div className="text-[10px] font-mono-code text-slate-400 mt-1">Ref: {selectedFinding.id}</div>
                         </div>
 
                         <div className="flex justify-center">
@@ -747,7 +489,7 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
 
                         <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-lg">
                           <div className="text-[10px] text-rose-600 dark:text-rose-400 uppercase font-bold">3. Resulting Exposure Risk</div>
-                          <div className="font-bold text-rose-900 dark:text-rose-200 mt-0.5">{selectedRisk.title}</div>
+                          <div className="font-bold text-rose-900 dark:text-rose-200 mt-0.5">{selectedFinding.riskId}</div>
                         </div>
                       </div>
                     </div>
@@ -759,36 +501,36 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
                   <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
                     <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
                       <span>Human Governance Decision Sign-Off</span>
-                      <span className="text-[10px] text-slate-400">Accountable Lead: {selectedRisk.accountableOwner.name}</span>
+                      <span className="text-[10px] text-slate-400">Accountable Lead: {selectedFinding.owner.name}</span>
                     </div>
 
-                    {selectedRisk.decisionStatus === 'PENDING_DECISION' ? (
+                    {selectedFinding.status === 'PENDING_DECISION' ? (
                       <div className="space-y-3">
                         <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
                           Under CG-AG Governance OS, risks do not automatically become actions. Choose an explicit, accountable decision:
                         </p>
                         <div className="grid grid-cols-2 gap-2">
                           <button
-                            onClick={() => handleExecuteDecision(selectedRisk, 'MITIGATE')}
+                            onClick={() => handleExecuteDecision(selectedFinding, 'MITIGATE')}
                             className="p-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs"
                           >
                             <CheckCircle2 className="w-4 h-4" />
                             <span>1. MITIGATE (Apply Guardrails)</span>
                           </button>
                           <button
-                            onClick={() => handleExecuteDecision(selectedRisk, 'ACCEPT')}
+                            onClick={() => handleExecuteDecision(selectedFinding, 'ACCEPT')}
                             className="p-3 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5"
                           >
                             <span>2. ACCEPT (Formal Sign-Off)</span>
                           </button>
                           <button
-                            onClick={() => handleExecuteDecision(selectedRisk, 'TRANSFER')}
+                            onClick={() => handleExecuteDecision(selectedFinding, 'TRANSFER')}
                             className="p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs"
                           >
                             <span>3. TRANSFER (Insurance/Vendor)</span>
                           </button>
                           <button
-                            onClick={() => handleExecuteDecision(selectedRisk, 'ESCALATE')}
+                            onClick={() => handleExecuteDecision(selectedFinding, 'ESCALATE')}
                             className="p-3 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs"
                           >
                             <span>4. ESCALATE (Board / C-Level)</span>
@@ -802,10 +544,10 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
                           <span>Governance Decision Formally Executed</span>
                         </div>
                         <div className="text-xs text-slate-700 dark:text-slate-300">
-                          Decision Type: <strong className="text-emerald-600 dark:text-emerald-400">{selectedRisk.decisionStatus}</strong>
+                          Decision Type: <strong className="text-emerald-600 dark:text-emerald-400">{selectedFinding.decisionType}</strong>
                         </div>
                         <div className="font-mono-code text-[11px] text-slate-500">
-                          Decision ID: {selectedRisk.decisionId || 'DEC-2026-RESOLVED'}
+                          Decision ID: {selectedFinding.decision?.decisionId || 'DEC-2026-RESOLVED'}
                         </div>
                       </div>
                     )}
@@ -820,20 +562,20 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
                       <div>
                         <span className="text-slate-400">Assigned Action:</span>
                         <div className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-lg mt-1 font-semibold text-slate-900 dark:text-slate-100">
-                          {selectedRisk.treatment.actionRequired}
+                          {selectedFinding.treatment.actionRequired}
                         </div>
                       </div>
                       <div className="flex justify-between pt-1">
                         <span className="text-slate-400">Assigned Treatment Squad:</span>
-                        <span className="font-semibold">{selectedRisk.treatment.assignedTo}</span>
+                        <span className="font-semibold">{selectedFinding.treatment.assignedTo}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Target Resolution Due Date:</span>
-                        <span className="font-mono-code font-bold text-slate-900 dark:text-slate-100">{selectedRisk.treatment.targetDueDate}</span>
+                        <span className="font-mono-code font-bold text-slate-900 dark:text-slate-100">{selectedFinding.treatment.targetDueDate}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Treatment Lifecycle Status:</span>
-                        <span className="font-bold text-sky-600 dark:text-sky-400">{selectedRisk.treatment.status}</span>
+                        <span className="font-bold text-sky-600 dark:text-sky-400">{selectedFinding.treatment.status}</span>
                       </div>
                     </div>
                   </div>
@@ -847,7 +589,7 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
                       <span>Tamper-Evident Evidence & Audit Link</span>
                     </div>
                     <div className="font-mono-code text-[11px] p-2.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300">
-                      Integrity Hash: {selectedRisk.evidenceDigest}
+                      Integrity Hash: {selectedFinding.evidenceDigest}
                     </div>
                     <p className="text-[11px] text-slate-500">
                       Chained into the Tamper-Evident Audit Ledger upon risk identification and decision registration.
@@ -859,9 +601,9 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
 
             {/* Drawer Footer */}
             <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex items-center justify-between">
-              <span className="text-[11px] text-slate-400 font-mono-code">Risk ID: {selectedRisk.id}</span>
+              <span className="text-[11px] text-slate-400 font-mono-code">Risk ID: {selectedFinding.riskId}</span>
               <button
-                onClick={() => setSelectedRisk(null)}
+                onClick={() => setSelectedFinding(null)}
                 className="px-4 py-1.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-semibold transition"
               >
                 Close Drawer

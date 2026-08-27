@@ -30,6 +30,7 @@ interface GovernanceCenterProps {
   onNavigateToControls: () => void;
   onNavigateToInventory?: () => void;
   onNavigateToAgents?: () => void;
+  onNavigateToRisk?: () => void;
 }
 
 export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
@@ -37,22 +38,26 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
   onNavigateToPassports,
   onNavigateToControls,
   onNavigateToInventory,
-  onNavigateToAgents
+  onNavigateToAgents,
+  onNavigateToRisk
 }) => {
   const { activeProfile, environment } = useIndustry();
   const [findings, setFindings] = useState<OperationalFinding[]>([]);
   const [ledger, setLedger] = useState<ProtectedEvidenceRecord[]>([]);
   const [feedback, setFeedback] = useState<{ message: string; decisionId: string; signature: string } | null>(null);
 
-  useEffect(() => {
+  const refreshState = () => {
     setFindings(DecisionStore.getFindings());
     setLedger(DecisionStore.getEvidenceLedger());
+  };
+
+  useEffect(() => {
+    refreshState();
+    return DecisionStore.subscribe(refreshState);
   }, []);
 
   const handleDecision = (id: string, actionType: 'MITIGATE' | 'ACCEPT' | 'ESCALATE') => {
     const result = DecisionStore.recordDecision(id, actionType);
-    setFindings(DecisionStore.getFindings());
-    setLedger(DecisionStore.getEvidenceLedger());
 
     setFeedback({
       message: `Governance Decision [${actionType}] formally executed and registered with human accountability.`,
@@ -62,7 +67,7 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
     setTimeout(() => setFeedback(null), 6000);
   };
 
-  const openFindingsCount = findings.filter(f => f.status === 'PENDING_DECISION').length;
+  const pendingDecisionsCount = findings.filter(f => f.status === 'PENDING_DECISION').length;
 
   return (
     <div className="space-y-6">
@@ -101,7 +106,7 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
             <div>
               <span className="font-semibold">{feedback.message}</span>
               <span className="ml-2 font-mono-code text-[11px] text-emerald-700 dark:text-emerald-300">
-                Decision: <strong>{feedback.decisionId}</strong> | Signature: <strong>{feedback.signature}</strong>
+                Decision: <strong>{feedback.decisionId}</strong> | Integrity Hash: <strong>{feedback.signature}</strong>
               </span>
             </div>
           </div>
@@ -184,17 +189,17 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
             <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
           </div>
           <div className="mt-2 flex items-baseline space-x-2">
-            <span className="text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400">
-              {openFindingsCount}
+            <span className="text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400 cursor-pointer hover:underline" onClick={onNavigateToRisk}>
+              {pendingDecisionsCount}
             </span>
-            <span className="text-[11px] font-medium text-rose-600 dark:text-rose-400">Pending Decision</span>
+            <span className="text-[11px] font-medium text-rose-600 dark:text-rose-400">Decisions Required</span>
           </div>
           <div className="mt-2 text-[11px] text-slate-600 dark:text-slate-400 flex items-center justify-between">
             <span>1 Missing HITL</span>
             <span>1 Unmasked PII</span>
           </div>
-          <div className="mt-1 text-[10px] text-slate-400">
-            <span>Human Review Required</span>
+          <div className="mt-1 text-[10px] text-sky-600 dark:text-sky-400 cursor-pointer hover:underline" onClick={onNavigateToRisk}>
+            Inspect in Risk Engine →
           </div>
         </div>
 
@@ -251,10 +256,10 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
           <div>
             <h2 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
               <span>🎯 What Needs Attention?</span>
-              <span className="text-xs font-normal text-slate-500">({openFindingsCount} Open Findings)</span>
+              <span className="text-xs font-normal text-slate-500">({pendingDecisionsCount} Open Findings Requiring Decisions)</span>
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Every risk requires an explicit human decision: <strong className="text-slate-700 dark:text-slate-300">Accept, Mitigate, Transfer, Avoid, or Escalate</strong>.
+              Risks do not automatically become actions. Every exposure requires an explicit human decision: <strong className="text-slate-700 dark:text-slate-300">Accept, Mitigate, Transfer, Avoid, or Escalate</strong>.
             </p>
           </div>
           <div className="text-xs text-slate-400 font-mono-code hidden sm:block">
@@ -301,8 +306,8 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
                     </td>
 
                     <td className="py-3 px-4 whitespace-nowrap text-slate-600 dark:text-slate-300">
-                      <div className="font-medium">{item.owner.split('(')[0]}</div>
-                      <div className="text-[10px] text-slate-400">{item.owner.split('(')[1]?.replace(')', '')}</div>
+                      <div className="font-medium">{item.owner.name}</div>
+                      <div className="text-[10px] text-slate-400">{item.owner.role}</div>
                     </td>
 
                     <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
@@ -429,7 +434,7 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
               <div className="text-[11px] text-slate-500 font-mono-code mt-0.5">CG-AG-CREWAI-CREDIT-911E</div>
               <div className="flex items-center justify-between text-[10px] text-slate-400 mt-2">
                 <span>Owner: Roberto Silva</span>
-                <span>Autonomy: L3 Bounded</span>
+                <span>Autonomy: CG-AG L3 Bounded</span>
               </div>
             </div>
 
@@ -440,8 +445,8 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
               </div>
               <div className="text-[11px] text-slate-500 font-mono-code mt-0.5">CG-AG-LANGGRAPH-SUPPORT-49F1</div>
               <div className="flex items-center justify-between text-[10px] text-slate-400 mt-2">
-                <span>Owner: Customer Ops</span>
-                <span>Autonomy: L2 Supervised</span>
+                <span>Owner: Juliana Lima</span>
+                <span>Autonomy: CG-AG L2 Supervised</span>
               </div>
             </div>
           </div>
