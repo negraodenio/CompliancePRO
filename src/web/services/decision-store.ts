@@ -261,7 +261,11 @@ export class DecisionStore {
   static recordDecision(
     findingId: string,
     decisionType: 'MITIGATE' | 'ACCEPT' | 'TRANSFER' | 'AVOID' | 'ESCALATE',
-    decider = { name: 'Roberto Silva', role: 'CISO & Accountable Lead', stakeholderGroup: 'CISO' as const }
+    decider: {
+      name: string;
+      role: string;
+      stakeholderGroup: 'AI_OFFICE' | 'CISO' | 'DPO' | 'COMPLIANCE' | 'LEGAL' | 'RISK' | 'INTERNAL_AUDIT' | 'BOARD';
+    } = { name: 'Roberto Silva', role: 'CISO & Accountable Lead', stakeholderGroup: 'CISO' }
   ): { finding: OperationalFinding; decision: GovernanceDecision; evidence: ProtectedEvidenceRecord } {
     const findings = this.getFindings();
     const targetIndex = findings.findIndex(f => f.id === findingId || f.riskId === findingId);
