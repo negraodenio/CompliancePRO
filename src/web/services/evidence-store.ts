@@ -20,6 +20,10 @@ export type EvidenceType =
   | 'REGULATORY_EVIDENCE';
 
 export interface ComprehensiveEvidenceRecord {
+  sourceType?: 'REAL_SCAN' | 'CANONICAL_BASELINE' | 'SIMULATION';
+  scanId?: string;
+  sourceRepository?: string;
+  createdFromScan?: boolean;
   evidenceId: string;
   title: string;
   evidenceType: EvidenceType;
@@ -250,6 +254,9 @@ export class EvidenceStore {
   }
 
   static getEvidenceRecords(): ComprehensiveEvidenceRecord[] {
+    if (this.scanEvidenceOverride) {
+      return JSON.parse(JSON.stringify(this.scanEvidenceOverride));
+    }
     if (typeof localStorage !== 'undefined') {
       const saved = localStorage.getItem(STORAGE_KEY_EVIDENCE);
       if (saved) {
@@ -263,7 +270,27 @@ export class EvidenceStore {
     return BASELINE_EVIDENCE;
   }
 
-  static verifyRecordIntegrity(evidenceId: string): { verified: boolean; computedHash: string; matchesLedger: boolean } {
+    private static scanEvidenceOverride: ComprehensiveEvidenceRecord[] | null = null;
+
+  static ingestEvidence(records: ComprehensiveEvidenceRecord[]) {
+    const current = this.getEvidenceRecords();
+    const combined = [...records, ...current.filter(c => !records.some(r => r.evidenceId === c.evidenceId))];
+    this.scanEvidenceOverride = combined;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY_EVIDENCE, JSON.stringify(combined));
+    }
+    this.notify();
+  }
+
+  static resetToBaseline() {
+    this.scanEvidenceOverride = null;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY_EVIDENCE);
+    }
+    this.notify();
+  }
+
+static verifyRecordIntegrity(evidenceId: string): { verified: boolean; computedHash: string; matchesLedger: boolean } {
     const list = this.getEvidenceRecords();
     const record = list.find(r => r.evidenceId === evidenceId);
     if (!record) throw new Error(`Evidence ${evidenceId} not found`);

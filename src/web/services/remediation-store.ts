@@ -10,6 +10,10 @@ export type RemediationStatus = 'OPEN' | 'IN_PROGRESS' | 'PENDING_VERIFICATION' 
 export type VerificationMethod = 'AUTOMATED_RESCAN' | 'PEER_SECURITY_REVIEW' | 'AUDIT_ATTESTATION';
 
 export interface RemediationAction {
+  sourceType?: 'REAL_SCAN' | 'CANONICAL_BASELINE' | 'SIMULATION';
+  scanId?: string;
+  sourceRepository?: string;
+  createdFromScan?: boolean;
   actionId: string;
   title: string;
   riskId: string;
@@ -153,6 +157,9 @@ export class RemediationStore {
   }
 
   static getActions(): RemediationAction[] {
+    if (this.scanActionsOverride) {
+      return JSON.parse(JSON.stringify(this.scanActionsOverride));
+    }
     if (typeof localStorage !== 'undefined') {
       const saved = localStorage.getItem(STORAGE_KEY_REMEDIATIONS);
       if (saved) {
@@ -166,7 +173,25 @@ export class RemediationStore {
     return BASELINE_REMEDIATIONS;
   }
 
-  static verifyAndCloseAction(
+    private static scanActionsOverride: RemediationAction[] | null = null;
+
+  static ingestActions(actions: RemediationAction[]) {
+    this.scanActionsOverride = actions;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY_REMEDIATIONS, JSON.stringify(actions));
+    }
+    this.notify();
+  }
+
+  static resetToBaseline() {
+    this.scanActionsOverride = null;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY_REMEDIATIONS);
+    }
+    this.notify();
+  }
+
+static verifyAndCloseAction(
     actionId: string,
     closureRationale: string,
     testOutcome: string,

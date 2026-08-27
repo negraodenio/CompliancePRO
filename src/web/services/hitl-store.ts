@@ -9,6 +9,10 @@ import { ProtectedEvidenceRecord } from '../../core/governance-control-plane';
 export type GateStatus = 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'EXPIRED_BLOCKED';
 
 export interface HITLApprovalRequest {
+  sourceType?: 'REAL_SCAN' | 'CANONICAL_BASELINE' | 'SIMULATION';
+  scanId?: string;
+  sourceRepository?: string;
+  createdFromScan?: boolean;
   gateId: string;
   actionTitle: string;
   agentId: string;
@@ -143,6 +147,9 @@ export class HitlStore {
   }
 
   static getGates(): HITLApprovalRequest[] {
+    if (this.scanGatesOverride) {
+      return JSON.parse(JSON.stringify(this.scanGatesOverride));
+    }
     if (typeof localStorage !== 'undefined') {
       const saved = localStorage.getItem(STORAGE_KEY_HITL);
       if (saved) {
@@ -156,7 +163,25 @@ export class HitlStore {
     return BASELINE_GATES;
   }
 
-  static executeHumanApproval(
+    private static scanGatesOverride: HITLApprovalRequest[] | null = null;
+
+  static ingestGates(gates: HITLApprovalRequest[]) {
+    this.scanGatesOverride = gates;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY_HITL, JSON.stringify(gates));
+    }
+    this.notify();
+  }
+
+  static resetToBaseline() {
+    this.scanGatesOverride = null;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY_HITL);
+    }
+    this.notify();
+  }
+
+static executeHumanApproval(
     gateId: string,
     decision: 'APPROVE' | 'REJECT',
     rationale: string,

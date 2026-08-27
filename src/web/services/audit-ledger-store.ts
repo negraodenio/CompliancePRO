@@ -225,7 +225,56 @@ export class AuditLedgerStore {
     return JSON.parse(JSON.stringify(BASELINE_BLOCKS));
   }
 
-  static verifyEntireLedger(): ChainVerificationResult {
+      static resetToBaseline() {
+    this.memoryOverride = null;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY_LEDGER);
+    }
+    this.notify();
+  }
+
+static appendScanBlock(
+    evidenceRef: string,
+    payloadData: any,
+    actor = 'AST Ingestion Scanner',
+    eventType: AuditBlock['eventType'] = 'PASSPORT_ISSUED',
+    controlId = 'CG-AG-12'
+  ): AuditBlock {
+    const blocks = this.getBlocks();
+    const prevBlock = blocks[blocks.length - 1];
+    const blockHeight = prevBlock ? prevBlock.blockHeight + 1 : 1;
+    const blockId = 'LEDGER-BLK-' + String(blockHeight).padStart(4, '0');
+    const previousHash = prevBlock ? prevBlock.blockHash : GENESIS_PREV_HASH;
+    const payloadHash = computeDeterministicHash(JSON.stringify(payloadData));
+    const blockHash = computeDeterministicHash(previousHash + payloadHash);
+
+    const newBlock: AuditBlock = {
+      blockHeight,
+      blockId,
+      timestamp: new Date().toISOString(),
+      previousHash,
+      payloadHash,
+      blockHash,
+      actor,
+      actorRole: 'Automated Scan Ingestion Authority',
+      eventType,
+      sourceModule: 'DISCOVER',
+      evidenceRef,
+      controlId,
+      payloadData
+    };
+
+    blocks.push(newBlock);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY_LEDGER, JSON.stringify(blocks));
+    } else {
+      this.memoryOverride = blocks;
+    }
+    this.notify();
+    return newBlock;
+  }
+
+static verifyEntireLedger(): ChainVerificationResult {
     const blocks = this.getBlocks();
     let brokenLinks = 0;
     let hashMismatches = 0;

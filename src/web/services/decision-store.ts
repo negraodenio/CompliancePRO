@@ -6,6 +6,11 @@
 import { GovernanceDecision, ProtectedEvidenceRecord, GovernanceControlPlane } from '../../core/governance-control-plane';
 
 export interface OperationalFinding {
+  sourceType?: 'REAL_SCAN' | 'CANONICAL_BASELINE' | 'SIMULATION';
+  scanId?: string;
+  sourceRepository?: string;
+  sourcePath?: string;
+  createdFromScan?: boolean;
   id: string;
   riskId: string;
   finding: string;
@@ -212,6 +217,9 @@ export class DecisionStore {
   }
 
   static getFindings(): OperationalFinding[] {
+    if (this.scanFindingsOverride) {
+      return JSON.parse(JSON.stringify(this.scanFindingsOverride));
+    }
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY_FINDINGS) : null;
     if (saved) {
       try {
@@ -258,7 +266,25 @@ export class DecisionStore {
     ];
   }
 
-  static recordDecision(
+    private static scanFindingsOverride: OperationalFinding[] | null = null;
+
+  static ingestFindings(findings: OperationalFinding[]) {
+    this.scanFindingsOverride = findings;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY_FINDINGS, JSON.stringify(findings));
+    }
+    this.notify();
+  }
+
+  static resetToBaseline() {
+    this.scanFindingsOverride = null;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY_FINDINGS);
+    }
+    this.notify();
+  }
+
+static recordDecision(
     findingId: string,
     decisionType: 'MITIGATE' | 'ACCEPT' | 'TRANSFER' | 'AVOID' | 'ESCALATE',
     decider: {

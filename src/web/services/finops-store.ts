@@ -167,6 +167,9 @@ export class FinOpsStore {
   }
 
   static getUsage(): FinOpsEntityUsage[] {
+    if (this.scanFinOpsOverride) {
+      return JSON.parse(JSON.stringify(this.scanFinOpsOverride));
+    }
     if (typeof localStorage !== 'undefined') {
       const saved = localStorage.getItem(STORAGE_KEY_FINOPS);
       if (saved) {
@@ -178,6 +181,49 @@ export class FinOpsStore {
       }
     }
     return BASELINE_FINOPS;
+  }
+
+    private static scanFinOpsOverride: FinOpsEntityUsage[] | null = null;
+
+  static ingestScanFinOps(monthlyUsd: number, monthlyTokens: number, providerSummary: Record<string, number>) {
+    const primaryProvider = Object.keys(providerSummary)[0] || 'OpenAI';
+    const mappedProvider: FinOpsEntityUsage['modelProvider'] = 
+      primaryProvider.toLowerCase().includes('anthropic') ? 'Anthropic' :
+      primaryProvider.toLowerCase().includes('google') ? 'Google' :
+      primaryProvider.toLowerCase().includes('local') || primaryProvider.toLowerCase().includes('mistral') ? 'Self-Hosted OSS' : 'OpenAI';
+
+    const scannedEntity: FinOpsEntityUsage = {
+      entityId: 'FINOPS-SCAN-01',
+      entityName: 'Scanned AI Application Fleet',
+      systemId: 'SYS-SCAN-CORE',
+      systemName: 'Scanned Production AI System',
+      department: 'Quantitative AI Engineering',
+      assignedSquad: 'Trading Algorithmic Systems',
+      primaryModel: 'gpt-4o',
+      modelProvider: mappedProvider,
+      monthlyBudgetUSD: Math.round(monthlyUsd * 1.5),
+      currentSpendUSD: monthlyUsd,
+      promptTokens: Math.round(monthlyTokens * 0.4),
+      completionTokens: Math.round(monthlyTokens * 0.6),
+      totalTokens: monthlyTokens,
+      totalRequests: Math.round(monthlyTokens / 800),
+      avgLatencyMs: 240,
+      tokenQuotaMonthly: Math.round(monthlyTokens * 2),
+      rateLimitRpm: 500,
+      status: 'WITHIN_LIMIT',
+      enforcementMode: 'RUNTIME_ENFORCED',
+      governingPolicyId: 'POL-FINOPS-01',
+      governingPolicyName: 'Enterprise AI Token Quota & Cost Control Policy',
+      lastUpdated: new Date().toISOString()
+    };
+
+    this.scanFinOpsOverride = [scannedEntity];
+    this.notify();
+  }
+
+  static resetToBaseline() {
+    this.scanFinOpsOverride = null;
+    this.notify();
   }
 
   static updateBudgetAndQuota(

@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import type { ScannerResult } from '../../core/types';
 import { useIndustry } from '../context/IndustryContext';
+import { ScanGovernanceBridge } from '../services/scan-governance-bridge';
 
 export interface AgentEntity {
   id: string;

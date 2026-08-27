@@ -37,6 +37,7 @@ import { AcademyModal } from './components/AcademyModal';
 import { fetchGitHubRepo } from './services/github-fetcher';
 import { readZipFile, readFolderFiles } from './services/zip-reader';
 import { runLocalScan } from './services/scanner-bridge';
+import { ScanGovernanceBridge } from './services/scan-governance-bridge';
 import { DEMO_PROJECTS, DemoProject } from './services/demo-projects';
 import type { ScannerResult } from '../core/types';
 import { Lock, Sparkles, Terminal, FileBadge, CheckSquare, Layers } from 'lucide-react';
@@ -83,6 +84,7 @@ export const App: React.FC = () => {
       });
 
       setScanResult(result);
+      ScanGovernanceBridge.ingestScan(result);
       setScanProgress({ message: 'Scan Complete!', percent: 100 });
       triggerConfetti();
       setActiveView('overview-center');
@@ -107,6 +109,7 @@ export const App: React.FC = () => {
       });
 
       setScanResult(result);
+      ScanGovernanceBridge.ingestScan(result);
       setScanProgress({ message: 'Scan Complete!', percent: 100 });
       triggerConfetti();
       setActiveView('overview-center');
@@ -130,6 +133,7 @@ export const App: React.FC = () => {
       const result = await runLocalScan(files.files, { repoName: folderName });
 
       setScanResult(result);
+      ScanGovernanceBridge.ingestScan(result);
       setScanProgress({ message: 'Scan Complete!', percent: 100 });
       triggerConfetti();
       setActiveView('overview-center');
@@ -149,6 +153,7 @@ export const App: React.FC = () => {
         repoName: demo.name,
       });
       setScanResult(result);
+      ScanGovernanceBridge.ingestScan(result);
       setScanProgress({ message: 'Loaded!', percent: 100 });
     } catch (err: any) {
       console.error('Demo load error:', err);

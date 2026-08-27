@@ -176,7 +176,11 @@ export class DossierStore {
     return BASELINE_DOSSIERS;
   }
 
-  static markDossierExported(dossierId: string): RegulatoryDossier {
+    static updateDossierContextFromScan(compliance: any) {
+    this.notify();
+  }
+
+static markDossierExported(dossierId: string): RegulatoryDossier {
     const list = this.getDossiers();
     const index = list.findIndex(d => d.dossierId === dossierId);
     if (index === -1) throw new Error(`Dossier ${dossierId} not found`);
