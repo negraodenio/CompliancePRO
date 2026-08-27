@@ -4,6 +4,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { IndustryProvider } from './context/IndustryContext';
 import { AppShell, ActiveNavView } from './components/AppShell';
 import { GovernanceCenter } from './views/GovernanceCenter';
+import { AiInventoryView } from './views/AiInventoryView';
 import { HeroScanner } from './components/HeroScanner';
 import { AgentInventory } from './components/AgentInventory';
 import { RegulationsGrid } from './components/RegulationsGrid';
@@ -156,6 +157,15 @@ export const App: React.FC = () => {
               onNavigateToScanner={() => setActiveView('tools-scanner')}
               onNavigateToPassports={() => setActiveView('discover-passports')}
               onNavigateToControls={() => setActiveView('govern-controls')}
+              onNavigateToInventory={() => setActiveView('discover-inventory')}
+              onNavigateToAgents={() => setActiveView('discover-agents')}
+            />
+          )}
+
+          {activeView === 'discover-inventory' && (
+            <AiInventoryView 
+              result={scanResult}
+              onOpenScanner={() => setActiveView('tools-scanner')}
             />
           )}
 
@@ -174,7 +184,7 @@ export const App: React.FC = () => {
               </div>
 
               {/* In-Browser AST Scanner Tool */}
-              <div className="bg-white dark:bg-[#0f172a] rounded-xl border border-slate-200 dark:border-slate-800 p-6 elevation-card">
+              <div className="bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-slate-800 p-6 elevation-card">
                 <HeroScanner 
                   onScanGitHub={handleScanGitHub}
                   onScanZip={handleScanZip}
@@ -208,7 +218,7 @@ export const App: React.FC = () => {
 
               {/* Passports Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-5 bg-white dark:bg-[#0f172a] rounded-xl border border-slate-200 dark:border-slate-800 elevation-card space-y-4">
+                <div className="p-5 bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-slate-800 elevation-card space-y-4">
                   <div className="flex items-start justify-between">
                     <div>
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300">
@@ -244,7 +254,7 @@ export const App: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="p-5 bg-white dark:bg-[#0f172a] rounded-xl border border-slate-200 dark:border-slate-800 elevation-card space-y-4">
+                <div className="p-5 bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-slate-800 elevation-card space-y-4">
                   <div className="flex items-start justify-between">
                     <div>
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
@@ -283,7 +293,7 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {activeView === 'govern-controls' && scanResult && (
+          {activeView === 'govern-controls' && (
             <div className="space-y-6">
               <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
                 <h1 className="text-xl font-bold text-slate-900 dark:text-white">
@@ -300,8 +310,8 @@ export const App: React.FC = () => {
           )}
 
           {/* Fallback for other planned views */}
-          {!['overview-center', 'tools-scanner', 'discover-passports', 'govern-controls'].includes(activeView) && (
-            <div className="p-12 text-center bg-white dark:bg-[#0f172a] rounded-xl border border-slate-200 dark:border-slate-800 elevation-card space-y-4">
+          {!['overview-center', 'discover-inventory', 'tools-scanner', 'discover-passports', 'govern-controls'].includes(activeView) && (
+            <div className="p-12 text-center bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-slate-800 elevation-card space-y-4">
               <div className="w-12 h-12 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center mx-auto">
                 <Lock className="w-6 h-6" />
               </div>
@@ -310,7 +320,7 @@ export const App: React.FC = () => {
               </h2>
               <p className="text-xs text-slate-500 max-w-md mx-auto">
                 This Control Plane operational workspace is part of the CG-AG Enterprise SaaS roadmap. 
-                Use the <strong>Governance Center</strong> or <strong>Scanner</strong> to manage current active policies.
+                Use the <strong>Governance Center</strong>, <strong>AI Inventory</strong>, or <strong>Scanner</strong> to manage current active policies.
               </p>
               <button 
                 onClick={() => setActiveView('overview-center')}
