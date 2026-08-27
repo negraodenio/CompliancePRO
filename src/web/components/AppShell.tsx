@@ -49,6 +49,8 @@ export type ActiveNavView =
   | 'assure-evidence'
   | 'assure-audit'
   | 'assure-reports'
+  | 'assure-simulator'
+  | 'assure-readiness'
   | 'tools-scanner'
   | 'tools-integrations'
   | 'settings';

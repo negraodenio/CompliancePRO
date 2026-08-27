@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   ShieldCheck,
+  Database,
   CheckCircle2,
   Lock,
   Layers,

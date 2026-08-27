@@ -49,7 +49,10 @@ export interface PersistenceError extends Error {
     | 'TENANT_BOUNDARY_VIOLATION'
     | 'SCHEMA_VALIDATION_FAILED'
     | 'STORAGE_QUOTA_EXCEEDED'
-    | 'INTEGRITY_VALIDATION_FAILED';
+    | 'INTEGRITY_VALIDATION_FAILED'
+  | 'QUERY_FAILED'
+  | 'DATABASE_UNAVAILABLE'
+  | 'UNKNOWN_COLLECTION';
   details?: Record<string, any>;
 }
 
