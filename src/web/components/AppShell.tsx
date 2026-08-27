@@ -53,6 +53,7 @@ export type ActiveNavView =
   | 'assure-readiness'
   | 'tools-scanner'
   | 'tools-operations'
+  | 'tools-deployment'
   | 'tools-integrations'
   | 'settings';
 
