@@ -152,8 +152,8 @@ const BASELINE_POLICIES: GovernancePolicy[] = [
     enforcement: {
       mode: 'HUMAN_GATE',
       configuredCoverage: '100% Configured in Policy Registry',
-      observedCoverage: '75% (1 Credit Underwriting Agent Lacks Checkpoint)',
-      enforcementCoverage: '75% Enforced via API Gateways',
+      observedCoverage: '75% Telemetry Observed (1 Agent Lacks Gate)',
+      enforcementCoverage: '75% Active Human Blocking Gateway',
       telemetrySensor: 'HITL Proxy / Workflow Interceptor v2.4',
       isRuntimeInstrumented: true
     },
@@ -223,10 +223,10 @@ const BASELINE_POLICIES: GovernancePolicy[] = [
     },
     enforcement: {
       mode: 'HYBRID',
-      configuredCoverage: '100% Configured in SecurityGuard',
-      observedCoverage: '88% (Direct Shadow LLM Call Detected in Growth Service)',
-      enforcementCoverage: '88% Sanitized via Proxy',
-      telemetrySensor: 'SecurityGuard Anonymizer & LLM Egress Filter',
+      configuredCoverage: '100% Configured in SecurityGuard Proxy',
+      observedCoverage: '88% Telemetry Observed (Direct Call Detected)',
+      enforcementCoverage: '88% Active Egress Sanitization',
+      telemetrySensor: 'SecurityGuard Anonymizer & Egress Filter',
       isRuntimeInstrumented: true
     },
     guardrails: [
@@ -295,9 +295,9 @@ const BASELINE_POLICIES: GovernancePolicy[] = [
     },
     enforcement: {
       mode: 'STATIC',
-      configuredCoverage: '100% Configured in CI/CD linter',
-      observedCoverage: '90% (1 Ops Agent with unbounded BashTool)',
-      enforcementCoverage: '90% Verified at Build Time',
+      configuredCoverage: '100% Configured in Static Scanner',
+      observedCoverage: '90% Static AST Analysis',
+      enforcementCoverage: 'Static Scan Only (Runtime Not Instrumented)',
       telemetrySensor: 'AST Tool Boundary Scanner',
       isRuntimeInstrumented: false
     },
@@ -423,9 +423,9 @@ const BASELINE_POLICIES: GovernancePolicy[] = [
     },
     enforcement: {
       mode: 'STATIC',
-      configuredCoverage: '100% Configured in CI/CD pipeline gate',
-      observedCoverage: '100% (142 Entities Cataloged)',
-      enforcementCoverage: '100% Verified via Registry Sensor',
+      configuredCoverage: '100% Configured in Pre-Commit Hook',
+      observedCoverage: '100% Verified Catalog',
+      enforcementCoverage: 'Static Pre-Commit Gate (Runtime Not Instrumented)',
       telemetrySensor: 'Repository Scanner & Asset Catalog Sensor',
       isRuntimeInstrumented: false
     },

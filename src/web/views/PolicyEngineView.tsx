@@ -182,11 +182,11 @@ export const PolicyEngineView: React.FC<{ result?: ScannerResult | null }> = ({ 
 
         <div className="p-4 rounded-xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 elevation-card">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-            <span className="font-semibold text-slate-700 dark:text-slate-300">Configured Coverage</span>
+            <span className="font-semibold text-slate-700 dark:text-slate-300">Coverage & Enforcement</span>
             <ShieldCheck className="w-4 h-4 text-emerald-500" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400">100%</div>
-          <div className="text-[11px] text-slate-500 mt-1">88% Observed Telemetry</div>
+          <div className="mt-2 text-xl font-bold text-emerald-600 dark:text-emerald-400">100% Configured</div>
+          <div className="text-[11px] text-slate-500 mt-1">88% Observed · Runtime Instrumented</div>
         </div>
       </div>
 
