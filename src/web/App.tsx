@@ -7,6 +7,7 @@ import { GovernanceCenter } from './views/GovernanceCenter';
 import { AiInventoryView } from './views/AiInventoryView';
 import { AgentsTeamsView } from './views/AgentsTeamsView';
 import { AssessmentsView } from './views/AssessmentsView';
+import { ControlsMatrixView } from './views/ControlsMatrixView';
 import { HeroScanner } from './components/HeroScanner';
 import { AgentInventory } from './components/AgentInventory';
 import { RegulationsGrid } from './components/RegulationsGrid';
@@ -224,18 +225,7 @@ export const App: React.FC = () => {
           )}
 
           {activeView === 'govern-controls' && (
-            <div className="space-y-6">
-              <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
-                <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-                  📜 The 12 CG-AG Governance Controls
-                </h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Normative operational baseline for enterprise AI agent governance.
-                </p>
-              </div>
-
-              <RegulationsGrid result={scanResult} />
-            </div>
+            <ControlsMatrixView result={scanResult} />
           )}
 
           {!['overview-center', 'discover-inventory', 'discover-agents', 'discover-passports', 'discover-assessments', 'tools-scanner', 'govern-controls'].includes(activeView) && (
