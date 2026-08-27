@@ -212,7 +212,7 @@ export class DecisionStore {
   }
 
   static getFindings(): OperationalFinding[] {
-    const saved = localStorage.getItem(STORAGE_KEY_FINDINGS);
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY_FINDINGS) : null;
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -224,7 +224,7 @@ export class DecisionStore {
   }
 
   static getEvidenceLedger(): ProtectedEvidenceRecord[] {
-    const saved = localStorage.getItem(STORAGE_KEY_EVIDENCE);
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY_EVIDENCE) : null;
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -289,7 +289,7 @@ export class DecisionStore {
     if (targetIndex >= 0) {
       findings[targetIndex] = updatedFinding;
     }
-    localStorage.setItem(STORAGE_KEY_FINDINGS, JSON.stringify(findings));
+    if (typeof localStorage !== 'undefined') { localStorage.setItem(STORAGE_KEY_FINDINGS, JSON.stringify(findings)); }
 
     // Emit real protected evidence record into ledger
     const hash = Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -306,7 +306,7 @@ export class DecisionStore {
     };
 
     const ledger = [evidence, ...this.getEvidenceLedger()];
-    localStorage.setItem(STORAGE_KEY_EVIDENCE, JSON.stringify(ledger.slice(0, 30)));
+    if (typeof localStorage !== 'undefined') { localStorage.setItem(STORAGE_KEY_EVIDENCE, JSON.stringify(ledger.slice(0, 30))); }
 
     this.notify();
     return { finding: updatedFinding, decision, evidence };
