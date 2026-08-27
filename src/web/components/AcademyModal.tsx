@@ -71,13 +71,13 @@ export const AcademyModal: React.FC<AcademyModalProps> = ({ onClose }) => {
     },
     {
       id: 6,
-      title: 'Módulo 6: Dossiês Formais & Certificação CAIGA™',
+      title: 'Módulo 6: Dossiês Formais & Certificação AIGOV™',
       duration: '6 Horas',
       lessons: [
         '6.1 Geração Automática do RIPD Oficial (Art. 38 LGPD)',
         '6.2 Dossiê Técnico do EU AI Act (Anexo IV)',
         '6.3 Projeto Prático Final com Repositório-Desafio',
-        '6.4 Emissão da Certificação Profissional CAIGA™',
+        '6.4 Emissão da Certificação Profissional AIGOV™',
       ],
     },
   ];
@@ -96,7 +96,7 @@ export const AcademyModal: React.FC<AcademyModalProps> = ({ onClose }) => {
               <div className="flex items-center space-x-2">
                 <h3 className="text-lg font-bold text-white">ComplyPRO Academy • Formação Executiva</h3>
                 <span className="px-2 py-0.5 text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded font-bold">
-                  Certificação CAIGA™
+                  Certificação AIGOV™
                 </span>
               </div>
               <p className="text-xs text-slate-300">
@@ -154,7 +154,7 @@ export const AcademyModal: React.FC<AcademyModalProps> = ({ onClose }) => {
 
             <div className="p-3.5 rounded-xl bg-slate-900 text-white border border-slate-900 text-center space-y-0.5 shadow-sm">
               <span className="text-[10px] text-slate-300 font-bold uppercase">Certificação</span>
-              <div className="text-lg font-black text-amber-400 font-mono">CAIGA™</div>
+              <div className="text-lg font-black text-amber-400 font-mono">AIGOV™</div>
               <p className="text-[10px] text-slate-300">Selo Internacional</p>
             </div>
           </div>

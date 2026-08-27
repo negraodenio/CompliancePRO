@@ -1,0 +1,70 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ComplyPRO Light AI Governance REST API",
+    "version": "1.0.0",
+    "description": "Deterministic, zero-code-retention REST interface for AI Agent Governance, Risk and Compliance auditing."
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "responses": { "200": { "description": "Engine status" } }
+      }
+    },
+    "/api/v1/scan": {
+      "post": {
+        "summary": "Execute Code Compliance Audit",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "files": { "type": "object", "additionalProperties": { "type": "string" } },
+                  "directoryPath": { "type": "string" },
+                  "repoName": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "ScanResult object" } }
+      }
+    },
+    "/api/v1/standard": {
+      "get": {
+        "summary": "Retrieve CG-AG 24/12 Governance Standard",
+        "parameters": [
+          { "name": "format", "in": "query", "schema": { "type": "string", "enum": ["json", "md"] } }
+        ],
+        "responses": { "200": { "description": "Standard controls specification" } }
+      }
+    },
+    "/api/v1/report": {
+      "post": {
+        "summary": "Generate Regulatory Dossier (RIPD / EU AI Act)",
+        "responses": { "200": { "description": "Markdown / JSON report" } }
+      }
+    },
+    "/api/v1/graph": {
+      "post": {
+        "summary": "Generate in-memory GraphOS Entity Lineage Graph",
+        "responses": { "200": { "description": "Graph nodes and edges" } }
+      }
+    },
+    "/api/v1/patch": {
+      "post": {
+        "summary": "Generate deterministic AST remediation patch",
+        "responses": { "200": { "description": "Patched source code" } }
+      }
+    },
+    "/api/v1/webhook/github": {
+      "post": {
+        "summary": "GitHub Webhook Trigger (HMAC SHA-256)",
+        "responses": { "200": { "description": "Scan queued" } }
+      }
+    }
+  }
+}

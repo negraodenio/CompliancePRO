@@ -3,9 +3,10 @@ import type { SourceConnector, ConnectorConfig, ConnectorRepoMeta, ConnectorFile
 
 export class GiteaConnector implements SourceConnector {
   /** Pass 'forgejo' to surface the correct provider label */
-  constructor(private readonly providerOverride?: SourceProvider) {}
+  readonly provider: SourceProvider;
+  constructor(providerOverride?: SourceProvider) { this.provider = providerOverride ?? 'gitea'; }
 
-  readonly provider: SourceProvider = this.providerOverride ?? 'gitea';
+  
 
   private base(cfg: ConnectorConfig) {
     if (!cfg.baseUrl) throw new Error('Gitea/Forgejo requires baseUrl (e.g. https://codeberg.org)');

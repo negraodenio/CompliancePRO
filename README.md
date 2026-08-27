@@ -22,8 +22,8 @@ O **CodeGuard Compliance Scanner** é uma solução independente capaz de escane
    - 🛡️ **OWASP Top 10 for LLMs** (Prompt Injection, Insecure Output, Data Poisoning, etc.)
    - 🏦 **DORA** (Digital Operational Resilience Act - UE)
    - 🔒 **NIS2** (Network and Information Security Directive)
-   - 💳 **PCI-DSS v4.0**
-   - 📜 **CG-AG (CodeGuard Agent Governance Framework)** — 12 Controles de Governança
+   - 📜 [**CG-AG (CodeGuard Agent Governance Framework)**](./docs/CG_AG_FRAMEWORK_SPECIFICATION.md) — Matriz Completa de 12 Controles de Governança de Agentes de IA
+   - 👓 [**Metodologia de Leitura & Lentes Executivas C-Level**](./docs/LENTES_EXECUTIVAS_E_METODOLOGIA_LEITURA.md) — Como o scanner lê cada item e a visão de CISO, DPO, CIO, Board e CFO
 
 ---
 

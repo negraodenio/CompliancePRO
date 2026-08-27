@@ -11,7 +11,7 @@
 - **Subheadline:** *"Da análise de código à sala do Conselho de Administração. Aprenda a auditar repositórios, mitigar riscos do EU AI Act, emitir RIPDs da LGPD e calcular o Value at Risk (VaR) de inteligência artificial — com **6 meses de acesso irrestrito à plataforma ComplyPRO Light inclusos**."*
 - **Call to Action Primário:** `[ Quero Garantir Minha Vaga com 6 Meses de Software Grátis → ]`
 - **Badges de Confiança:** 
-  - 🛡️ Certificação Profissional CAIGA™ com Registro Digital
+  - 🛡️ Certificação Profissional AIGOV™ com Registro Digital
   - 🔒 100% Alinhado ao EU AI Act, LGPD, ISO/IEC 42001 e NIST AI RMF
   - 💻 3 Laboratórios Práticos com Códigos Reais
 
@@ -33,7 +33,7 @@
 3. **Módulo 3: Laboratório Prático Hands-On** (Escaneamento de repositórios, Matriz SIPOC de Agentes e Matriz RACI).
 4. **Módulo 4: Governança de Runtime & FinOps** (Human-in-the-Loop L2, Circuit Breakers de Loops e Otimização de Tokens).
 5. **Módulo 5: Simulação Monte Carlo & Lentes C-Level** (Cálculo de VaR 95%, Expected Shortfall e Apólices de Seguro Cyber).
-6. **Módulo 6: Dossiês Formais & Projeto de Certificação** (Emissão de RIPD automatizado, Dossiê Técnico e Certificação CAIGA™).
+6. **Módulo 6: Dossiês Formais & Projeto de Certificação** (Emissão de RIPD automatizado, Dossiê Técnico e Certificação AIGOV™).
 
 ---
 
@@ -62,35 +62,41 @@ Ao se inscrever, você recebe imediatamente **6 meses de licença integral da pl
 
 ---
 
-### **[SEÇÃO 6: OFERTA & INVESTIMENTO]**
+### **[SEÇÃO 6: MODELO DE OFERTA NO UDEMY & UPSELL SAAS]**
 
-- **Preço de Tabela:** ~~R$ 3.997,00~~
-- **Condição Especial de Lançamento:**
-  - **12x de R$ 199,70** ou **R$ 1.997,00 à vista**
-- **O que está incluso:**
-  - Acesso Vitalício às 24h de Videoaulas e atualizações regulatórias.
-  - 6 Meses de Licença Full do Software ComplyPRO Light.
-  - Kit Completo de Templates Editáveis (RIPD, RACI, Dossiê Técnico).
-  - 3 Repositórios-Laboratório de Teste.
-  - Avaliação de Projeto Prático e Certificado Profissional CAIGA™.
-  - Garantia Incondicional de 15 Dias (Risco Zero).
+#### **A) Oferta do Curso no Udemy (Front-End):**
+- **Preço de Tabela no Marketplace:** R$ 249,90 *(Faixas promocionais da Udemy: R$ 39,90 a R$ 89,90)*
+- **O que o Aluno do Udemy Recebe Imediatamente:**
+  - Acesso vitalício a todos os 6 módulos gravados em resolução executiva.
+  - **6 Meses de Licença Full do Software ComplyPRO Light** (Standalone).
+  - Kit de Ferramentas (Templates de RIPD, Matriz RACI, Repositórios de Teste).
+  - Exame de Certificação Digital AIGOV™ com Rubrica Oficial.
+  - Garantia de 30 dias incondicional da Udemy.
+
+#### **B) Oferta Especial de Aluno para o ComplyPRO SaaS (Back-End):**
+- **Benefício Exclusivo para Alunos:** Desconto vitalício de mais de 60% na contratação dos planos Cloud:
+  - **Plano Pro (Monitoramento Contínuo):** De R$ 490/mês por **R$ 149/mês para alunos**.
+  - **Plano Enterprise Suite:** De R$ 2.490/mês por **R$ 890/mês para alunos**.
+- **Cupom Promocional:** `UDEMY-ALUMNI-VIP` *(Resgatável via portal do aluno)*.
 
 ---
 
-## 📧 2. SEQUÊNCIA DE E-MAILS DE LANÇAMENTO
+## 📧 2. SEQUÊNCIA DE E-MAILS & ANÚNCIOS DO UDEMY
 
-### **E-mail 1: O Alerta (Dia 1)**
-- **Assunto:** *"O código de IA da sua empresa passaria em uma auditoria da ANPD hoje?"*
-- **Mensagem:** Explica a transição do mercado em 2026, a entrada em vigor do EU AI Act e o risco de Shadow AI em empresas. Convida para a apresentação da formação executiva.
+### **Anúncio Educacional 1: Boas-Vindas & Ativação da Licença Light (Dia 1)**
+- **Assunto:** *"Bem-vindo! Baixe seu Pacote de Governança e Ative o ComplyPRO Light (6 Meses Grátis)"*
+- **Conteúdo:** Orientações para baixar o kit zipado na Aula 1 e chave de ativação para a ferramenta de auditoria.
 
-### **E-mail 2: A Ferramenta (Dia 2)**
-- **Assunto:** *"Por que não ensinamos governança de IA apenas com slides"*
-- **Mensagem:** Demonstra a plataforma ComplyPRO Light e anuncia que todos os inscritos ganham 6 meses de acesso irrestrito ao software.
+### **Anúncio Educacional 2: Dica Prática de Auditoria (Dia 7)**
+- **Assunto:** *"Como identificar Shadow AI em repositórios corporativos em 3 minutos"*
+- **Conteúdo:** Guia prático sobre regex de chaves de API e chamadas a provedores não autorizados.
 
-### **E-mail 3: O Caso Real (Dia 3)**
-- **Assunto:** *"Como R$ 15.000 em correções de código evitaram R$ 1,8 milhão em multas"*
-- **Mensagem:** Mostra o cálculo de Simulação de Monte Carlo e o ROI da remediação preventiva.
+### **Anúncio Promocional 1 (Mensal permitido pela Udemy): Oferta Especial SaaS para Alunos**
+- **Assunto:** *"Condição Especial de Aluno: 60% OFF no ComplyPRO Enterprise Suite"*
+- **Conteúdo:** Apresentação da plataforma cloud contínua para empresas de alunos com o cupom `UDEMY-ALUMNI-VIP`.
 
-### **E-mail 4: Últimas Horas (Dia 4)**
-- **Assunto:** *"[Últimas Vagas] Certificação CAIGA™ + 6 Meses de Software ComplyPRO"*
-- **Mensagem:** Chamada final com escassez de bônus e encerramento do lote de lançamento.
+---
+
+## 🎯 3. GUIA RÁPIDO DE CADASTRO NO INSTRUTOR UDEMY
+Consulte o arquivo dedicado: [07_UDEMY_PLATFORM_AND_FUNNEL_STRATEGY.md](file:///c:/Users/denio/Documents/Denio/PluginVIbeCOde/standalone-compliance-scanner/course/07_UDEMY_PLATFORM_AND_FUNNEL_STRATEGY.md) para visualizar títulos, subtítulos de 60/120 caracteres, roteiro de vídeo de 2 minutos e mensagens de conclusão.
+

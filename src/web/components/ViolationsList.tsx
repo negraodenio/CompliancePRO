@@ -40,16 +40,16 @@ export const ViolationsList: React.FC<ViolationsListProps> = ({ result }) => {
     return matchesSeverity && matchesSearch;
   });
 
-  const getSeverityBadge = (sev: string) => {
-    switch (sev?.toLowerCase()) {
+  const getSeverityBadge = (severity?: string) => {
+    switch (severity?.toLowerCase()) {
       case 'critical':
-        return 'bg-rose-950/80 text-rose-300 border-rose-800/80 animate-pulse';
+        return 'bg-rose-50 text-rose-800 border-rose-200';
       case 'high':
-        return 'bg-orange-950/80 text-orange-300 border-orange-800/80';
+        return 'bg-amber-50 text-amber-800 border-amber-200';
       case 'medium':
-        return 'bg-amber-950/80 text-amber-300 border-amber-800/80';
+        return 'bg-yellow-50 text-yellow-800 border-yellow-200';
       default:
-        return 'bg-slate-800 text-slate-300 border-slate-700';
+        return 'bg-slate-100 text-slate-700 border-slate-200';
     }
   };
 
@@ -59,25 +59,25 @@ export const ViolationsList: React.FC<ViolationsListProps> = ({ result }) => {
       {/* Header and Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center space-x-2">
-            <AlertTriangle className="w-5 h-5 text-amber-400" />
+          <h2 className="text-lg font-bold text-slate-900 flex items-center space-x-2">
+            <AlertTriangle className="w-5 h-5 text-amber-600" />
             <span>Violações de Conformidade & Artigos de Lei ({violations.length})</span>
           </h2>
-          <p className="text-xs text-slate-400">
-            Mapeamento legal exato por artigo de regulação violado com correção automática por IA.
+          <p className="text-xs text-slate-500">
+            Mapeamento legal exato por artigo de regulação violado com plano de conformidade técnico.
           </p>
         </div>
 
         {/* Severity Filter Tabs */}
-        <div className="flex items-center space-x-1.5 bg-surface p-1 rounded-xl border border-surface-border text-xs">
+        <div className="flex items-center space-x-1 bg-white p-1 rounded-xl border border-slate-200 text-xs shadow-2xs">
           {(['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((sev) => (
             <button
               key={sev}
               onClick={() => setSeverityFilter(sev)}
-              className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
+              className={`px-3 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${
                 severityFilter === sev
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
               {sev}
@@ -93,41 +93,41 @@ export const ViolationsList: React.FC<ViolationsListProps> = ({ result }) => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Buscar por artigo de lei (ex: Art. 14, LGPD, OWASP), arquivo ou mensagem..."
-          className="w-full px-3.5 py-2 bg-surface text-xs text-white placeholder-slate-500 rounded-xl border border-surface-border focus:outline-none focus:border-cyan-500"
+          className="w-full px-4 py-2.5 bg-white text-xs text-slate-900 placeholder-slate-400 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 shadow-2xs"
         />
       </div>
 
       {/* Violations Feed */}
       <div className="space-y-3">
         {filtered.length === 0 ? (
-          <div className="p-8 text-center glass-panel rounded-2xl border border-surface-border text-slate-400 text-xs">
-            Nenhuma violação encontrada para os filtros selecionados. 🎉
+          <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 text-xs shadow-2xs">
+            Nenhuma violação encontrada para os filtros selecionados.
           </div>
         ) : (
           filtered.map((v, idx) => (
             <div
               key={idx}
-              className="glass-panel p-4 rounded-xl border border-surface-border hover:border-slate-700 transition-all space-y-3"
+              className="bg-white p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-all space-y-3 shadow-2xs"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1.5 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${getSeverityBadge(v.severity)}`}>
+                    <span className={`px-2 py-0.5 text-[10px] font-bold rounded-md border ${getSeverityBadge(v.severity)}`}>
                       {v.severity?.toUpperCase()}
                     </span>
-                    <span className="text-xs font-mono text-cyan-400 font-bold bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/40">
+                    <span className="text-xs font-mono text-slate-900 font-bold bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                       {v.lawArticle}
                     </span>
-                    <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-300 border border-slate-700 font-mono">
+                    <span className="text-[10px] bg-slate-50 px-2 py-0.5 rounded text-slate-600 border border-slate-200 font-mono">
                       {v.rule}
                     </span>
                   </div>
                   
-                  <h4 className="text-sm font-semibold text-white leading-snug">{v.message}</h4>
+                  <h4 className="text-sm font-semibold text-slate-900 leading-snug">{v.message}</h4>
                   
                   {v.recommendation && (
-                    <p className="text-xs text-slate-400 flex items-start space-x-1.5 pt-1">
-                      <span className="text-emerald-400 font-semibold shrink-0">💡 Recomendação:</span>
+                    <p className="text-xs text-slate-600 flex items-start space-x-1.5 pt-1">
+                      <span className="text-emerald-700 font-bold shrink-0">Recomendação:</span>
                       <span>{v.recommendation}</span>
                     </p>
                   )}
@@ -138,28 +138,27 @@ export const ViolationsList: React.FC<ViolationsListProps> = ({ result }) => {
                   onClick={() => setSelectedViolationForFix({
                     ruleId: v.rule,
                     message: v.message,
-                    severity: v.severity,
-                    file: v.file,
-                    line: v.line,
-                    regulation: v.lawArticle,
                     codeSnippet: v.match,
+                    lawArticle: v.lawArticle,
+                    filePath: v.file,
                   })}
-                  className="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700 text-xs font-medium flex items-center space-x-1.5 transition-all shrink-0 cursor-pointer"
+                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition-colors flex items-center space-x-1.5 shrink-0 shadow-2xs cursor-pointer"
                 >
-                  <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                  <CheckCircle className="w-3.5 h-3.5" />
                   <span>Plano de Conformidade</span>
                 </button>
               </div>
 
-              {/* Code Reference / Snippet if available */}
-              {v.file && (
-                <div className="bg-[#0a0f1c] p-2.5 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-400 flex items-center justify-between">
-                  <span className="text-slate-300 font-semibold">📁 {v.file}{v.line ? `:${v.line}` : ''}</span>
-                  {v.match && (
-                    <span className="text-slate-400 text-[10px] bg-slate-900 px-2 py-0.5 rounded border border-slate-800 font-mono truncate max-w-sm">
-                      {v.match}
-                    </span>
-                  )}
+              {/* Code Snippet */}
+              {v.match && (
+                <div className="rounded-lg overflow-hidden border border-slate-200 bg-slate-900 text-slate-100 font-mono text-xs">
+                  <div className="px-3 py-1 bg-slate-950 border-b border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+                    <span>{v.file}:{v.line || 1}</span>
+                    <span className="text-[10px] text-slate-400 uppercase font-mono">Evidência em Código</span>
+                  </div>
+                  <pre className="p-3 overflow-x-auto text-[11px] leading-relaxed text-slate-200">
+                    <code>{v.match}</code>
+                  </pre>
                 </div>
               )}
             </div>
@@ -167,13 +166,14 @@ export const ViolationsList: React.FC<ViolationsListProps> = ({ result }) => {
         )}
       </div>
 
-      {/* AI Remediation Modal */}
+      {/* Remediation Modal */}
       {selectedViolationForFix && (
         <RemediationModal
           violation={selectedViolationForFix}
           onClose={() => setSelectedViolationForFix(null)}
         />
       )}
+
     </div>
   );
 };

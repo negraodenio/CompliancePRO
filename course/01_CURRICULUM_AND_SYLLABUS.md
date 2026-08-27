@@ -10,7 +10,7 @@
 - **Modalidade:** 100% Online Assíncrono com Aulas em Vídeo (Gravação com Avatar Executivo) + Laboratórios Hands-On no Software ComplyPRO.
 - **Ferramenta Oficial do Aluno:** 6 meses de acesso irrestrito à versão standalone da plataforma ComplyPRO (Scanner de 13 Regulações, Detecção de Shadow AI, Inventário SIPOC, Matriz RACI, Simulação Monte Carlo e Gerador de RIPD).
 - **Público-Alvo:** CISOs, DPOs, CIOs, Heads de IA/ML, Engenheiros de Software, Tech Leads, Consultores de Compliance, Auditores de TI e Advogados de Direito Digital.
-- **Certificação Emitida:** *Certified AI Governance & Agentic Auditor (CAIGA™)* com credencial digital verificável e selo de conformidade.
+- **Certificação Emitida:** *Certified AI Governance & Agentic Auditor (AIGOV™)* com credencial digital verificável e selo de conformidade.
 
 ---
 
@@ -34,16 +34,18 @@
 - **Aula 2.2:** **Shadow AI na Prática:** Como desenvolvedores e equipes de produto conectam APIs de IA sem governança de TI e como rastrear essas chamadas.
 - **Aula 2.3:** **OWASP Top 10 para LLMs & Agentes:** Injeção de Prompt Direta e Indireta (LLM01), Exfiltração de Dados (LLM02), Alucinações Induzidas e Execução Insegura de Código.
 - **Aula 2.4:** **Model Context Protocol (MCP) & Permissões de Ferramentas:** Como auditar endpoints e evitar que agentes executem ações destrutivas em bancos de dados e APIs externas.
+- **Aula 2.5:** **CG-AG Agentic Governance Lifecycle & Agent Passport:** O ciclo fechado de governança (*Define ➔ Build ➔ Govern ➔ Observe ➔ Respond ➔ Improve*), o princípio central *"Every Agent Action Must Be Governable and Evidenced"* e a emissão do crachá formal de governança do agente (*Agent Governance Passport*).
 
 ---
 
 ### **MÓDULO 3: Laboratório Prático com a Plataforma ComplyPRO (Light) (8 Horas)**
-**Competência Desenvolvida:** Domínio da ferramenta de auditoria de código para escanear repositórios, gerar o inventário SIPOC e estruturar a matriz RACI.
+**Competência Desenvolvida:** Domínio da ferramenta de auditoria de código para escanear repositórios, gerar o inventário SIPOC, emitir passaportes e rodar o assessment Agentic Light de 10 dimensões.
 
 - **Aula 3.1:** Ativação e Configuração da sua Licença de 6 Meses do ComplyPRO Light.
 - **Aula 3.2:** **Escaneamento de Repositórios:** Auditoria 100% Client-side via URL do GitHub, upload de `.zip` ou pastas locais sem envio de código para servidores externos.
 - **Aula 3.3:** **Mapeamento SIPOC de Agentes:** Rastreando Fornecedores (*Suppliers*), Entradas de Prompt (*Inputs*), Processos de Inferência (*Process*), Saídas de Decisão (*Outputs*) e Clientes/Sistemas Impactados (*Customers*).
 - **Aula 3.4:** **Matriz RACI de IA:** Atribuindo o *Process Owner* (Negócio) e o *Technical Custodian* (Engenharia) para cada agente em produção.
+- **Aula 3.5:** **CG-AG Agentic Light (10 Dimensões):** Execução do diagnóstico rápido de governança agentic produzindo o *Agentic Governance Score* (🟢 Governed, 🟡 Attention, 🔴 Exposure), análise de gaps e passaportes digitais.
 
 ---
 
@@ -73,13 +75,13 @@
 - **Aula 6.1:** **Geração do RIPD Oficial (Art. 38 LGPD):** Exportação do relatório visual e textual homologado para submissão à ANPD.
 - **Aula 6.2:** **Dossiê Técnico do EU AI Act (Anexo IV):** Estruturação da documentação de arquitetura, métricas de acurácia e medidas de robustez cibernética.
 - **Aula 6.3:** **Projeto Prático Final:** Escanear um dos 3 repositórios-desafio (FinTech, MedIA ou SmartCommerce), corrigir as violações e gerar o Parecer 360°.
-- **Aula 6.4:** **Banca de Avaliação & Emissão da Certificação Profissional CAIGA™.**
+- **Aula 6.4:** **Banca de Avaliação & Emissão da Certificação Profissional AIGOV™.**
 
 ---
 
-## 3. METODOLOGIA DE AVALIAÇÃO & CERTIFICAÇÃO
+## 🎯 CRITÉRIOS DE AVALIAÇÃO & CERTIFICAÇÃO
 
-Para obter a certificação **CAIGA™ (Certified AI Governance & Agentic Auditor)**, o aluno deve:
+Para obter a certificação **AIGOV™ (Certified AI Governance & Agentic Auditor)**, o aluno deve:
 1. Concluir 100% das videoaulas e quizzes de validação de cada módulo.
 2. Executar a auditoria prática de um repositório real utilizando a plataforma ComplyPRO Light.
 3. Submeter o **Parecer Consolidado 360°** e o **RIPD Oficial** gerados pelo sistema, obtendo pontuação mínima de 80/100 na rubrica de avaliação.

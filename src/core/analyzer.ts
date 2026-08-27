@@ -567,3 +567,14 @@ function dedupeMemorySystems(systems: import('./types').MemorySystem[]): import(
     return true;
   });
 }
+
+
+import { runLocalScan, ScanOptions } from '../web/services/scanner-bridge';
+import type { ScannerResult } from './types';
+
+export class CodebaseAnalyzer {
+  async analyze(fileMap: Record<string, string> | Map<string, string>, repoName = 'complypro-audit'): Promise<ScannerResult> {
+    const map = fileMap instanceof Map ? fileMap : new Map(Object.entries(fileMap));
+    return runLocalScan(map, { repoName });
+  }
+}

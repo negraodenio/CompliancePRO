@@ -8,9 +8,13 @@ export interface GraphEntity {
 
 export interface Relationship {
   id: string;
-  type: string;
-  from: string;
-  to: string;
+  type?: string;
+  from?: string;
+  to?: string;
+  kind?: string;
+  sourceId?: string;
+  targetId?: string;
+  weight?: number;
   label?: string;
   [key: string]: any;
 }

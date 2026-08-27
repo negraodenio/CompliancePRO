@@ -1,7 +1,7 @@
 {
   "name": "complypro-ai-scanner",
   "version": "1.0.0",
-  "description": "ComplyPRO: Scanner de Governança, Riscos & Conformidade de IA e Agentes Autônomos",
+  "description": "ComplyPRO: Scanner de Governan\u00e7a, Riscos & Conformidade de IA e Agentes Aut\u00f4nomos",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,7 +10,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "server": "tsx src/server/app.ts",
+    "mcp": "tsx src/mcp/server.ts"
   },
   "keywords": [
     "ai-governance",
@@ -28,7 +30,12 @@
     "jszip": "^3.10.1",
     "lucide-react": "^0.475.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "@modelcontextprotocol/sdk": "^1.5.0",
+    "express": "^4.21.0",
+    "zod": "^3.23.8",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",
@@ -40,6 +47,9 @@
     "postcss": "^8.5.1",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.3.3",
-    "vite": "^5.4.14"
+    "vite": "^5.4.14",
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "tsx": "^4.19.0"
   }
 }

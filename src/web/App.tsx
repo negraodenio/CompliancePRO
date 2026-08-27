@@ -150,7 +150,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f8fafc] text-slate-900 selection:bg-slate-800 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-50/50 via-slate-50 to-slate-100/70 text-slate-900 selection:bg-blue-600 selection:text-white">
       
       {/* Navbar */}
       <Navbar
@@ -181,74 +181,74 @@ export const App: React.FC = () => {
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 animate-in fade-in duration-300">
                 
                 {/* Result Section Tabs */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 pb-4 gap-3">
+                <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200/80 pb-4 gap-3">
                   <div className="flex items-center space-x-2.5">
                     <span className="text-xs text-slate-500 font-mono">Repositório:</span>
                     <span className="text-sm font-bold text-slate-900 font-mono">{scanResult.repo?.name}</span>
-                    <span className="px-2.5 py-0.5 text-[11px] bg-slate-100 border border-slate-200 text-slate-700 rounded-md font-mono">
+                    <span className="px-2.5 py-0.5 text-[11px] bg-blue-50 border border-blue-200 text-blue-800 rounded-md font-mono font-semibold">
                       {scanResult.repo?.fileCount} arquivos analisados
                     </span>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                  <div className="flex flex-wrap items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
                     <button
                       onClick={() => setViewSection('overview')}
-                      className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center space-x-2 cursor-pointer ${
+                      className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center space-x-2 cursor-pointer ${
                         viewSection === 'overview'
-                          ? 'bg-white text-slate-900 border border-slate-200 shadow-2xs'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                       }`}
                     >
-                      <LayoutDashboard className="w-3.5 h-3.5 text-slate-600" />
+                      <LayoutDashboard className={`w-3.5 h-3.5 ${viewSection === 'overview' ? 'text-blue-400' : 'text-slate-500'}`} />
                       <span>Visão Geral</span>
                     </button>
 
                     {/* Persona Views Tab */}
                     <button
                       onClick={() => setViewSection('personas')}
-                      className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center space-x-2 cursor-pointer ${
+                      className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center space-x-2 cursor-pointer ${
                         viewSection === 'personas'
-                          ? 'bg-white text-slate-900 border border-slate-200 shadow-2xs'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                       }`}
                     >
-                      <UserCheck className="w-3.5 h-3.5 text-slate-700" />
+                      <UserCheck className={`w-3.5 h-3.5 ${viewSection === 'personas' ? 'text-emerald-400' : 'text-slate-500'}`} />
                       <span>Lentes Executivas C-Level</span>
                     </button>
 
                     <button
                       onClick={() => setViewSection('regulations')}
-                      className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center space-x-2 cursor-pointer ${
+                      className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center space-x-2 cursor-pointer ${
                         viewSection === 'regulations'
-                          ? 'bg-white text-slate-900 border border-slate-200 shadow-2xs'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                       }`}
                     >
-                      <Scale className="w-3.5 h-3.5 text-slate-600" />
+                      <Scale className={`w-3.5 h-3.5 ${viewSection === 'regulations' ? 'text-indigo-400' : 'text-slate-500'}`} />
                       <span>13 Regulações</span>
                     </button>
 
                     <button
                       onClick={() => setViewSection('agents')}
-                      className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center space-x-2 cursor-pointer ${
+                      className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center space-x-2 cursor-pointer ${
                         viewSection === 'agents'
-                          ? 'bg-white text-slate-900 border border-slate-200 shadow-2xs'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                       }`}
                     >
-                      <Bot className="w-3.5 h-3.5 text-slate-600" />
+                      <Bot className={`w-3.5 h-3.5 ${viewSection === 'agents' ? 'text-purple-400' : 'text-slate-500'}`} />
                       <span>Agentes & Shadow AI</span>
                     </button>
 
                     <button
                       onClick={() => setViewSection('violations')}
-                      className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center space-x-2 cursor-pointer ${
+                      className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center space-x-2 cursor-pointer ${
                         viewSection === 'violations'
-                          ? 'bg-white text-slate-900 border border-slate-200 shadow-2xs'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                       }`}
                     >
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                      <AlertTriangle className={`w-3.5 h-3.5 ${viewSection === 'violations' ? 'text-amber-400' : 'text-amber-600'}`} />
                       <span>Violações ({scanResult.violations?.length || 0})</span>
                     </button>
                   </div>

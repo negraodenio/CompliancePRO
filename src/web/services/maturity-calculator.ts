@@ -12,8 +12,9 @@ export interface MaturityEvaluation {
 }
 
 /**
- * Calcula de forma auditável e determinística o Nível de Maturidade de Governança de IA
- * alinhado aos pilares de CMMI, ISO/IEC 42001 e NIST AI RMF (GOVERN, MAP, MEASURE, MANAGE).
+ * Calcula o Nível de Maturidade de Governança de IA com base no Modelo de Maturidade ComplyPRO,
+ * relacionando evidências técnicas do código aos princípios da ISO/IEC 42001, CMMI (Níveis 1-5)
+ * e às quatro funções do NIST AI RMF (GOVERN, MAP, MEASURE, MANAGE).
  */
 export function calculateMaturityLevel(result: ScannerResult): MaturityEvaluation {
   const violations = result.violations || [];
@@ -35,84 +36,84 @@ export function calculateMaturityLevel(result: ScannerResult): MaturityEvaluatio
   const gaps: string[] = [];
 
   // Avaliação de forças identificadas
-  if (hasAgents) strengths.push(`Inventário de ${agents.length} agentes/frameworks mapeado.`);
-  if (!hasHardcodedKeys) strengths.push('Gerenciamento de credenciais via variáveis de ambiente.');
-  if (hasLoopProtection) strengths.push('Ausência de loops infinitos não controlados em agentes.');
-  if (hasHumanInTheLoop) strengths.push('Supervisão humana (HITL) identificada em parte dos fluxos.');
+  if (hasAgents) strengths.push(`Inventário de ${agents.length} agentes/modelos de IA mapeado (Função MAP).`);
+  if (!hasHardcodedKeys) strengths.push('Gerenciamento seguro de credenciais via variáveis de ambiente.');
+  if (hasLoopProtection) strengths.push('Controles de execução contra loops infinitos em agentes autônomos.');
+  if (hasHumanInTheLoop) strengths.push('Mecanismos de supervisão humana (HITL) identificados no código.');
 
   // Avaliação de lacunas encontradas
-  if (criticalCount > 0) gaps.push(`${criticalCount} vulnerabilidade(s) crítica(s) identificada(s).`);
   if (hasShadowAI) gaps.push(`${shadowAI.length} chamada(s) a LLM sem governança centralizada (Shadow AI).`);
-  if (!hasInputValidation) gaps.push('Ausência de sanitização formal de prompts contra injeção.');
+  if (criticalCount > 0) gaps.push(`${criticalCount} vulnerabilidade(s) crítica(s) de segurança/conformidade.`);
+  if (!hasInputValidation) gaps.push('Ausência de sanitização formal de prompts contra injeção direta/indireta.');
   if (highCount > 0) gaps.push(`${highCount} achado(s) de alta severidade regulatória pendente(s).`);
 
-  // Regra de Classificação de Nível:
+  // Regra de Classificação de Nível (Modelo ComplyPRO):
   
-  // Nível 1: Se tem Shadow AI descontrolada, chaves expostas ou muitas violações críticas
+  // Nível 1: Práticas inexistentes, informais ou predominantemente reativas (Shadow AI, chaves expostas)
   if (hasHardcodedKeys || (hasShadowAI && criticalCount >= 2) || (agents.length === 0 && externalServices.length > 0)) {
     return {
       level: 1,
-      title: 'Nível 1 - Ad-Hoc / Não Gerenciado',
+      title: 'Nível 1 — Ad-Hoc / Não Gerenciado',
       shortTitle: 'Ad-Hoc',
       badge: 'NÍVEL 1 (AD-HOC)',
-      rationale: 'Uso disperso de APIs de IA sem inventário formal, presença de chaves em código ou Shadow AI ativa.',
+      rationale: 'Uso de IA sem inventário formal, presença de chaves expostas no código ou Shadow AI não controlada.',
       strengths,
       gaps,
-      nextLevelCriteria: 'Eliminar credenciais em código, inventariar todas as chamadas a LLMs e estruturar rastreabilidade estática.',
+      nextLevelCriteria: 'Mapear todos os agentes e chamadas a LLMs, eliminar credenciais em código e documentar o contexto de uso.',
     };
   }
 
-  // Nível 2: Possui código analisado e inventário estático mapeado, mas ainda possui violações e falta governança ativa de runtime
+  // Nível 2: Primeiros mecanismos de identificação e controle começam a existir (MAP do NIST AI RMF)
   if (criticalCount > 0 || hasShadowAI || !hasHumanInTheLoop || highCount > 2) {
     return {
       level: 2,
-      title: 'Nível 2 - Emergente / Mapeamento Estático',
-      shortTitle: 'Emergente',
+      title: 'Nível 2 — Emergente / Identificação',
+      shortTitle: 'Identificação',
       badge: 'NÍVEL 2 (EMERGENTE)',
-      rationale: `O repositório possui mapeamento estático e inventário de ${agents.length} agente(s), porém foram identificadas ${violations.length} pendência(s) de conformidade (${criticalCount} críticas, ${highCount} altas) que impedem a homologação formal.`,
+      rationale: `A organização começou a mapear o seu ecossistema com ${agents.length} agente(s) e modelos identificados, mas ainda possui pendências de controles e governança (Função MAP do NIST AI RMF).`,
       strengths,
       gaps,
-      nextLevelCriteria: 'Remediar violações críticas/altas, homologar Custodiantes Técnicos (RACI) e instituir supervisão humana (HITL).',
+      nextLevelCriteria: 'Incorporar políticas de segurança, sanitização de prompts e controles repetíveis nas esteiras de desenvolvimento.',
     };
   }
 
-  // Nível 3: Sem violações críticas, HITL ativo, mas sem telemetria em tempo real
+  // Nível 3: Governance e controles formalizados e incorporados ao ciclo de desenvolvimento
   if (highCount > 0 || !hasInputValidation) {
     return {
       level: 3,
-      title: 'Nível 3 - Definido & Estruturado',
-      shortTitle: 'Definido',
-      badge: 'NÍVEL 3 (DEFINIDO)',
-      rationale: 'Processos de supervisão humana (HITL) e governança estática estabelecidos, com 0 violações críticas.',
+      title: 'Nível 3 — Estruturado / Controles Implementados',
+      shortTitle: 'Estruturado',
+      badge: 'NÍVEL 3 (ESTRUTURADO)',
+      rationale: 'Controles de segurança, guardrails de prompt e processos de tratamento de risco formalizados no ciclo de vida de desenvolvimento (Processos definidos e repetíveis CMMI).',
       strengths,
       gaps,
-      nextLevelCriteria: 'Implementar guardrails de runtime em produção, telemetria de tokens (FinOps) e SLAs.',
+      nextLevelCriteria: 'Operacionalizar métricas de risco e performance, formalizar RACI/ownership e implementar monitoramento contínuo (MEASURE).',
     };
   }
 
-  // Nível 4: 0 críticas, 0 altas, guardrails ativos
+  // Nível 4: Controles operacionalizados, monitorizados e medidos (MEASURE do NIST AI RMF)
   if (violations.length > 0) {
     return {
       level: 4,
-      title: 'Nível 4 - Quantitativamente Gerenciado',
+      title: 'Nível 4 — Gerenciado & Quantificado',
       shortTitle: 'Gerenciado',
       badge: 'NÍVEL 4 (GERENCIADO)',
-      rationale: 'Controles técnicos sólidos em código, matriz de governança preenchida e guardrails implementados.',
+      rationale: 'Controles técnicos sólidos com Human-in-the-Loop formalizado, rastreabilidade e métricas de risco ativas (Alinhado à dimensão MEASURE do NIST AI RMF).',
       strengths,
       gaps,
-      nextLevelCriteria: 'Automatizar bloqueios em esteiras de CI/CD e monitoramento contínuo de deriva de modelos (Model Drift).',
+      nextLevelCriteria: 'Estabelecer sistema de melhoria contínua baseada em dados, análise de tendências e gestão dinâmica de drift.',
     };
   }
 
-  // Nível 5: Excelência regulatória máxima (0 violações em todas as 13 regulações)
+  // Nível 5: AI Governance funciona como um sistema contínuo de gestão, medição e melhoria (Optimizing CMMI / ISO 42001)
   return {
     level: 5,
-    title: 'Nível 5 - Otimização Contínua',
+    title: 'Nível 5 — Otimizado & Melhoria Contínua',
     shortTitle: 'Otimizado',
     badge: 'NÍVEL 5 (OTIMIZADO)',
-    rationale: '100% de conformidade com as 13 regulações, trilhas imutáveis de auditoria e arquitetura resiliente.',
+    rationale: 'Governança de IA opera como um sistema contínuo de gestão, auditoria probatória e evolução baseada em métricas e evidências (Conceito Optimizing CMMI).',
     strengths,
     gaps,
-    nextLevelCriteria: 'Manter auditorias contínuas pós-deploy e recertificações anuais ISO 42001.',
+    nextLevelCriteria: 'Manter auditorias contínuas pós-deploy e recertificações de maturidade periódicas.',
   };
 }

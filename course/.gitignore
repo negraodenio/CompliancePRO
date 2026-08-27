@@ -1,0 +1,21 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Node
+node_modules/
+dist/
+.next/
+
+# Scans efêmeros temporários (segurança de dados)
+/temp_scans/
+/scratch/

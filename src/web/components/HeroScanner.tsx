@@ -53,41 +53,44 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
       
       {/* Top Pill Badge */}
       <div className="text-center mb-6">
-        <div className="inline-flex items-center space-x-3 px-4 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-slate-700 text-xs font-medium">
-          <Sparkles className="w-3.5 h-3.5 text-slate-500" />
+        <div className="inline-flex items-center space-x-3 px-4 py-1.5 rounded-full bg-white border border-blue-200/80 shadow-xs text-slate-800 text-xs font-semibold">
+          <Sparkles className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
           <span>Motor 100% Gratuito & Independente</span>
           <span className="text-slate-300">|</span>
-          <Sparkles className="w-3.5 h-3.5 text-slate-500" />
-          <span>Auditoria de 13 Regulações</span>
+          <Scale className="w-3.5 h-3.5 text-indigo-600" />
+          <span>Auditoria de 13 Regulações Globais</span>
         </div>
       </div>
 
       {/* Hero Headline */}
       <div className="text-center max-w-3xl mx-auto space-y-3.5 mb-8">
-        <h1 className="text-3xl sm:text-5xl font-serif font-bold text-slate-900 tracking-tight leading-tight">
+        <h1 className="text-3xl sm:text-5xl font-serif font-bold text-slate-950 tracking-tight leading-tight">
           Governança, Riscos & Compliance <br className="hidden sm:block" />
-          para <span className="font-sans font-extrabold text-[#2c4c7c]">Agentes e Modelos de IA</span>
+          para <span className="bg-gradient-to-r from-blue-700 via-indigo-600 to-slate-900 bg-clip-text text-transparent font-sans font-extrabold">Agentes e Modelos de IA</span>
         </h1>
 
         <p className="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
           Escaneie repositórios para descobrir <strong>Shadow AI</strong>, avaliar conformidade com <br className="hidden sm:block" />
-          <strong>EU AI Act, LGPD, GDPR, NIST AI RMF, ISO 42001 e OWASP</strong>, e gerar correções com inteligência artificial.
+          <strong>EU AI Act, LGPD, GDPR, NIST AI RMF, ISO 42001 e OWASP</strong>, e gerar pareceres executivos para a diretoria.
         </p>
       </div>
 
       {/* Main Scanner Box (Crisp White Executive Card) */}
       <div className="max-w-3xl mx-auto">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md space-y-4 relative overflow-hidden">
           
+          {/* Subtle Top Accent Line */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500" />
+
           {/* GitHub URL Form */}
-          <form onSubmit={handleSubmit} className="space-y-2">
-            <label className="block text-[11px] font-bold tracking-wider text-slate-500 uppercase font-mono">
-              Repositório Git
+          <form onSubmit={handleSubmit} className="space-y-2 pt-1">
+            <label className="block text-[11px] font-bold tracking-wider text-slate-600 uppercase font-mono">
+              Repositório Git Público ou Privado
             </label>
             <div className="flex flex-col sm:flex-row items-center gap-2">
               <div className="relative flex-1 w-full">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <Github className="w-4 h-4" />
+                  <Github className="w-4 h-4 text-slate-700" />
                 </div>
                 <input
                   type="text"
@@ -95,14 +98,14 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
                   onChange={(e) => setGitUrl(e.target.value)}
                   placeholder="https://github.com/owner/repo"
                   disabled={isScanning}
-                  className="w-full pl-10 pr-4 py-2.5 bg-white text-sm text-slate-900 placeholder-slate-400 rounded-xl border border-slate-200 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-all font-mono"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50/70 text-sm text-slate-900 placeholder-slate-400 rounded-xl border border-slate-200 focus:outline-none focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all font-mono"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isScanning || !gitUrl.trim()}
-                className="w-full sm:w-auto px-6 py-2.5 bg-[#0f172a] hover:bg-[#1e293b] text-white font-medium text-sm rounded-xl transition-all flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0 shadow-sm"
+                className="w-full sm:w-auto px-7 py-3 bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 hover:from-blue-800 hover:to-slate-950 text-white font-bold text-sm rounded-xl transition-all flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0 shadow-md hover:shadow-blue-500/20 active:scale-[0.99]"
               >
                 {isScanning ? (
                   <>
@@ -112,7 +115,7 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
                 ) : (
                   <>
                     <span>Escanear Repositório</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4 text-blue-200" />
                   </>
                 )}
               </button>
@@ -124,13 +127,15 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
             onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
             onDragLeave={() => setIsDragOver(false)}
             onDrop={handleDrop}
-            className={`p-3 rounded-xl border border-dashed transition-all flex flex-wrap items-center justify-between text-xs gap-3 ${
-              isDragOver ? 'border-slate-400 bg-slate-100' : 'border-slate-300 bg-slate-50/70'
+            className={`p-3.5 rounded-xl border border-dashed transition-all flex flex-wrap items-center justify-between text-xs gap-3 ${
+              isDragOver ? 'border-blue-500 bg-blue-50/50' : 'border-slate-300 bg-slate-50/60 hover:bg-slate-50'
             }`}
           >
-            <div className="flex items-center space-x-2 text-slate-600">
-              <Cloud className="w-4 h-4 text-slate-500 shrink-0" />
-              <span>Ou analise localmente sem subir para a nuvem: <strong>arraste pasta ou .zip aqui</strong></span>
+            <div className="flex items-center space-x-2.5 text-slate-600">
+              <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
+                <Cloud className="w-4 h-4 shrink-0" />
+              </div>
+              <span>Auditoria local segura: <strong>arraste pasta ou arquivo .ZIP aqui</strong> (sem envio de código à nuvem)</span>
             </div>
 
             <div className="flex items-center space-x-2 shrink-0">
@@ -145,7 +150,7 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
                 type="button"
                 onClick={() => zipInputRef.current?.click()}
                 disabled={isScanning}
-                className="px-3 py-1.5 bg-white rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors flex items-center space-x-1.5 shadow-2xs cursor-pointer font-medium"
+                className="px-3 py-1.5 bg-white rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors flex items-center space-x-1.5 shadow-2xs cursor-pointer font-semibold text-xs"
               >
                 <FileArchive className="w-3.5 h-3.5 text-slate-500" />
                 <span>Upload .ZIP</span>
@@ -164,7 +169,7 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
                 type="button"
                 onClick={() => folderInputRef.current?.click()}
                 disabled={isScanning}
-                className="px-3 py-1.5 bg-white rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors flex items-center space-x-1.5 shadow-2xs cursor-pointer font-medium"
+                className="px-3 py-1.5 bg-white rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors flex items-center space-x-1.5 shadow-2xs cursor-pointer font-semibold text-xs"
               >
                 <FolderUp className="w-3.5 h-3.5 text-slate-500" />
                 <span>Selecionar Pasta</span>
@@ -174,17 +179,17 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
 
           {/* Scanning Progress Bar */}
           {isScanning && (
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+            <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-100 space-y-2">
               <div className="flex justify-between text-xs">
-                <span className="text-slate-700 font-mono font-medium flex items-center space-x-2">
-                  <div className="w-2 h-2 rounded-full bg-slate-800 animate-pulse" />
+                <span className="text-blue-900 font-mono font-semibold flex items-center space-x-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
                   <span>{scanProgress.message}</span>
                 </span>
-                <span className="text-slate-600 font-mono">{scanProgress.percent}%</span>
+                <span className="text-blue-700 font-mono font-bold">{scanProgress.percent}%</span>
               </div>
-              <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+              <div className="w-full h-1.5 bg-blue-200/60 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-slate-800 transition-all duration-300 ease-out"
+                  className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-300 ease-out"
                   style={{ width: `${scanProgress.percent}%` }}
                 />
               </div>
@@ -208,11 +213,13 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
             <button
               onClick={() => onSelectDemo(DEMO_PROJECTS[0])}
               disabled={isScanning}
-              className="text-left p-4 rounded-xl bg-white border border-slate-200 hover:border-slate-400 hover:shadow-sm transition-all group cursor-pointer flex flex-col justify-between"
+              className="text-left p-4 rounded-xl bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
             >
               <div className="space-y-2">
                 <div className="flex items-center space-x-2.5">
-                  <Landmark className="w-5 h-5 text-slate-700" />
+                  <div className="p-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    <Landmark className="w-4 h-4" />
+                  </div>
                   <span className="text-xs font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
                     FinTech Credit Scoring Multi-Agent
                   </span>
@@ -222,8 +229,8 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
                 </p>
               </div>
               <div className="mt-3">
-                <span className="inline-block px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 border border-blue-200 rounded">
-                  RISCO ALTO - BCB / LGPD
+                <span className="inline-block px-2.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 border border-blue-200 rounded-md">
+                  RISCO ALTO • BCB / LGPD
                 </span>
               </div>
             </button>
@@ -232,12 +239,14 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
             <button
               onClick={() => onSelectDemo(DEMO_PROJECTS[1] || DEMO_PROJECTS[0])}
               disabled={isScanning}
-              className="text-left p-4 rounded-xl bg-white border border-slate-200 hover:border-slate-400 hover:shadow-sm transition-all group cursor-pointer flex flex-col justify-between"
+              className="text-left p-4 rounded-xl bg-white border border-slate-200 hover:border-rose-400 hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
             >
               <div className="space-y-2">
                 <div className="flex items-center space-x-2.5">
-                  <Stethoscope className="w-5 h-5 text-slate-700" />
-                  <span className="text-xs font-bold text-slate-900 group-hover:text-amber-900 transition-colors">
+                  <div className="p-2 rounded-lg bg-rose-50 text-rose-700 border border-rose-100 group-hover:bg-rose-600 group-hover:text-white transition-colors">
+                    <Stethoscope className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-900 group-hover:text-rose-900 transition-colors">
                     MedIA Diagnostic Assistant
                   </span>
                 </div>
@@ -246,8 +255,8 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
                 </p>
               </div>
               <div className="mt-3">
-                <span className="inline-block px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 rounded">
-                  ALTO RISCO - EU AI ACT & ANVISA
+                <span className="inline-block px-2.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-rose-700 bg-rose-50 border border-rose-200 rounded-md">
+                  ALTO RISCO • EU AI ACT & ANVISA
                 </span>
               </div>
             </button>
@@ -256,11 +265,13 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
             <button
               onClick={() => onSelectDemo(DEMO_PROJECTS[2] || DEMO_PROJECTS[0])}
               disabled={isScanning}
-              className="text-left p-4 rounded-xl bg-white border border-slate-200 hover:border-slate-400 hover:shadow-sm transition-all group cursor-pointer flex flex-col justify-between"
+              className="text-left p-4 rounded-xl bg-white border border-slate-200 hover:border-emerald-400 hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
             >
               <div className="space-y-2">
                 <div className="flex items-center space-x-2.5">
-                  <MessageSquare className="w-5 h-5 text-slate-700" />
+                  <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                    <MessageSquare className="w-4 h-4" />
+                  </div>
                   <span className="text-xs font-bold text-slate-900 group-hover:text-emerald-900 transition-colors">
                     SmartCommerce Customer Agent
                   </span>
@@ -270,7 +281,7 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
                 </p>
               </div>
               <div className="mt-3">
-                <span className="inline-block px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded">
+                <span className="inline-block px-2.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md">
                   OWASP LLM TOP 10
                 </span>
               </div>
@@ -285,7 +296,9 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
       <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto pt-8 border-t border-slate-200">
         
         <div className="flex items-start space-x-3">
-          <CheckCircle className="w-5 h-5 text-slate-800 shrink-0 mt-0.5" />
+          <div className="p-2 rounded-xl bg-blue-50 text-blue-700 border border-blue-100 shrink-0">
+            <CheckCircle className="w-4 h-4" />
+          </div>
           <div className="space-y-1">
             <h4 className="text-xs font-bold text-slate-900">Transparência Auditável</h4>
             <p className="text-[11px] text-slate-500 leading-relaxed">
@@ -295,7 +308,9 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
         </div>
 
         <div className="flex items-start space-x-3">
-          <Scale className="w-5 h-5 text-slate-800 shrink-0 mt-0.5" />
+          <div className="p-2 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-100 shrink-0">
+            <Scale className="w-4 h-4" />
+          </div>
           <div className="space-y-1">
             <h4 className="text-xs font-bold text-slate-900">13 Regulações Suportadas</h4>
             <p className="text-[11px] text-slate-500 leading-relaxed">
@@ -305,7 +320,9 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
         </div>
 
         <div className="flex items-start space-x-3">
-          <BarChart3 className="w-5 h-5 text-slate-800 shrink-0 mt-0.5" />
+          <div className="p-2 rounded-xl bg-purple-50 text-purple-700 border border-purple-100 shrink-0">
+            <BarChart3 className="w-4 h-4" />
+          </div>
           <div className="space-y-1">
             <h4 className="text-xs font-bold text-slate-900">Relatórios Executivos</h4>
             <p className="text-[11px] text-slate-500 leading-relaxed">
@@ -315,7 +332,9 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
         </div>
 
         <div className="flex items-start space-x-3">
-          <Lock className="w-5 h-5 text-slate-800 shrink-0 mt-0.5" />
+          <div className="p-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 shrink-0">
+            <Lock className="w-4 h-4" />
+          </div>
           <div className="space-y-1">
             <h4 className="text-xs font-bold text-slate-900">Privacidade & Segurança</h4>
             <p className="text-[11px] text-slate-500 leading-relaxed">

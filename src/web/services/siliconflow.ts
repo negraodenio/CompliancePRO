@@ -34,8 +34,8 @@ export const AVAILABLE_MODELS = [
 
 export function getSiliconFlowApiKey(): string {
   // 1. Check Vite Environment Variable (Vercel / .env)
-  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SILICONFLOW_API_KEY) {
-    const envKey = import.meta.env.VITE_SILICONFLOW_API_KEY.trim();
+  if (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SILICONFLOW_API_KEY) {
+    const envKey = (import.meta as any).env.VITE_SILICONFLOW_API_KEY.trim();
     if (envKey && envKey !== 'your_siliconflow_api_key_here') return envKey;
   }
 

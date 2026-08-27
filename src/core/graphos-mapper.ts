@@ -541,3 +541,9 @@ export function mapToGraphOS(result: ScannerResult): { entities: GraphEntity[]; 
 
   return { entities, relationships };
 }
+
+export class GraphOSMapper {
+  mapScanResult(scanResult: ScannerResult) {
+    return mapToGraphOS(scanResult);
+  }
+}

@@ -1,12 +1,12 @@
-# 🏆 EXAME DE CERTIFICAÇÃO, RUBRICA & PROJETO FINAL
-## Certificação: Certified AI Governance & Agentic Auditor (CAIGA™)
-### *Avaliação de Competência Técnica, Regulatória e Estratégica para Emissão de Certificado Digital*
+# 🎓 EXAME OFICIAL DE CERTIFICAÇÃO & RUBRICA DE AVALIAÇÃO
+## Certificação: Certified AI Governance & Agentic Auditor (AIGOV™)
+### *Formação: Especialista em Governança, Riscos & Auditoria de Agentes de IA*
 
 ---
 
-## 🎯 1. CRITÉRIOS DE ELEGIBILIDADE PARA CERTIFICAÇÃO
+## 🎯 1. ESTRUTURAÇÃO DO EXAME DE CERTIFICAÇÃO
 
-Para receber o título e o selo digital de **Certified AI Governance & Agentic Auditor (CAIGA™)**, o candidato deve atender a dois requisitos complementares:
+Para receber o título e o selo digital de **Certified AI Governance & Agentic Auditor (AIGOV™)**, o candidato deve atender a dois requisitos complementares:
 
 1. **Exame Teórico-Prático Online:** Obter pontuação mínima de **80% (16 de 20 questões)** no exame de múltipla escolha com cenários reais.
 2. **Submissão do Projeto Prático de Auditoria:** Auditar um dos repositórios-desafio com o software ComplyPRO Light e submeter o **Parecer 360°** e o **RIPD Oficial**, alcançando nota mínima de **80/100** na Rubrica de Avaliação.
@@ -95,9 +95,9 @@ Para receber o título e o selo digital de **Certified AI Governance & Agentic A
 │   simulação estocástica e adequação ao EU AI Act, LGPD e ISO/IEC 42001,      │
 │   sendo diplomado com a credencial profissional:                             │
 │                                                                              │
-│              CERTIFIED AI GOVERNANCE & AGENTIC AUDITOR (CAIGA™)              │
+│              CERTIFIED AI GOVERNANCE & AGENTIC AUDITOR (AIGOV™)              │
 │                                                                              │
-│   Credencial nº: CAIGA-2026-[HASH]          Data de Emissão: [DD/MM/AAAA]    │
+│   Credencial nº: AIGOV-2026-[HASH]           Data de Emissão: [DD/MM/AAAA]    │
 │   Verificação de Autenticidade: complypro.pt/verify/[HASH]                   │
 │                                                                              │
 │   ___________________________              ___________________________       │

@@ -294,13 +294,12 @@ Você clica em 'Baixar Documento Oficial (.txt / .pdf)', anexa ao processo inter
 
 ### **Aula 6.3 — O Projeto Prático de Certificação & Emissão do Certificado**
 **Tempo Estimado:** 04:45 min  
-**Elementos Visuais:** Demonstração do portal de envio de projetos e prévia do Certificado CAIGA™.
+**Elementos Visuais:** Demonstração do portal de envio de projetos e prévia do Certificado AIGOV™.
 
-```text
-[CENA 1 - O SEU DESAFIO FINAL]
-"Parabéns por chegar até aqui! Você completou toda a jornada conceitual e técnica da nossa formação.
+**Fala do Avatar (Tom Inspirador e Conclusivo):**
+"Chegamos ao final da nossa jornada teórica e metodológica. Parabéns pela dedicação até aqui! Você agora domina os fundamentos das 13 regulações globais, sabe inspecionar código estático em busca de vulnerabilidades reais e tem em mãos a metodologia dos 5 Níveis de Maturidade e a Matriz CG-AG.
 
-Agora é a sua vez de demonstrar a sua maestria prática para receber a sua Certificação Internacional CAIGA™ — Certified AI Governance & Agentic Auditor.
+Agora é a sua vez de demonstrar a sua maestria prática para receber a sua Certificação Internacional AIGOV™ — Certified AI Governance & Agentic Auditor.
 
 O seu projeto final consiste em:
 1. Escolher um dos 3 repositórios de desafio disponibilizados no seu material de apoio (FinTech, MedIA ou SmartCommerce);

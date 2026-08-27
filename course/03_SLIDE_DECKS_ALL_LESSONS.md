@@ -10,7 +10,7 @@
 - **Slide 1 [Capa]:** 
   - *Título:* Formação Executiva em Governança de IA & Agentes Autônomos
   - *Subtítulo:* Do Código-Fonte à Sala do Conselho
-  - *Identidade:* ComplyPRO Academy • Certificação CAIGA™
+  - *Identidade:* ComplyPRO Academy • Certificação AIGOV™
 - **Slide 2 [Contexto 2026]:**
   - *Headline:* A Transição de Era da Inteligência Artificial
   - *Colunas:* 
@@ -63,6 +63,26 @@
 - **Slide 4 [Padrão de Mitigação]:**
   - Esquemas Pydantic / Zod estritos, Validação de Tipos e Guardrails de Entrada/Saída.
 
+### Slide Deck 2.4 — Model Context Protocol (MCP) & Permissões
+- **Slide 1 [Capa]:** Governança de Tools & Protocolo MCP
+- **Slide 2 [Superfície de Ataque das Tools]:** O perigo de permissões abertas de escrita e execução em ferramentas de agentes.
+- **Slide 3 [Padrão Least-Privilege]:** Delimitação de acessos somente-leitura e escopos restritos.
+
+---
+
+### Slide Deck 2.5 — Agentic Governance Lifecycle & Agent Passport
+- **Slide 1 [Capa]:** O Ciclo de Governança Agentic & Crachá Digital do Agente
+- **Slide 2 [Princípio Central]:** *"Every Agent Action Must Be Governable and Evidenced."*
+- **Slide 3 [O Ciclo em 5 Etapas]:**
+  - **1. DEFINE:** Propósito, Owner formal e Nível de Autonomia.
+  - **2. BUILD:** Modelos homologados, Tools e Permissões limitadas.
+  - **3. GOVERN:** Guardrails, Políticas e Controles de Aprovação.
+  - **4. OBSERVE:** Comportamento, Decisões, Telemetria e Evidências.
+  - **5. RESPOND:** Intervenção, Circuit Breakers e Kill Switch imediato.
+  - *(Loop fechado: **IMPROVE** como retorno contínuo).*
+- **Slide 4 [Agent Governance Passport]:**
+  - A anatomia do Passaporte: ID único, Owner, Nível de Autonomia, Permissões, Guardrails, Histórico de Incidentes e Assinatura Digital.
+
 ---
 
 ## 📑 MÓDULO 3: LABORATÓRIO HANDS-ON COM COMPLYPRO LIGHT
@@ -91,6 +111,17 @@
   - **C**ustomers: Usuários finais e sistemas downstream
 - **Slide 3 [Exemplo Real]:**
   - SIPOC de um Agente de Análise de Risco de Crédito FinTech.
+
+---
+
+### Slide Deck 3.5 — CG-AG Agentic Light (10 Dimensões)
+- **Slide 1 [Capa]:** Diagnóstico Rápido de Governança Agentic
+- **Slide 2 [As 10 Dimensões]:**
+  - Purpose, Ownership, Autonomy, Data, Tools, Permissions, Policy, Observability, Evidence, Response.
+- **Slide 3 [Agentic Governance Score]:**
+  - 🟢 **Governed** (>=80%) • 🟡 **Attention Required** (60-79%) • 🔴 **Exposure** (<60%).
+- **Slide 4 [Plano de Ação Corretiva]:**
+  - Priorização P1 a P4 de controles ausentes e emissão de Passaportes.
 
 ---
 
@@ -145,5 +176,7 @@
   - 4. Medidas de Segurança e Mitigação de Riscos
 - **Slide 3 [Apresentação à ANPD]:**
   - Prazos legais de resposta e boas práticas de entrega.
-- **Slide 4 [Encerramento & Certificação CAIGA™]:**
-  - Instruções finais para submissão do projeto prático e validação de diploma.
+- **Slide 4 [Encerramento & Certificação AIGOV™]:**
+  - *Selo Oficial:* Certified AI Governance & Agentic Auditor (AIGOV™)
+  - *Validação:* QR Code e Hash Criptográfico na Blockchain/Registro Digital ComplyPRO
+  - *Call to Action:* Submeter projeto prático e solicitar emissão da credencial.

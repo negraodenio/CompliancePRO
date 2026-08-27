@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  complypro-scanner:
+    build: .
+    container_name: complypro-light-scanner
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - TRANSPORT_MODE=stdio
+      - CODEGUARD_SAFE_ROOT=/workspace
+    volumes:
+      - .:/workspace:ro
+    restart: unless-stopped

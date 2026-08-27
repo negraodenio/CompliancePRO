@@ -373,3 +373,5 @@ export interface ScannerEnrichment {
   trustZone: TrustZoneResult | null;
   codeMap: CodeMapResult | null;
 }
+
+export type ScanResult = ScannerResult;
