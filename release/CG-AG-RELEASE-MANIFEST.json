@@ -1,0 +1,114 @@
+{
+  "pillars": {
+    "assure": {
+      "evidenceRecords": [
+        "EV-2026-0042",
+        "EV-2026-0088",
+        "EV-2026-0091",
+        "EV-2026-0001",
+        "EV-2026-0019",
+        "EV-2026-0055"
+      ],
+      "ledgerBlocks": [
+        "LEDGER-BLK-0000",
+        "LEDGER-BLK-0012",
+        "LEDGER-BLK-0062",
+        "LEDGER-BLK-0074",
+        "LEDGER-BLK-0078",
+        "LEDGER-BLK-0082",
+        "LEDGER-BLK-0089"
+      ],
+      "ledgerHeight": 6,
+      "regulatoryDossiers": [
+        "DOS-2026-EUAI-001",
+        "DOS-2026-LGPD-002",
+        "DOS-2026-NIST-003"
+      ]
+    },
+    "discover": {
+      "agentPassports": 169,
+      "agentsDetected": 27,
+      "assessmentsCompleted": 10,
+      "entitiesTracked": 142
+    },
+    "govern": {
+      "cgagControlsCount": 12,
+      "cgagControlsList": [
+        "CG-AG-01",
+        "CG-AG-02",
+        "CG-AG-03",
+        "CG-AG-04",
+        "CG-AG-05",
+        "CG-AG-06",
+        "CG-AG-07",
+        "CG-AG-08",
+        "CG-AG-09",
+        "CG-AG-10",
+        "CG-AG-11",
+        "CG-AG-12"
+      ],
+      "frameworkOverlays": [
+        "EU_AI_ACT_ANNEX_IV",
+        "LGPD_RIPD_ART38",
+        "NIST_AI_RMF_1_0"
+      ],
+      "policyRulesCount": 6
+    },
+    "operate": {
+      "decisionsPipeline": [
+        "DEC-2026-0042",
+        "DEC-2026-0019",
+        "DEC-2026-0008",
+        "DEC-2026-0001"
+      ],
+      "findingsCount": 4,
+      "finopsMonitoredEntities": [
+        "AGT-CREDIT-911E",
+        "AGT-SUPPORT-49F1",
+        "AGT-DATA-0041",
+        "SYS-CORE-001"
+      ],
+      "hitlGates": [
+        "GATE-2026-8801",
+        "GATE-2026-8802",
+        "GATE-2026-8799"
+      ],
+      "incidentFailsafes": [
+        "INC-2026-0091",
+        "INC-2026-0087",
+        "INC-2026-0072"
+      ],
+      "remediationActions": [
+        "ACT-2026-0042",
+        "ACT-2026-0019",
+        "ACT-2026-0008",
+        "ACT-2026-0001"
+      ]
+    }
+  },
+  "readinessGates": {
+    "adversarialSimulator": "PASS",
+    "architectureAudit": "PASS",
+    "atomicTransactions": "PASS",
+    "cryptographicContinuity": "PASS",
+    "dataIntegrity": "PASS",
+    "evidenceSealing": "PASS",
+    "optimisticLocking": "PASS",
+    "productionBuild": "PASS",
+    "regulatoryOverlays": "PASS",
+    "securitySecretScan": "PASS",
+    "stateMachines": "PASS",
+    "tenantIsolation": "PASS",
+    "typecheck": "PASS"
+  },
+  "release": {
+    "antiOverclaimingNotice": "Technical readiness does not constitute legal, regulatory, or ISO certification. Independent audit required.",
+    "canonicalization": "RFC 8785 Canonical JSON",
+    "environment": "production-readiness",
+    "hashingAlgorithm": "SHA-256",
+    "name": "CG-AG Governance OS",
+    "readinessStatus": "PRODUCTION_READY",
+    "releaseDate": "2026-08-27T22:00:00Z",
+    "version": "1.0.0"
+  }
+}

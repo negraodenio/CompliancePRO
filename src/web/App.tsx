@@ -20,6 +20,7 @@ import { ProtectedEvidenceView } from './views/ProtectedEvidenceView';
 import { AuditLedgerView } from './views/AuditLedgerView';
 import { RegulatoryDossiersView } from './views/RegulatoryDossiersView';
 import { GovernanceSimulatorView } from './views/GovernanceSimulatorView';
+import { SystemReadinessView } from './views/SystemReadinessView';
 import { HeroScanner } from './components/HeroScanner';
 import { AgentInventory } from './components/AgentInventory';
 import { RegulationsGrid } from './components/RegulationsGrid';
@@ -244,6 +245,10 @@ export const App: React.FC = () => {
 
           {activeView === 'assure-simulator' && (
             <GovernanceSimulatorView />
+          )}
+
+          {activeView === 'assure-readiness' && (
+            <SystemReadinessView />
           )}
 
           {activeView === 'assure-audit' && (
