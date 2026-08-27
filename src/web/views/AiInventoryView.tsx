@@ -159,9 +159,36 @@ export const AiInventoryView: React.FC<{ result?: ScannerResult | null; onOpenSc
   const [selectedSystem, setSelectedSystem] = useState<AISystemRecord | null>(null);
   const [activeDrawerTab, setActiveDrawerTab] = useState<'overview' | 'ownership' | 'controls' | 'evidence' | 'incidents'>('overview');
 
+    const ingestedAgents = ScanGovernanceBridge.getIngestedAgents();
+  const allInventory = useMemo(() => {
+    if (ingestedAgents.length > 0) {
+      return ingestedAgents.map((ag, idx) => ({
+        id: ag.id || `AI-SYS-${String(idx + 1).padStart(3, '0')}`,
+        name: ag.name,
+        type: 'AUTONOMOUS_AGENT' as const,
+        owner: ag.owner || {
+          name: 'Quantitative AI Squad',
+          role: 'Chief AI Architect',
+          department: ag.team || 'AI Engineering'
+        },
+        industry: 'Cross-Industry',
+        model: ag.model || 'gpt-4o',
+        riskTier: (ag.riskClassification?.includes('HIGH') ? 'HIGH_RISK' : 'LIMITED_RISK') as any,
+        governanceStatus: (ag.governanceStatus === 'GOVERNED' ? 'GOVERNED' : 'ATTENTION') as any,
+        environment: 'Production' as const,
+        lastAssessmentDate: '2026-08-28',
+        score: ag.governanceStatus === 'GOVERNED' ? 95 : 78,
+        toolsCount: (ag.tools || []).length,
+        piiProcessing: false,
+        hitlRequired: ag.riskClassification?.includes('HIGH') || false
+      })) as AISystemRecord[];
+    }
+    return INITIAL_INVENTORY;
+  }, [ingestedAgents]);
+
   // Filtered Inventory Data
   const filteredData = useMemo(() => {
-    return INITIAL_INVENTORY.filter(item => {
+    return allInventory.filter(item => {
       const matchSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           item.owner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -173,7 +200,7 @@ export const AiInventoryView: React.FC<{ result?: ScannerResult | null; onOpenSc
 
       return matchSearch && matchType && matchStatus && matchRisk;
     });
-  }, [searchTerm, filterType, filterStatus, filterRisk]);
+  }, [allInventory, searchTerm, filterType, filterStatus, filterRisk]);
 
   const handleExportCSV = () => {
     const headers = ['ID', 'Name', 'Type', 'Owner', 'Department', 'RiskTier', 'Status', 'Score', 'Environment', 'Signature'];

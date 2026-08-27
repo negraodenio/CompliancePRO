@@ -214,7 +214,10 @@ export class FinOpsStore {
       enforcementMode: 'RUNTIME_ENFORCED',
       governingPolicyId: 'POL-FINOPS-01',
       governingPolicyName: 'Enterprise AI Token Quota & Cost Control Policy',
-      lastUpdated: new Date().toISOString()
+      controlId: 'CG-AG-10',
+      controlName: 'FinOps AI Token Quota & Cost Control',
+      costPerThousandTokens: 0.002
+      
     };
 
     this.scanFinOpsOverride = [scannedEntity];

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  Bot, 
+  Bot,
+  Building2, 
   Users, 
   Cpu, 
   Wrench, 
@@ -27,6 +28,7 @@ import {
 import type { ScannerResult } from '../../core/types';
 import { useIndustry } from '../context/IndustryContext';
 import { ScanGovernanceBridge } from '../services/scan-governance-bridge';
+import { getAgentBusinessAndSipoc } from '../services/agent-sipoc-mapper';
 
 export interface AgentEntity {
   id: string;
@@ -226,11 +228,19 @@ export const AgentsTeamsView: React.FC<{ result?: ScannerResult | null }> = ({ r
   const [filterTeam, setFilterTeam] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [selectedAgent, setSelectedAgent] = useState<AgentEntity | null>(null);
-  const [activeDrawerTab, setActiveDrawerTab] = useState<'topology' | 'autonomy' | 'tools' | 'hitl' | 'controls' | 'passport'>('topology');
+  const [activeDrawerTab, setActiveDrawerTab] = useState<'topology' | 'sipoc' | 'autonomy' | 'tools' | 'hitl' | 'controls' | 'passport'>('topology');
+
+  const ingestedAgents = ScanGovernanceBridge.getIngestedAgents();
+  const allAgents = useMemo(() => {
+    if (ingestedAgents.length > 0) {
+      return ingestedAgents as unknown as AgentEntity[];
+    }
+    return INITIAL_AGENTS;
+  }, [ingestedAgents]);
 
   const filteredAgents = useMemo(() => {
-    return INITIAL_AGENTS.filter(agent => {
-      const matchSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    return allAgents.filter(agent => {
+const matchSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           agent.team.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           agent.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           agent.model.toLowerCase().includes(searchTerm.toLowerCase());
@@ -528,7 +538,107 @@ export const AgentsTeamsView: React.FC<{ result?: ScannerResult | null }> = ({ r
                 )}
 
                 {/* 2. AUTONOMY & BOUNDARIES */}
-                {activeDrawerTab === 'autonomy' && (
+                {activeDrawerTab === 'sipoc' && (() => {
+              const sipocData = getAgentBusinessAndSipoc({
+                name: selectedAgent.name,
+                framework: selectedAgent.framework,
+                tools: selectedAgent.tools.map(t => typeof t === 'string' ? t : t.name),
+                description: selectedAgent.description
+              } as any);
+              const { businessPurpose, sipoc } = sipocData;
+              return (
+                <div className="space-y-4">
+                  {/* Business Purpose Banner */}
+                  <div className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800">
+                    <div className="text-[11px] font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider mb-1 flex items-center space-x-1.5">
+                      <Building2 className="w-3.5 h-3.5" />
+                      <span>Função de Negócio (Business Purpose)</span>
+                    </div>
+                    <p className="text-xs text-indigo-950 dark:text-indigo-200 leading-relaxed font-medium">
+                      {businessPurpose}
+                    </p>
+                    <div className="mt-2 pt-2 border-t border-indigo-200/50 dark:border-indigo-800/50 flex items-center justify-between text-[11px] text-indigo-700 dark:text-indigo-300">
+                      <span>Papel Arquitetural: <strong>{sipoc.businessRole}</strong></span>
+                      <span className="px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 font-mono text-[10px]">
+                        {sipoc.governanceStatus}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 5-Stage SIPOC Grid */}
+                  <div className="space-y-2.5">
+                    <div className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center space-x-1.5">
+                      <Activity className="w-3.5 h-3.5 text-indigo-700" />
+                      <span>Cadeia SIPOC (Supplier ➔ Input ➔ Process ➔ Output ➔ Customer)</span>
+                    </div>
+
+                    {/* Step 1: Supplier & Input */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                          1. Fornecedor (Supplier / Origem)
+                        </span>
+                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                          {sipoc.supplier}
+                        </p>
+                      </div>
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                        <span className="text-[10px] font-bold text-blue-800 dark:text-blue-400 uppercase tracking-wider block">
+                          2. Entrada de Dados (Input)
+                        </span>
+                        <p className="text-xs text-slate-700 dark:text-slate-300">
+                          {sipoc.input}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Step 2: Process */}
+                    <div className="p-3 rounded-xl bg-indigo-50/40 dark:bg-indigo-950/20 border border-indigo-200/80 dark:border-indigo-800/60 space-y-1">
+                      <div className="flex items-center justify-between text-[10px] font-bold text-indigo-800 dark:text-indigo-400 uppercase tracking-wider">
+                        <span>3. Processamento do Agente (Process)</span>
+                        <span className="font-mono">{selectedAgent.framework}</span>
+                      </div>
+                      <p className="text-xs text-slate-800 dark:text-slate-200 font-medium">
+                        {sipoc.process}
+                      </p>
+                    </div>
+
+                    {/* Step 3: Output & Customer */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                        <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider block">
+                          4. Saída Gerada (Output)
+                        </span>
+                        <p className="text-xs text-slate-700 dark:text-slate-300">
+                          {sipoc.output}
+                        </p>
+                      </div>
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                          5. Cliente / Destino (Customer)
+                        </span>
+                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                          {sipoc.customer}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Custodianship */}
+                    <div className="p-3 rounded-xl bg-slate-100/70 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 grid grid-cols-2 gap-2 text-[11px]">
+                      <div>
+                        <span className="text-slate-500 block text-[10px] font-bold uppercase">Process Owner:</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">{sipoc.processOwner}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px] font-bold uppercase">Technical Custodian:</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">{sipoc.technicalCustodian}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+            {activeDrawerTab === 'autonomy' && (
                   <div className="space-y-4">
                     <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
                       <div className="font-bold text-slate-800 dark:text-slate-200">CG-AG Autonomy Tier Classification</div>
