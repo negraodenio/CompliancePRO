@@ -18,6 +18,7 @@ import { IncidentsFailsafeView } from './views/IncidentsFailsafeView';
 import { RuntimeFinOpsView } from './views/RuntimeFinOpsView';
 import { ProtectedEvidenceView } from './views/ProtectedEvidenceView';
 import { AuditLedgerView } from './views/AuditLedgerView';
+import { RegulatoryDossiersView } from './views/RegulatoryDossiersView';
 import { HeroScanner } from './components/HeroScanner';
 import { AgentInventory } from './components/AgentInventory';
 import { RegulationsGrid } from './components/RegulationsGrid';
@@ -232,6 +233,12 @@ export const App: React.FC = () => {
                 </div>
               )}
             </div>
+          )}
+
+          {activeView === 'assure-reports' && (
+            <RegulatoryDossiersView 
+              result={scanResult}
+            />
           )}
 
           {activeView === 'assure-audit' && (
