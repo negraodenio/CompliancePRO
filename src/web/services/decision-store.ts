@@ -83,7 +83,7 @@ const BASELINE_FINDINGS: OperationalFinding[] = [
   },
   {
     id: 'FIND-002',
-    riskId: 'RISK-2026-0043',
+    riskId: 'RISK-2026-0019',
     finding: 'Direct unmonitored LLM invocation detected bypassing PII de-identification filter',
     sourceTarget: 'services/direct_llm.py (Shadow AI Endpoint)',
     systemId: 'SYS-SHADOW-003',
@@ -109,13 +109,13 @@ const BASELINE_FINDINGS: OperationalFinding[] = [
       targetDueDate: '2026-09-02',
       status: 'PLANNED'
     },
-    evidenceDigest: 'DIGEST-RISK-0043-SHA256',
+    evidenceDigest: 'DIGEST-RISK-0019-SHA256',
     createdAt: '2026-08-26T14:30:00Z',
     updatedAt: '2026-08-27T17:00:00Z'
   },
   {
     id: 'FIND-003',
-    riskId: 'RISK-2026-0044',
+    riskId: 'RISK-2026-0008',
     finding: 'High-privilege execution tool attached without least-privilege boundary',
     sourceTarget: 'tools/system_executor.ts (BashTool)',
     systemId: 'SYS-MAINT-007',
@@ -144,13 +144,13 @@ const BASELINE_FINDINGS: OperationalFinding[] = [
       targetDueDate: '2026-09-08',
       status: 'PLANNED'
     },
-    evidenceDigest: 'DIGEST-RISK-0044-SHA256',
+    evidenceDigest: 'DIGEST-RISK-0008-SHA256',
     createdAt: '2026-08-27T08:00:00Z',
     updatedAt: '2026-08-27T17:00:00Z'
   },
   {
     id: 'FIND-004',
-    riskId: 'RISK-2026-0045',
+    riskId: 'RISK-2026-0001',
     finding: 'Multi-agent orchestration crew lacks automated max_iterations limit and execution timeout',
     sourceTarget: 'crew/orchestration.py (CrewAI Team)',
     systemId: 'SYS-INVEST-005',
@@ -176,7 +176,7 @@ const BASELINE_FINDINGS: OperationalFinding[] = [
       targetDueDate: '2026-09-15',
       status: 'IN_PROGRESS'
     },
-    evidenceDigest: 'DIGEST-RISK-0045-SHA256',
+    evidenceDigest: 'DIGEST-RISK-0001-SHA256',
     createdAt: '2026-08-27T09:30:00Z',
     updatedAt: '2026-08-27T17:00:00Z',
     decision: {

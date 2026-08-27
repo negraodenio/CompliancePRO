@@ -195,6 +195,7 @@ const BASELINE_BLOCKS: AuditBlock[] = [
 
 export class AuditLedgerStore {
   private static listeners: Array<() => void> = [];
+  private static memoryOverride: AuditBlock[] | null = null;
 
   static subscribe(fn: () => void) {
     this.listeners.push(fn);
@@ -218,7 +219,10 @@ export class AuditLedgerStore {
         }
       }
     }
-    return BASELINE_BLOCKS;
+    if (this.memoryOverride) {
+      return JSON.parse(JSON.stringify(this.memoryOverride));
+    }
+    return JSON.parse(JSON.stringify(BASELINE_BLOCKS));
   }
 
   static verifyEntireLedger(): ChainVerificationResult {
@@ -271,11 +275,14 @@ export class AuditLedgerStore {
 
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(STORAGE_KEY_LEDGER, JSON.stringify(blocks));
+    } else {
+      this.memoryOverride = blocks;
     }
     this.notify();
   }
 
   static restoreCanonicalLedger() {
+    this.memoryOverride = null;
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(STORAGE_KEY_LEDGER);
     }

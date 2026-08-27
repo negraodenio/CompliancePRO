@@ -112,7 +112,7 @@ const BASELINE_REMEDIATIONS: RemediationAction[] = [
     title: 'Enforce Cryptographic Evidence Ledger Hashing on Disbursal Decisions',
     riskId: 'RISK-2026-0001',
     decisionId: 'DEC-2026-0001',
-    findingId: 'FIND-000',
+    findingId: 'FIND-004',
     controlId: 'CG-AG-07',
     controlName: 'Audit Ledger & Evidence Chain',
     affectedEntity: 'Core Governance Ledger (SYS-CORE-001)',
