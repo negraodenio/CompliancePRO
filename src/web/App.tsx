@@ -40,7 +40,7 @@ import { runLocalScan } from './services/scanner-bridge';
 import { ScanGovernanceBridge } from './services/scan-governance-bridge';
 import { DEMO_PROJECTS, DemoProject } from './services/demo-projects';
 import type { ScannerResult } from '../core/types';
-import { Lock, Sparkles, Terminal, FileBadge, CheckSquare, Layers } from 'lucide-react';
+import { Lock, Sparkles, Terminal, FileBadge, CheckSquare, Layers, CheckCircle2, Bot, ShieldCheck } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [activeView, setActiveView] = useState<ActiveNavView>('overview-center');
@@ -238,9 +238,95 @@ export const App: React.FC = () => {
 
               {scanResult && (
                 <div className="space-y-6 animate-fadeIn">
-                  <ExecutiveSummary result={scanResult} />
-                  <AgentInventory result={scanResult} />
-                  <ViolationsList result={scanResult} />
+                  {/* Ingestion Telemetry Card */}
+                  <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white border border-indigo-500/30 shadow-xl space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-800/50 pb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                          <CheckCircle2 className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <h2 className="text-sm font-bold tracking-tight text-white">
+                              Ingestão AST Concluída & Sincronizada com o Governance OS
+                            </h2>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              LIVE INGESTION
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-300 mt-0.5">
+                            Repositório: <span className="font-mono text-indigo-300 font-semibold">{scanResult.repo?.fullName || scanResult.repo?.name || 'Local Scan'}</span> ({scanResult.repo?.fileCount || 0} arquivos analisados)
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Quick Navigation Action Buttons */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          onClick={() => setActiveView('discover-agents')}
+                          className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm"
+                        >
+                          <Bot className="w-3.5 h-3.5" />
+                          <span>Ver Agentes & SIPOC ({scanResult.source?.agents?.length || 0}) ➔</span>
+                        </button>
+                        <button
+                          onClick={() => setActiveView('operate-decisions')}
+                          className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition border border-slate-700 flex items-center space-x-1.5"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Decisões & Riscos ➔</span>
+                        </button>
+                        <button
+                          onClick={() => setActiveView('assure-evidence')}
+                          className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition border border-slate-700 flex items-center space-x-1.5"
+                        >
+                          <Lock className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Evidência RFC 8785 ➔</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Sensor Ingestion Metric Badges */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                      <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Agentes & Passports</span>
+                        <span className="text-base font-bold text-indigo-300">{scanResult.source?.agents?.length || 0} detectados</span>
+                        <span className="text-[10px] text-slate-400 block mt-0.5">Roteados para Agents & Teams</span>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Achados & Riscos</span>
+                        <span className="text-base font-bold text-amber-300">{(scanResult.risks?.length || 0) + (scanResult.violations?.length || 0)} achados</span>
+                        <span className="text-[10px] text-slate-400 block mt-0.5">Roteados para Decisions Store</span>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Modelos & Shadow AI</span>
+                        <span className="text-base font-bold text-sky-300">{(scanResult.source?.aiModels?.length || 0)} modelos</span>
+                        <span className="text-[10px] text-slate-400 block mt-0.5">{scanResult.shadowAI?.length || 0} Shadow LLM</span>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Conformidade Global</span>
+                        <span className="text-base font-bold text-emerald-300">{scanResult.compliance?.overallScore || 0}% score</span>
+                        <span className="text-[10px] text-slate-400 block mt-0.5">13 regulações avaliadas</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Clean Code Violations & AST Findings Sensor Output */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2 text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                        <Terminal className="w-4 h-4 text-sky-500" />
+                        <span>Diagnóstico de Código AST & Regras de Conformidade</span>
+                      </div>
+                      <span className="text-xs text-slate-500">
+                        {(scanResult.violations?.length || 0) + (scanResult.risks?.length || 0)} violações identificadas no repositório
+                      </span>
+                    </div>
+                    <ViolationsList result={scanResult} />
+                  </div>
                 </div>
               )}
             </div>

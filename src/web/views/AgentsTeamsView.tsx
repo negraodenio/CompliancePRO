@@ -417,17 +417,30 @@ const matchSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) 
 
                     {/* Passport Action */}
                     <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedAgent(agent);
-                          setActiveDrawerTab('passport');
-                        }}
-                        className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-sky-600 hover:text-white dark:hover:bg-sky-600 text-slate-700 dark:text-slate-300 rounded text-[11px] font-semibold transition flex items-center gap-1 ml-auto"
-                      >
-                        <FileBadge className="w-3 h-3 text-sky-400" />
-                        <span>Passport</span>
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedAgent(agent);
+                            setActiveDrawerTab('sipoc');
+                          }}
+                          className="px-2 py-1 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/80 rounded text-[11px] font-bold transition flex items-center gap-1"
+                          title="Visualizar Cadeia SIPOC (Entrada ➔ Processo ➔ Saída)"
+                        >
+                          <Layers className="w-3 h-3" />
+                          <span>SIPOC</span>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedAgent(agent);
+                            setActiveDrawerTab('passport');
+                          }}
+                          className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-sky-600 hover:text-white dark:hover:bg-sky-600 text-slate-700 dark:text-slate-300 rounded text-[11px] font-medium transition"
+                        >
+                          Passport ➔
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
