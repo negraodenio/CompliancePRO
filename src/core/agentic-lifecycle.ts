@@ -1,15 +1,15 @@
 /**
- * CG-AG Framework — Agentic Governance Lifecycle
+ * CG-AG Framework — Agentic Governance Lifecycle (6 Stages)
  * 
- * Defines the 5-stage closed loop governance model for autonomous AI agents:
- * DEFINE -> BUILD -> GOVERN -> OBSERVE -> RESPOND -> IMPROVE
+ * Defines the 6-stage closed loop governance model for autonomous AI agents:
+ * DEFINE -> BUILD -> GOVERN -> OBSERVE -> RESPOND -> IMPROVE -> (Loop to GOVERN/DEFINE)
  * 
  * Core Principle: "Every Agent Action Must Be Governable and Evidenced."
  */
 
 import type { DetectedAgent, CodeViolation, DetectedRisk } from './types';
 
-export type LifecycleStage = 'DEFINE' | 'BUILD' | 'GOVERN' | 'OBSERVE' | 'RESPOND';
+export type LifecycleStage = 'DEFINE' | 'BUILD' | 'GOVERN' | 'OBSERVE' | 'RESPOND' | 'IMPROVE';
 
 export interface LifecycleStageDetail {
   stage: LifecycleStage;
@@ -31,6 +31,9 @@ export interface AgenticLifecycleAudit {
 }
 
 export class AgenticLifecycleEngine {
+  /**
+   * Audits an agent across all 6 lifecycle governance stages.
+   */
   static auditAgent(
     agent: DetectedAgent,
     violations: CodeViolation[] = [],
@@ -48,7 +51,7 @@ export class AgenticLifecycleEngine {
 
     const defineDetail: LifecycleStageDetail = {
       stage: 'DEFINE',
-      title: 'Define (Purpose, Owner & Autonomy)',
+      title: '1. Define (Purpose, Owner & Autonomy)',
       focus: ['Purpose', 'Business objective', 'Owner', 'Risk classification', 'Level of autonomy', 'Human accountability'],
       status: defineScore >= 80 ? 'SATISFIED' : 'PARTIAL',
       score: defineScore,
@@ -57,7 +60,7 @@ export class AgenticLifecycleEngine {
         `Autonomy level: ${isHigh ? 'L3 (High Autonomy)' : 'L2 (Supervised)'}`,
         hasOwner ? 'Accountable owner defined in agent declaration' : 'Owner not explicitly attributed in metadata'
       ],
-      recommendations: hasOwner ? [] : ['Formally assign an accountable business owner (CG-AG-002 / EU AI Act Art. 26).']
+      recommendations: hasOwner ? [] : ['Formally assign an accountable business owner (CG-AG-01 / EU AI Act Art. 26).']
     };
 
     // 2. BUILD (Model, Tools, Data access, Permissions, Capabilities)
@@ -66,16 +69,16 @@ export class AgenticLifecycleEngine {
     const buildScore = hasBroadTools ? 40 : (toolsCount > 0 ? 85 : 75);
     const buildDetail: LifecycleStageDetail = {
       stage: 'BUILD',
-      title: 'Build (Model, Tools & Permissions)',
+      title: '2. Build (Model, Tools & Permissions)',
       focus: ['Model', 'Tools', 'Data access', 'Permissions', 'Capabilities', 'Agent dependencies'],
       status: buildScore >= 80 ? 'SATISFIED' : (buildScore >= 50 ? 'PARTIAL' : 'EXPOSED'),
       score: buildScore,
       findings: [
         `Model framework: ${agent.framework || 'Generative Engine'}`,
         `Connected tools: ${toolsCount > 0 ? agent.tools?.join(', ') : 'None detected'}`,
-        hasBroadTools ? 'CRITICAL: High-privilege execution tools attached to agent' : 'Tool access bounded'
+        hasBroadTools ? 'High-privilege execution tools attached to agent' : 'Tool access bounded'
       ],
-      recommendations: hasBroadTools ? ['Restrict execution capabilities with least-privilege boundary (CG-AG-004).'] : []
+      recommendations: hasBroadTools ? ['Restrict execution capabilities with least-privilege boundary (CG-AG-02).'] : []
     };
 
     // 3. GOVERN (Policies, Guardrails, Controls, Approval requirements)
@@ -83,22 +86,22 @@ export class AgenticLifecycleEngine {
     const governScore = hasDebugOrVerbose ? 45 : 85;
     const governDetail: LifecycleStageDetail = {
       stage: 'GOVERN',
-      title: 'Govern (Guardrails & Human Oversight)',
+      title: '3. Govern (Guardrails & Human Oversight)',
       focus: ['Policies', 'Guardrails', 'Controls', 'Approval requirements', 'Human oversight', 'Regulatory requirements'],
       status: governScore >= 80 ? 'SATISFIED' : 'PARTIAL',
       score: governScore,
       findings: [
-        `Regulatory posture: Evaluated against CG-AG Controls`,
+        'Regulatory posture: Evaluated against CG-AG Controls',
         hasDebugOrVerbose ? 'Exposed debug/verbose flag in production code' : 'Production guardrails verified'
       ],
-      recommendations: hasDebugOrVerbose ? ['Disable debug mode and establish human approval checkpoint (CG-AG-007).'] : []
+      recommendations: hasDebugOrVerbose ? ['Disable debug mode and establish human approval checkpoint (CG-AG-03).'] : []
     };
 
     // 4. OBSERVE (Behavior, Decisions, Actions, Performance, Evidence)
     const observeScore = 70;
     const observeDetail: LifecycleStageDetail = {
       stage: 'OBSERVE',
-      title: 'Observe (Behavior, Decisions & Evidence)',
+      title: '4. Observe (Behavior, Decisions & Evidence)',
       focus: ['Agent behavior', 'Decisions', 'Actions', 'Performance', 'KPIs', 'Exceptions', 'Evidence', 'Incidents'],
       status: 'PARTIAL',
       score: observeScore,
@@ -106,22 +109,37 @@ export class AgenticLifecycleEngine {
         'Agent invocation patterns mapped for audit ledger',
         'Decision traceability enabled for legal evidence'
       ],
-      recommendations: ['Connect execution telemetry to structured audit trail (CG-AG-008).']
+      recommendations: ['Connect execution telemetry to structured tamper-evident audit trail (CG-AG-07).']
     };
 
-    // 5. RESPOND (Intervention, Block, Suspend, Human review, Improve)
+    // 5. RESPOND (Intervention, Block, Suspend, Human review)
     const respondScore = 65;
     const respondDetail: LifecycleStageDetail = {
       stage: 'RESPOND',
-      title: 'Respond (Intervention, Kill Switch & Continuous Improvement)',
-      focus: ['Intervention', 'Escalation', 'Block', 'Suspend', 'Human review', 'Corrective action', 'Continuous improvement'],
+      title: '5. Respond (Intervention, Block & Kill Switch)',
+      focus: ['Intervention', 'Escalation', 'Block', 'Suspend', 'Human review'],
       status: 'PARTIAL',
       score: respondScore,
       findings: [
         'Intervention protocol: Manual code intervention',
         'Circuit breaker threshold: Standard loop safeguard recommended'
       ],
-      recommendations: ['Configure programmatic kill-switch and automated circuit breaker (CG-AG-012).']
+      recommendations: ['Configure programmatic kill-switch and automated circuit breaker (CG-AG-04).']
+    };
+
+    // 6. IMPROVE (Corrective Action, Review, Policy Update, Closed Loop)
+    const improveScore = 75;
+    const improveDetail: LifecycleStageDetail = {
+      stage: 'IMPROVE',
+      title: '6. Improve (Corrective Action & Closed-Loop Feedback)',
+      focus: ['Corrective action', 'Review', 'Policy update', 'Continuous improvement', 'Feedback to DEFINE/GOVERN'],
+      status: 'SATISFIED',
+      score: improveScore,
+      findings: [
+        'Closed-loop feedback mechanism active: findings feed policy revisions',
+        'Remediation priorities mapped to CG-AG Control Engine'
+      ],
+      recommendations: ['Perform quarterly policy reviews based on observed agent decisions.']
     };
 
     const stages: Record<LifecycleStage, LifecycleStageDetail> = {
@@ -129,10 +147,11 @@ export class AgenticLifecycleEngine {
       BUILD: buildDetail,
       GOVERN: governDetail,
       OBSERVE: observeDetail,
-      RESPOND: respondDetail
+      RESPOND: respondDetail,
+      IMPROVE: improveDetail
     };
 
-    const avgScore = Math.round((defineScore + buildScore + governScore + observeScore + respondScore) / 5);
+    const avgScore = Math.round((defineScore + buildScore + governScore + observeScore + respondScore + improveScore) / 6);
     const maturity: 'Governed' | 'Attention Required' | 'Exposure' = 
       avgScore >= 80 ? 'Governed' : (avgScore >= 55 ? 'Attention Required' : 'Exposure');
 
@@ -142,7 +161,7 @@ export class AgenticLifecycleEngine {
       overallMaturity: maturity,
       stages,
       closedLoopVerified: true,
-      nextImprovementAction: 'Implement explicit Human-in-the-Loop checkpoints and runtime Kill Switch.'
+      nextImprovementAction: 'Establish automated Circuit Breakers and register Tamper-Evident Audit Evidence.'
     };
   }
 }

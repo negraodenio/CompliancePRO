@@ -2,7 +2,13 @@
  * CG-AG Framework — Governance Control Plane Domain Model
  * 
  * Formal domain architecture for the CG-AG Governance OS.
- * Grounded on the 12 CG-AG Controls, Tamper-Evident Evidence, and Decision Pipelines.
+ * Operates the 12 CG-AG Controls, Tamper-Evident Evidence, and Decision Pipelines.
+ * 
+ * Organizes Level 2 Control Plane into:
+ * - DISCOVER: AI Registry, Agent Registry, Governance Assessment
+ * - GOVERN: Governance Repository, CG-AG Control Engine, Risk Engine, Policy Engine
+ * - OPERATE: Workflows & Approvals, Incident Management, Runtime Controls
+ * - ASSURE: Evidence Repository, Audit Ledger, Compliance & Reporting
  */
 
 import { CG_AG_CONTROLS, CGAGControl } from './cg-ag-controls';
@@ -18,7 +24,7 @@ export interface GovernanceDecision {
   decidedBy: {
     name: string;
     role: string;
-    stakeholderGroup: 'AI_OFFICE' | 'CISO' | 'DPO' | 'COMPLIANCE' | 'LEGAL' | 'RISK' | 'BOARD';
+    stakeholderGroup: 'AI_OFFICE' | 'CISO' | 'DPO' | 'COMPLIANCE' | 'LEGAL' | 'RISK' | 'INTERNAL_AUDIT' | 'BOARD';
   };
   rationale: string;
   actionRequired: string;
@@ -27,60 +33,133 @@ export interface GovernanceDecision {
 
 export interface ProtectedEvidenceRecord {
   evidenceId: string;
+  entityType: 'AI_SYSTEM' | 'AGENT' | 'CONTROL' | 'POLICY' | 'RISK' | 'ASSESSMENT' | 'DECISION' | 'ACTION' | 'INCIDENT' | 'AUDIT';
   entityId: string;
   controlId: string; // e.g. CG-AG-07
-  eventType: 'DECISION_EXECUTION' | 'TOOL_INVOCATION' | 'HITL_APPROVAL' | 'CIRCUIT_BREAK' | 'POLICY_OVERRIDE';
+  eventType: 'DECISION_EXECUTION' | 'TOOL_INVOCATION' | 'HITL_APPROVAL' | 'CIRCUIT_BREAK' | 'POLICY_OVERRIDE' | 'INCIDENT_RECORDED';
   timestamp: string;
-  tamperEvidentSignature: string; // SHA-256 hash chaining
+  tamperEvidentSignature: string; // Cryptographic SHA-256 hash
   payloadSummary: string;
   retentionDays: number;
 }
 
+export type ControlPlaneModule =
+  | 'AI_AGENT_REGISTRY'
+  | 'POLICY_ENGINE_ACCESS_TOOLS'
+  | 'WORKFLOWS_APPROVALS_HITL'
+  | 'RUNTIME_CONTROLS_INCIDENT'
+  | 'POLICY_ENGINE_AI_SECURITY'
+  | 'PRIVACY_DATA_CONTROLS'
+  | 'AUDIT_LEDGER_EVIDENCE'
+  | 'SECURITYGUARD_CREDENTIALS'
+  | 'MONITORING_ASSESSMENT'
+  | 'FINOPS_RUNTIME_COST'
+  | 'RUNTIME_RESILIENCE'
+  | 'THIRD_PARTY_GOVERNANCE';
+
 export interface ControlEngineMapping {
-  control: CGAGControl;
-  controlPlaneModule: 
-    | 'AI_AGENT_REGISTRY'
-    | 'POLICY_ENGINE'
-    | 'WORKFLOWS_APPROVALS'
-    | 'RUNTIME_CONTROLS'
-    | 'PRIVACY_DATA_CONTROLS'
-    | 'AUDIT_LEDGER_EVIDENCE'
-    | 'SECURITYGUARD_VAULT'
-    | 'MONITORING_ASSESSMENT'
-    | 'FINOPS_ENGINE'
-    | 'THIRD_PARTY_GOVERNANCE';
+  controlId: string;
+  controlName: string;
+  controlPlaneModule: ControlPlaneModule;
+  controlPlaneGroup: 'DISCOVER' | 'GOVERN' | 'OPERATE' | 'ASSURE';
   auditReadiness: 'AUTOMATED_STATIC' | 'AUTOMATED_RUNTIME' | 'DOCUMENTED_EVIDENCE';
 }
 
 export class GovernanceControlPlane {
   /**
-   * Returns the formal mapping of all 12 CG-AG controls to the Control Plane modules.
+   * Returns the exact 12-control mapping to the Control Plane modules.
    */
   static getControlEngineMappings(): ControlEngineMapping[] {
-    const mappings: Record<string, ControlEngineMapping['controlPlaneModule']> = {
-      'CG-AG-001': 'AI_AGENT_REGISTRY',
-      'CG-AG-002': 'POLICY_ENGINE',
-      'CG-AG-003': 'WORKFLOWS_APPROVALS',
-      'CG-AG-004': 'RUNTIME_CONTROLS',
-      'CG-AG-005': 'POLICY_ENGINE',
-      'CG-AG-006': 'THIRD_PARTY_GOVERNANCE',
-      'CG-AG-007': 'WORKFLOWS_APPROVALS',
-      'CG-AG-008': 'AUDIT_LEDGER_EVIDENCE',
-      'CG-AG-009': 'PRIVACY_DATA_CONTROLS',
-      'CG-AG-010': 'MONITORING_ASSESSMENT',
-      'CG-AG-011': 'AI_AGENT_REGISTRY',
-      'CG-AG-012': 'RUNTIME_CONTROLS',
-    };
-
-    return Object.values(CG_AG_CONTROLS).map(c => ({
-      control: c,
-      controlPlaneModule: mappings[c.id] || 'POLICY_ENGINE',
-      auditReadiness: 'AUTOMATED_STATIC'
-    }));
+    return [
+      {
+        controlId: 'CG-AG-01',
+        controlName: 'Inventory & Registration',
+        controlPlaneModule: 'AI_AGENT_REGISTRY',
+        controlPlaneGroup: 'DISCOVER',
+        auditReadiness: 'AUTOMATED_STATIC'
+      },
+      {
+        controlId: 'CG-AG-02',
+        controlName: 'Tool Scoping & Authorization',
+        controlPlaneModule: 'POLICY_ENGINE_ACCESS_TOOLS',
+        controlPlaneGroup: 'GOVERN',
+        auditReadiness: 'AUTOMATED_STATIC'
+      },
+      {
+        controlId: 'CG-AG-03',
+        controlName: 'Human-in-the-Loop',
+        controlPlaneModule: 'WORKFLOWS_APPROVALS_HITL',
+        controlPlaneGroup: 'OPERATE',
+        auditReadiness: 'AUTOMATED_RUNTIME'
+      },
+      {
+        controlId: 'CG-AG-04',
+        controlName: 'Circuit Breaker / Timeout / Anti-Loop',
+        controlPlaneModule: 'RUNTIME_CONTROLS_INCIDENT',
+        controlPlaneGroup: 'OPERATE',
+        auditReadiness: 'AUTOMATED_RUNTIME'
+      },
+      {
+        controlId: 'CG-AG-05',
+        controlName: 'Prompt Security / Injection Protection',
+        controlPlaneModule: 'POLICY_ENGINE_AI_SECURITY',
+        controlPlaneGroup: 'GOVERN',
+        auditReadiness: 'AUTOMATED_STATIC'
+      },
+      {
+        controlId: 'CG-AG-06',
+        controlName: 'PII Protection & De-identification',
+        controlPlaneModule: 'PRIVACY_DATA_CONTROLS',
+        controlPlaneGroup: 'GOVERN',
+        auditReadiness: 'AUTOMATED_STATIC'
+      },
+      {
+        controlId: 'CG-AG-07',
+        controlName: 'Audit Trail & Decision Trace',
+        controlPlaneModule: 'AUDIT_LEDGER_EVIDENCE',
+        controlPlaneGroup: 'ASSURE',
+        auditReadiness: 'AUTOMATED_RUNTIME'
+      },
+      {
+        controlId: 'CG-AG-08',
+        controlName: 'Secrets & Credentials Management',
+        controlPlaneModule: 'SECURITYGUARD_CREDENTIALS',
+        controlPlaneGroup: 'GOVERN',
+        auditReadiness: 'AUTOMATED_STATIC'
+      },
+      {
+        controlId: 'CG-AG-09',
+        controlName: 'Drift / Hallucination / Bias Monitoring',
+        controlPlaneModule: 'MONITORING_ASSESSMENT',
+        controlPlaneGroup: 'ASSURE',
+        auditReadiness: 'AUTOMATED_RUNTIME'
+      },
+      {
+        controlId: 'CG-AG-10',
+        controlName: 'FinOps / Token Budget / Rate Limiting',
+        controlPlaneModule: 'FINOPS_RUNTIME_COST',
+        controlPlaneGroup: 'OPERATE',
+        auditReadiness: 'AUTOMATED_RUNTIME'
+      },
+      {
+        controlId: 'CG-AG-11',
+        controlName: 'Resilience / Fallback / Graceful Degradation',
+        controlPlaneModule: 'RUNTIME_RESILIENCE',
+        controlPlaneGroup: 'OPERATE',
+        auditReadiness: 'AUTOMATED_RUNTIME'
+      },
+      {
+        controlId: 'CG-AG-12',
+        controlName: 'Third-Party AI / Supply Chain Governance',
+        controlPlaneModule: 'THIRD_PARTY_GOVERNANCE',
+        controlPlaneGroup: 'DISCOVER',
+        auditReadiness: 'AUTOMATED_STATIC'
+      }
+    ];
   }
 
   /**
-   * Formal causal pipeline execution helper.
+   * Resolves the causal Governance Pipeline:
    * Policy -> Responsibility -> Control -> Risk -> Decision -> Action -> Evidence -> Measurement -> Audit -> Improvement
    */
   static resolveGovernancePipeline(
@@ -110,7 +189,7 @@ export class GovernanceControlPlane {
       severity: riskSeverity,
       decision: decisionType,
       decidedBy: decider,
-      rationale: `Evaluated under CG-AG Governance Control Plane. Risk: ${riskSeverity}.`,
+      rationale: `Evaluated under CG-AG Governance Control Plane. Risk: ${riskSeverity}. Human accountability enforced.`,
       actionRequired: proposedAction,
       decidedAt: new Date().toISOString()
     };

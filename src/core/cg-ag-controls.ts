@@ -1,3 +1,10 @@
+/**
+ * CG-AG Framework — 12 Audit-Ready Governance Controls
+ * 
+ * Normative foundation for the CG-AG Governance Model.
+ * Core Principle: "Every Agent Action Must Be Governable and Evidenced."
+ */
+
 import type { DetectedRisk } from './types';
 
 export const AGENTIC_CORE_PRINCIPLE = 'Every Agent Action Must Be Governable and Evidenced.';
@@ -7,116 +14,134 @@ export interface CGAGControl {
   dbFlag: string | null;
   name: string;
   description: string;
-  domain: 'inventory' | 'ownership' | 'models' | 'access' | 'prompts' | 'mcp' | 'oversight' | 'audit' | 'data' | 'risk' | 'a2a' | 'autonomous';
+  domain: 
+    | 'inventory'
+    | 'scoping'
+    | 'oversight'
+    | 'runtime_safety'
+    | 'security'
+    | 'privacy'
+    | 'audit'
+    | 'secrets'
+    | 'monitoring'
+    | 'finops'
+    | 'resilience'
+    | 'supply_chain';
 }
 
 export interface CGAGTraceability {
-  aiAct?: string;
-  dora?: string;
-  iso42001?: string;
-  nist?: string;
-  lgpd?: string;
+  aiActReference?: string;
+  doraReference?: string;
+  iso42001Reference?: string;
+  nistReference?: string;
+  lgpdReference?: string;
 }
 
+/**
+ * Regulatory mappings indicating supported reference standards (not auto-guarantees).
+ */
 export const CG_AG_TRACEABILITY: Record<string, CGAGTraceability> = {
-  'CG-AG-001': { aiAct: 'Art. 16 (provider obligations)', iso42001: 'A.6.2 (AI system inventory)', nist: 'GOVERN 1.1', lgpd: 'Art. 37 (Registro das Operacoes)' },
-  'CG-AG-002': { aiAct: 'Art. 26 (deployer obligations)', iso42001: 'A.3.2 (roles & responsibilities)', nist: 'GOVERN 2.1', lgpd: 'Art. 41 (Encarregado / DPO)' },
-  'CG-AG-003': { aiAct: 'Art. 11 (technical documentation)', iso42001: 'A.7.2 (data & model documentation)', nist: 'MAP 2.3', lgpd: 'Art. 38 (Documentacao Tecnica)' },
-  'CG-AG-004': { aiAct: 'Art. 9 (risk management)', dora: 'Art. 9 (ICT protection)', iso42001: 'A.5.3 (access control)', lgpd: 'Art. 46 (Seguranca e Sigilo)' },
-  'CG-AG-005': { aiAct: 'Art. 15 (accuracy & robustness)', nist: 'MEASURE 2.7 (prompt injection)', iso42001: 'A.8.2 (robustness)' },
-  'CG-AG-006': { dora: 'Art. 28 (third-party ICT)', iso42001: 'A.10.3 (supplier AI)', nist: 'GOVERN 6.1', aiAct: 'Art. 25 (value chain responsibilities)' },
-  'CG-AG-007': { aiAct: 'Art. 14 (human oversight)', iso42001: 'A.8.4 (human oversight)', nist: 'GOVERN 3.2', lgpd: 'Art. 20 (Revisao Humana de Decisoes)' },
-  'CG-AG-008': { aiAct: 'Art. 12 (record-keeping/logs)', dora: 'Art. 12 (logging)', iso42001: 'A.6.7 (event logs)', lgpd: 'Art. 37 (Rastreabilidade)' },
-  'CG-AG-009': { aiAct: 'Art. 10 (data governance)', iso42001: 'A.7.3 (data quality)', nist: 'MAP 2.2', lgpd: 'Art. 6 (Finalidade, Adequacao, Necessidade)' },
-  'CG-AG-010': { aiAct: 'Art. 6 + Annex III (classification)', iso42001: 'A.5.2 (risk assessment)', nist: 'MAP 1.5', lgpd: 'Art. 38 (Avaliacao de Alto Risco)' },
-  'CG-AG-011': { aiAct: 'Art. 9 (interaction risk)', dora: 'Art. 30 (chain outsourcing)', nist: 'MEASURE 2.9', iso42001: 'A.9.1 (system interfaces)' },
-  'CG-AG-012': { aiAct: 'Art. 14 (autonomous oversight)', iso42001: 'A.8.4', nist: 'GOVERN 3.2 / MANAGE 2.4', lgpd: 'Art. 20 (Salvaguardas de Autonomia)' },
+  'CG-AG-01': { aiActReference: 'Art. 16 (provider obligations)', iso42001Reference: 'A.6.2 (AI system inventory)', nistReference: 'GOVERN 1.1', lgpdReference: 'Art. 37 (Registro das Operações)' },
+  'CG-AG-02': { aiActReference: 'Art. 9 (risk management)', doraReference: 'Art. 9 (ICT protection)', iso42001Reference: 'A.5.3 (access control)', lgpdReference: 'Art. 46 (Segurança e Sigilo)' },
+  'CG-AG-03': { aiActReference: 'Art. 14 (human oversight)', iso42001Reference: 'A.8.4 (human oversight)', nistReference: 'GOVERN 3.2', lgpdReference: 'Art. 20 (Revisão Humana de Decisões)' },
+  'CG-AG-04': { aiActReference: 'Art. 15 (accuracy & robustness)', doraReference: 'Art. 11 (ICT business continuity)', nistReference: 'MEASURE 2.7', iso42001Reference: 'A.8.2' },
+  'CG-AG-05': { aiActReference: 'Art. 15 (accuracy & robustness)', nistReference: 'MEASURE 2.7 (prompt injection)', iso42001Reference: 'A.8.2 (robustness)' },
+  'CG-AG-06': { aiActReference: 'Art. 10 (data governance)', iso42001Reference: 'A.7.3 (data quality)', nistReference: 'MAP 2.2', lgpdReference: 'Art. 6, 38, 46' },
+  'CG-AG-07': { aiActReference: 'Art. 12 (record-keeping/logs)', doraReference: 'Art. 12 (logging)', iso42001Reference: 'A.6.7 (event logs)', lgpdReference: 'Art. 37 (Rastreabilidade)' },
+  'CG-AG-08': { aiActReference: 'Art. 15 (cybersecurity)', doraReference: 'Art. 9 (ICT protection)', iso42001Reference: 'A.8.2 (secret protection)' },
+  'CG-AG-09': { aiActReference: 'Art. 15 (accuracy & monitoring)', iso42001Reference: 'A.9.2 (monitoring)', nistReference: 'MANAGE 2.2' },
+  'CG-AG-10': { iso42001Reference: 'A.7.4 (resource management)', nistReference: 'GOVERN 4.1' },
+  'CG-AG-11': { doraReference: 'Art. 11 (resilience & response)', iso42001Reference: 'A.8.4', nistReference: 'MANAGE 2.4' },
+  'CG-AG-12': { doraReference: 'Art. 28 (third-party ICT)', iso42001Reference: 'A.10.3 (supplier AI)', nistReference: 'GOVERN 6.1', aiActReference: 'Art. 25' },
 };
 
+/**
+ * The 12 Official CG-AG Governance Controls.
+ */
 export const CG_AG_CONTROLS: Record<string, CGAGControl> = {
-  'CG-AG-001': {
-    id: 'CG-AG-001',
+  'CG-AG-01': {
+    id: 'CG-AG-01',
     dbFlag: 'cg_ag_001_registered',
-    name: 'Agent Inventory',
-    description: 'Every AI agent must be formally registered in the master agent inventory before operating.',
+    name: 'Inventory & Registration',
+    description: 'Every AI agent and system must be formally cataloged with unique ID, owner, model, and purpose.',
     domain: 'inventory',
   },
-  'CG-AG-002': {
-    id: 'CG-AG-002',
+  'CG-AG-02': {
+    id: 'CG-AG-02',
     dbFlag: 'cg_ag_002_owner',
-    name: 'Agent Owner',
-    description: 'Every registered agent must have an identified, accountable human owner.',
-    domain: 'ownership',
+    name: 'Tool Scoping & Authorization',
+    description: 'Every external tool, database, and API accessed by an agent must be explicitly bounded with least-privilege permissions.',
+    domain: 'scoping',
   },
-  'CG-AG-003': {
-    id: 'CG-AG-003',
+  'CG-AG-03': {
+    id: 'CG-AG-03',
     dbFlag: 'cg_ag_003_model_reg',
-    name: 'Model Registration',
-    description: 'Every agent AI model must be documented with model name and provider.',
-    domain: 'models',
-  },
-  'CG-AG-004': {
-    id: 'CG-AG-004',
-    dbFlag: 'cg_ag_004_compliant',
-    name: 'Tool Authorisation',
-    description: 'Every tool and external resource accessed by an agent must be explicitly authorised before use.',
-    domain: 'access',
-  },
-  'CG-AG-005': {
-    id: 'CG-AG-005',
-    dbFlag: 'cg_ag_005_compliant',
-    name: 'Prompt Governance',
-    description: 'Prompts must be registered, versioned, and assessed for robustness and injection risk.',
-    domain: 'prompts',
-  },
-  'CG-AG-006': {
-    id: 'CG-AG-006',
-    dbFlag: 'cg_ag_006_compliant',
-    name: 'MCP Server Governance',
-    description: 'All MCP server connections must be registered, classified, and periodically reviewed.',
-    domain: 'mcp',
-  },
-  'CG-AG-007': {
-    id: 'CG-AG-007',
-    dbFlag: 'cg_ag_007_oversight',
-    name: 'Human Oversight',
-    description: 'Every agent must have an appropriate human oversight level calibrated to its risk.',
+    name: 'Human-in-the-Loop',
+    description: 'Autonomous decisions exceeding risk or financial thresholds require mandatory human oversight and approval checkpoints.',
     domain: 'oversight',
   },
-  'CG-AG-008': {
-    id: 'CG-AG-008',
-    dbFlag: 'cg_ag_008_audit_trail',
-    name: 'Audit Trail',
-    description: 'Agent activities and governance state changes must be captured in an immutable audit ledger.',
+  'CG-AG-04': {
+    id: 'CG-AG-04',
+    dbFlag: 'cg_ag_004_compliant',
+    name: 'Circuit Breaker / Timeout / Anti-Loop',
+    description: 'Runtime controls must enforce iteration limits, timeouts, and automated circuit breakers against infinite execution loops.',
+    domain: 'runtime_safety',
+  },
+  'CG-AG-05': {
+    id: 'CG-AG-05',
+    dbFlag: 'cg_ag_005_compliant',
+    name: 'Prompt Security / Injection Protection',
+    description: 'Prompts, system instructions, and input buffers must be guarded against direct and indirect prompt injection attacks.',
+    domain: 'security',
+  },
+  'CG-AG-06': {
+    id: 'CG-AG-06',
+    dbFlag: 'cg_ag_006_compliant',
+    name: 'PII Protection & De-identification',
+    description: 'Personal, health, or financial data ingested or generated by agents must undergo automated masking and hygiene validation.',
+    domain: 'privacy',
+  },
+  'CG-AG-07': {
+    id: 'CG-AG-07',
+    dbFlag: 'cg_ag_007_oversight',
+    name: 'Audit Trail & Decision Trace',
+    description: 'Agent executions, tool calls, and rationales must be captured in a tamper-evident audit ledger for regulatory verification.',
     domain: 'audit',
   },
-  'CG-AG-009': {
-    id: 'CG-AG-009',
+  'CG-AG-08': {
+    id: 'CG-AG-08',
+    dbFlag: 'cg_ag_008_audit_trail',
+    name: 'Secrets & Credentials Management',
+    description: 'API keys, credentials, and tokens must never be hardcoded and must be accessed through sandboxed secrets management.',
+    domain: 'secrets',
+  },
+  'CG-AG-09': {
+    id: 'CG-AG-09',
     dbFlag: 'cg_ag_009_compliant',
-    name: 'Data Governance',
-    description: 'Every resource carrying PII, PHI, or financial data must undergo a mandatory data governance review.',
-    domain: 'data',
+    name: 'Drift / Hallucination / Bias Monitoring',
+    description: 'Agent outputs and model accuracy must be continuously monitored for behavioral drift, hallucinations, and safety deviations.',
+    domain: 'monitoring',
   },
-  'CG-AG-010': {
-    id: 'CG-AG-010',
+  'CG-AG-10': {
+    id: 'CG-AG-10',
     dbFlag: 'cg_ag_010_classified',
-    name: 'Risk Classification',
-    description: 'Every agent must be assigned both an operational risk level and an AI Act risk class.',
-    domain: 'risk',
+    name: 'FinOps / Token Budget / Rate Limiting',
+    description: 'Token consumption, cost budgets, and rate limits must be enforced per agent and business unit to prevent cost overruns.',
+    domain: 'finops',
   },
-  'CG-AG-011': {
-    id: 'CG-AG-011',
+  'CG-AG-11': {
+    id: 'CG-AG-11',
     dbFlag: null,
-    name: 'Agent-to-Agent Governance',
-    description: 'All agent-to-agent relationships must be explicitly registered in the agent graph.',
-    domain: 'a2a',
+    name: 'Resilience / Fallback / Graceful Degradation',
+    description: 'Failures in downstream LLMs or external tools must trigger predictable fallbacks and graceful degradation without data loss.',
+    domain: 'resilience',
   },
-  'CG-AG-012': {
-    id: 'CG-AG-012',
+  'CG-AG-12': {
+    id: 'CG-AG-12',
     dbFlag: 'cg_ag_012_autonomous_governed',
-    name: 'Autonomous Agent Governance',
-    description: 'Autonomous agents require elevated oversight, fallback mechanisms, and enhanced monitoring.',
-    domain: 'autonomous',
+    name: 'Third-Party AI / Supply Chain Governance',
+    description: 'All third-party models, MCP servers, and external AI dependencies must be cataloged and evaluated for supply chain risk.',
+    domain: 'supply_chain',
   },
 };
 
@@ -124,10 +149,6 @@ export const CONTROL_LIST = Object.values(CG_AG_CONTROLS);
 
 export function getCGAGControl(id: string): CGAGControl | undefined {
   return CG_AG_CONTROLS[id];
-}
-
-export function getCGAGControlByRisk(risk: DetectedRisk): CGAGControl | undefined {
-  return risk.cgagControl ? CG_AG_CONTROLS[risk.cgagControl] : undefined;
 }
 
 export function isCGAGImplemented(dbFlags: Record<string, string | boolean | null>): string[] {
@@ -140,12 +161,18 @@ export function isCGAGImplemented(dbFlags: Record<string, string | boolean | nul
   return passed;
 }
 
-export function getCGAGScore(dbFlags: Record<string, string | boolean | null>): number {
+/**
+ * Computes the CG-AG Governance Score based strictly on the 12 CG-AG Governance Controls.
+ */
+export function getCGAGGovernanceScore(dbFlags: Record<string, string | boolean | null>): number {
   const total = CONTROL_LIST.filter(c => c.dbFlag).length;
   if (total === 0) return 100;
   const passed = isCGAGImplemented(dbFlags).length;
   return Math.round((passed / total) * 100);
 }
+
+// Backward-compatible alias
+export const getCGAGScore = getCGAGGovernanceScore;
 
 export function buildCGAGSpecification() {
   const controls = Object.values(CG_AG_CONTROLS).map(c => ({
@@ -156,9 +183,9 @@ export function buildCGAGSpecification() {
     traceability: CG_AG_TRACEABILITY[c.id] ?? {},
   }));
   return {
-    standard: 'CG-AG CodeGuard Agent Governance Framework',
+    standard: 'CG-AG Framework — 12 Audit-Ready Governance Controls',
     principle: AGENTIC_CORE_PRINCIPLE,
-    version: '1.1.0',
+    version: '1.2.0',
     license: 'CC BY 4.0',
     purpose: 'The open standard for AI agent governance. Every AI agent in production should satisfy these 12 controls.',
     mappedFrameworks: ['EU AI Act 2024/1689', 'LGPD Lei 13.709/2018', 'DORA (EU) 2022/2554', 'ISO/IEC 42001:2023', 'NIST AI RMF 1.0'],
@@ -176,23 +203,23 @@ export function cgagSpecificationToMarkdown(spec = buildCGAGSpecification()): st
     '',
     '> ' + spec.purpose,
     '',
-    '**Mapped Frameworks:** ' + spec.mappedFrameworks.join(' * '),
+    '**Supported Reference Frameworks:** ' + spec.mappedFrameworks.join(' · '),
     '',
-    '## The 12 Controls',
+    '## The 12 Audit-Ready Controls',
     '',
-    '| ID | Control | Domain | Requirement |',
-    '|----|---------|--------|-------------|',
+    '| ID | Control Name | Domain | Requirement Description |',
+    '|---|---|---|---|',
   ];
   for (const c of spec.controls) {
     lines.push('| **' + c.id + '** | ' + c.name + ' | ' + c.domain + ' | ' + c.description + ' |');
   }
-  lines.push('', '## Regulatory Traceability Matrix', '');
-  lines.push('| Control | EU AI Act | LGPD | DORA | ISO/IEC 42001 | NIST AI RMF |');
-  lines.push('|---------|-----------|------|------|----------------|-------------|');
+  lines.push('', '## Regulatory Reference Matrix (Informative)', '');
+  lines.push('| Control | EU AI Act Reference | LGPD Reference | DORA Reference | ISO/IEC 42001 Reference | NIST AI RMF Reference |');
+  lines.push('|---|---|---|---|---|---|');
   for (const c of spec.controls) {
     const t = c.traceability;
-    lines.push('| ' + c.id + ' | ' + (t.aiAct ?? '-') + ' | ' + (t.lgpd ?? '-') + ' | ' + (t.dora ?? '-') + ' | ' + (t.iso42001 ?? '-') + ' | ' + (t.nist ?? '-') + ' |');
+    lines.push('| ' + c.id + ' | ' + (t.aiActReference ?? '—') + ' | ' + (t.lgpdReference ?? '—') + ' | ' + (t.doraReference ?? '—') + ' | ' + (t.iso42001Reference ?? '—') + ' | ' + (t.nistReference ?? '—') + ' |');
   }
-  lines.push('', '---', '', '*Generated by ComplyPRO AI Governance Core Engine. Zero code retention.*');
+  lines.push('', '---', '', '*Generated by ComplyPRO CG-AG Governance Engine. Note: Regulatory mappings represent reference alignment, not automated legal certification.*');
   return lines.join('\n');
 }

@@ -2,8 +2,11 @@
  * CG-AG Agentic Light — Rapid Agent Governance Assessment
  * 
  * 10-Dimension Rapid Assessment for organizations scaling AI Agents.
- * Generates the Agentic Governance Score:
+ * Generates the Agentic Governance Score (0 - 100):
  * 🟢 Governed | 🟡 Attention Required | 🔴 Exposure
+ * 
+ * Note: The Agentic Governance Score (10 dimensions) is distinct from the
+ * CG-AG Governance Score (based on the 12 CG-AG Governance Controls).
  */
 
 import type { ScannerResult } from './types';
@@ -24,7 +27,7 @@ export interface AgenticLightDimension {
 export interface AgenticLightResult {
   projectName: string;
   assessedAt: string;
-  agenticGovernanceScore: number; // 0 - 100
+  agenticGovernanceScore: number; // 0 - 100 (based on the 10 dimensions)
   rating: 'Governed' | 'Attention Required' | 'Exposure';
   ratingEmoji: '🟢' | '🟡' | '🔴';
   totalAgentsAudited: number;
@@ -40,6 +43,9 @@ export interface AgenticLightResult {
 }
 
 export class AgenticLightAssessment {
+  /**
+   * Executes the 10-Dimension Rapid Agent Governance Assessment.
+   */
   static assess(scanResult: ScannerResult): AgenticLightResult {
     const agents = scanResult.source?.agents || [];
     const violations = scanResult.violations || [];
@@ -67,7 +73,7 @@ export class AgenticLightAssessment {
       status: hasOwnerExplicit ? 'PASS' : 'WARN',
       score: hasOwnerExplicit ? 90 : 55,
       evidence: hasOwnerExplicit ? 'Owner identificado nas declarações.' : 'Owner implícito ao repositório.',
-      missingControl: hasOwnerExplicit ? null : 'CG-AG-002: Formal Agent Ownership Assignment',
+      missingControl: hasOwnerExplicit ? null : 'CG-AG-01: Formal Agent Ownership Assignment',
       remediationPriority: 'P2 - High'
     };
 
@@ -80,7 +86,7 @@ export class AgenticLightAssessment {
       status: hasHighAutonomy ? 'WARN' : 'PASS',
       score: hasHighAutonomy ? 60 : 85,
       evidence: hasHighAutonomy ? 'Agente opera em nível L3 (Autonomia com alçada crítica).' : 'Autonomia L2 supervisionada.',
-      missingControl: hasHighAutonomy ? 'CG-AG-012: Autonomous Agent Operational Boundary' : null,
+      missingControl: hasHighAutonomy ? 'CG-AG-04: Autonomous Agent Operational Boundary' : null,
       remediationPriority: 'P1 - Immediate'
     };
 
@@ -93,7 +99,7 @@ export class AgenticLightAssessment {
       status: hasPiiFindings ? 'FAIL' : 'PASS',
       score: hasPiiFindings ? 35 : 90,
       evidence: hasPiiFindings ? 'Acesso a fluxos com PII sem sanitização comprovada.' : 'Sem violações diretas de PII.',
-      missingControl: hasPiiFindings ? 'CG-AG-009: PII & Restricted Data Governance Safeguard' : null,
+      missingControl: hasPiiFindings ? 'CG-AG-06: PII & Restricted Data Governance Safeguard' : null,
       remediationPriority: 'P1 - Immediate'
     };
 
@@ -119,7 +125,7 @@ export class AgenticLightAssessment {
       status: hasDangerousTools ? 'FAIL' : 'PASS',
       score: hasDangerousTools ? 30 : 90,
       evidence: hasDangerousTools ? 'Ferramentas com permissão de execução aberta identificadas.' : 'Permissões restritas ao escopo.',
-      missingControl: hasDangerousTools ? 'CG-AG-004: Least-Privilege Tool Authorization' : null,
+      missingControl: hasDangerousTools ? 'CG-AG-02: Least-Privilege Tool Authorization' : null,
       remediationPriority: 'P1 - Immediate'
     };
 
@@ -132,7 +138,7 @@ export class AgenticLightAssessment {
       status: hasVerboseOrDebug ? 'WARN' : 'PASS',
       score: hasVerboseOrDebug ? 50 : 85,
       evidence: hasVerboseOrDebug ? 'Debug ativo em código suscetível a vazamento de prompt.' : 'Políticas padrão ativas.',
-      missingControl: hasVerboseOrDebug ? 'CG-AG-005: Prompt & Guardrail Governance' : null,
+      missingControl: hasVerboseOrDebug ? 'CG-AG-05: Prompt & Guardrail Governance' : null,
       remediationPriority: 'P2 - High'
     };
 
@@ -156,7 +162,7 @@ export class AgenticLightAssessment {
       status: 'WARN',
       score: 65,
       evidence: 'Linhagem de decisão depende de retenção imutável de logs.',
-      missingControl: 'CG-AG-008: Immutable Audit & Evidence Ledger',
+      missingControl: 'CG-AG-07: Tamper-Evident Audit & Evidence Ledger',
       remediationPriority: 'P2 - High'
     };
 
@@ -168,7 +174,7 @@ export class AgenticLightAssessment {
       status: 'WARN',
       score: 60,
       evidence: 'Kill switch manual disponível via código; automação de circuit breaker pendente.',
-      missingControl: 'CG-AG-012: Automated Circuit Breaker & Emergency Kill Switch',
+      missingControl: 'CG-AG-04: Automated Circuit Breaker & Emergency Kill Switch',
       remediationPriority: 'P1 - Immediate'
     };
 
@@ -225,6 +231,7 @@ export class AgenticLightAssessment {
 
 **Project:** ${result.projectName} | **Date:** ${new Date(result.assessedAt).toLocaleDateString('pt-BR')}  
 **Agentic Governance Score:** **${result.agenticGovernanceScore}%** — ${result.ratingEmoji} **${result.rating.toUpperCase()}**  
+*(Note: Agentic Score is based on 10 dimensions; CG-AG Governance Score is based on 12 controls)*  
 **Total Agents Audited:** ${result.totalAgentsAudited}
 
 ---
@@ -247,11 +254,11 @@ ${result.correctivePriorities.length === 0 ? '_Sistema em conformidade ótima._'
 
 ---
 
-### 🪪 ISSUED AGENT GOVERNANCE PASSPORTS (${result.passports.length})
-${result.passports.map(p => `- **${p.name}** (\`${p.agentId}\`): ${p.executionStatus} | Autonomia: ${p.autonomyLevel} | Risco: ${p.riskLevel}`).join('\n')}
+### 🪪 ISSUED VERIFIABLE AGENT GOVERNANCE PASSPORTS (${result.passports.length})
+${result.passports.map(p => `- **${p.identity.name}** (\`${p.identity.agentId}\`): ${p.operational.currentStatus} | Autonomia: ${p.governance.autonomyLevel} | Risco: ${p.governance.riskLevel}`).join('\n')}
 
 ---
-*Governed under the CodeGuard Agent Governance Framework (CG-AG). Principle: Every Agent Action Must Be Governable and Evidenced.*
+*Governed under the CG-AG Governance Control Plane. Principle: "Every Agent Action Must Be Governable and Evidenced."*
 `;
   }
 }
