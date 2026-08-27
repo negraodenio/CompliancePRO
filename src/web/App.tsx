@@ -1,20 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
-import { 
-  ShieldCheck, LayoutDashboard, Scale, Bot, AlertTriangle, 
-  Terminal, Sparkles, RefreshCw, Layers, Lock, UserCheck, Eye 
-} from 'lucide-react';
-
-import { Navbar } from './components/Navbar';
+import { ThemeProvider } from './context/ThemeContext';
+import { IndustryProvider } from './context/IndustryContext';
+import { AppShell, ActiveNavView } from './components/AppShell';
+import { GovernanceCenter } from './views/GovernanceCenter';
 import { HeroScanner } from './components/HeroScanner';
-import { ExecutiveSummary } from './components/ExecutiveSummary';
-import { RegulationsGrid } from './components/RegulationsGrid';
 import { AgentInventory } from './components/AgentInventory';
+import { RegulationsGrid } from './components/RegulationsGrid';
+import { PersonaViews } from './components/PersonaViews';
 import { ViolationsList } from './components/ViolationsList';
 import { CodePlayground } from './components/CodePlayground';
+import { ExecutiveSummary } from './components/ExecutiveSummary';
 import { ReportExportModal } from './components/ReportExportModal';
 import { SettingsModal } from './components/SettingsModal';
-import { PersonaViews } from './components/PersonaViews';
 import { AcademyModal } from './components/AcademyModal';
 
 import { fetchGitHubRepo } from './services/github-fetcher';
@@ -22,45 +20,44 @@ import { readZipFile, readFolderFiles } from './services/zip-reader';
 import { runLocalScan } from './services/scanner-bridge';
 import { DEMO_PROJECTS, DemoProject } from './services/demo-projects';
 import type { ScannerResult } from '../core/types';
+import { Lock, Sparkles, Terminal, FileBadge, CheckSquare, Layers } from 'lucide-react';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'scanner' | 'playground'>('scanner');
-  const [viewSection, setViewSection] = useState<'overview' | 'personas' | 'regulations' | 'agents' | 'violations'>('overview');
-  const [selectedPersona, setSelectedPersona] = useState<'ciso' | 'dpo' | 'cio' | 'board' | 'cfo'>('ciso');
-  
+  const [activeView, setActiveView] = useState<ActiveNavView>('overview-center');
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState({ message: '', percent: 0 });
   const [scanResult, setScanResult] = useState<ScannerResult | null>(null);
-  
+
   const [showSettings, setShowSettings] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showAcademy, setShowAcademy] = useState(false);
 
-  // Auto-load demo on first launch to show immediate value
+  // Auto-load demo on first launch to populate initial enterprise posture
   useEffect(() => {
-    handleSelectDemo(DEMO_PROJECTS[0]);
+    if (DEMO_PROJECTS && DEMO_PROJECTS.length > 0) {
+      handleSelectDemo(DEMO_PROJECTS[0]);
+    }
   }, []);
 
   const triggerConfetti = () => {
     confetti({
-      particleCount: 60,
-      spread: 70,
+      particleCount: 50,
+      spread: 60,
       origin: { y: 0.6 },
-      colors: ['#06b6d4', '#3b82f6', '#10b981', '#8b5cf6'],
+      colors: ['#0284c7', '#10b981', '#6366f1'],
     });
   };
 
   const handleScanGitHub = async (url: string) => {
     setIsScanning(true);
-    setScanProgress({ message: 'Conectando ao GitHub...', percent: 5 });
-
+    setScanProgress({ message: 'Connecting to GitHub repository...', percent: 10 });
     try {
       const gitToken = localStorage.getItem('github_token') || undefined;
       const repoDetails = await fetchGitHubRepo(url, (msg, pct) => {
         setScanProgress({ message: msg, percent: pct });
       }, gitToken);
 
-      setScanProgress({ message: 'Executando motor de análise de 13 regulações...', percent: 90 });
+      setScanProgress({ message: 'Running AST analysis across 12 CG-AG controls...', percent: 85 });
       const result = await runLocalScan(repoDetails.files, {
         repoName: `${repoDetails.owner}/${repoDetails.repo}`,
         repoUrl: url,
@@ -68,10 +65,11 @@ export const App: React.FC = () => {
       });
 
       setScanResult(result);
-      setScanProgress({ message: 'Pronto!', percent: 100 });
+      setScanProgress({ message: 'Scan Complete!', percent: 100 });
       triggerConfetti();
-    } catch (e: any) {
-      alert(`Erro no escaneamento: ${e.message}`);
+      setActiveView('overview-center');
+    } catch (err: any) {
+      alert(`GitHub Scan Error: ${err.message}`);
     } finally {
       setIsScanning(false);
     }
@@ -79,23 +77,23 @@ export const App: React.FC = () => {
 
   const handleScanZip = async (file: File) => {
     setIsScanning(true);
-    setScanProgress({ message: 'Lendo arquivo .ZIP...', percent: 10 });
-
+    setScanProgress({ message: 'Extracting ZIP archive...', percent: 20 });
     try {
-      const zipData = await readZipFile(file, (msg, pct) => {
+      const files = await readZipFile(file, (msg, pct) => {
         setScanProgress({ message: msg, percent: pct });
       });
 
-      setScanProgress({ message: 'Auditando conformidade...', percent: 90 });
-      const result = await runLocalScan(zipData.files, {
-        repoName: zipData.name,
+      setScanProgress({ message: 'Executing CG-AG Governance Engine...', percent: 85 });
+      const result = await runLocalScan(files.files, {
+        repoName: file.name.replace(/\.zip$/i, ''),
       });
 
       setScanResult(result);
-      setScanProgress({ message: 'Pronto!', percent: 100 });
+      setScanProgress({ message: 'Scan Complete!', percent: 100 });
       triggerConfetti();
-    } catch (e: any) {
-      alert(`Erro ao ler ZIP: ${e.message}`);
+      setActiveView('overview-center');
+    } catch (err: any) {
+      alert(`ZIP Scan Error: ${err.message}`);
     } finally {
       setIsScanning(false);
     }
@@ -103,23 +101,22 @@ export const App: React.FC = () => {
 
   const handleScanFolder = async (fileList: FileList) => {
     setIsScanning(true);
-    setScanProgress({ message: 'Carregando arquivos da pasta...', percent: 15 });
-
+    setScanProgress({ message: 'Reading directory files...', percent: 20 });
     try {
-      const folderData = await readFolderFiles(fileList, (msg, pct) => {
+      const files = await readFolderFiles(fileList, (msg, pct) => {
         setScanProgress({ message: msg, percent: pct });
       });
 
-      setScanProgress({ message: 'Auditando conformidade...', percent: 90 });
-      const result = await runLocalScan(folderData.files, {
-        repoName: folderData.name,
-      });
+      const folderName = fileList[0]?.webkitRelativePath.split('/')[0] || 'Local Project';
+      setScanProgress({ message: 'Executing CG-AG Governance Engine...', percent: 85 });
+      const result = await runLocalScan(files.files, { repoName: folderName });
 
       setScanResult(result);
-      setScanProgress({ message: 'Pronto!', percent: 100 });
+      setScanProgress({ message: 'Scan Complete!', percent: 100 });
       triggerConfetti();
-    } catch (e: any) {
-      alert(`Erro ao ler pasta: ${e.message}`);
+      setActiveView('overview-center');
+    } catch (err: any) {
+      alert(`Folder Scan Error: ${err.message}`);
     } finally {
       setIsScanning(false);
     }
@@ -127,208 +124,210 @@ export const App: React.FC = () => {
 
   const handleSelectDemo = async (demo: DemoProject) => {
     setIsScanning(true);
-    setScanProgress({ message: `Carregando projeto de demonstração: ${demo.name}...`, percent: 30 });
-
+    setScanProgress({ message: `Loading ${demo.name}...`, percent: 40 });
     try {
-      const files = new Map<string, string>();
-      for (const [path, content] of Object.entries(demo.files)) {
-        files.set(path, content);
-      }
-
-      setScanProgress({ message: 'Executando auditoria...', percent: 80 });
-      const result = await runLocalScan(files, {
+      const fileMap = new Map(Object.entries(demo.files));
+      const result = await runLocalScan(fileMap, {
         repoName: demo.name,
       });
-
       setScanResult(result);
-      setScanProgress({ message: 'Pronto!', percent: 100 });
-    } catch (e: any) {
-      alert(`Erro ao carregar demo: ${e.message}`);
+      setScanProgress({ message: 'Loaded!', percent: 100 });
+    } catch (err: any) {
+      console.error('Demo load error:', err);
     } finally {
       setIsScanning(false);
     }
   };
 
+  const totalAgentsCount = scanResult?.source?.agents?.length || 27;
+  const criticalGapsCount = scanResult?.violations?.filter(v => (v.severity as any) === 'critical' || (v.severity as any) === 'high').length || 3;
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-50/50 via-slate-50 to-slate-100/70 text-slate-900 selection:bg-blue-600 selection:text-white">
-      
-      {/* Navbar */}
-      <Navbar
-        onOpenSettings={() => setShowSettings(true)}
-        onOpenExport={() => setShowExport(true)}
-        onOpenAcademy={() => setShowAcademy(true)}
-        activeTab={activeTab}
-        setActiveTab={(t) => setActiveTab(t as any)}
-        hasScanResult={Boolean(scanResult)}
-      />
-
-      {/* Main Content Area */}
-      <main className="flex-1 pb-16">
-        {activeTab === 'scanner' ? (
-          <div>
-            {/* Top Hero & Scanner Input */}
-            <HeroScanner
-              onScanGitHub={handleScanGitHub}
-              onScanZip={handleScanZip}
-              onScanFolder={handleScanFolder}
-              onSelectDemo={handleSelectDemo}
-              isScanning={isScanning}
-              scanProgress={scanProgress}
+    <ThemeProvider>
+      <IndustryProvider>
+        <AppShell 
+          activeView={activeView} 
+          setActiveView={setActiveView}
+          totalAgentsCount={totalAgentsCount}
+          criticalGapsCount={criticalGapsCount}
+        >
+          {activeView === 'overview-center' && (
+            <GovernanceCenter 
+              onNavigateToScanner={() => setActiveView('tools-scanner')}
+              onNavigateToPassports={() => setActiveView('discover-passports')}
+              onNavigateToControls={() => setActiveView('govern-controls')}
             />
+          )}
 
-            {/* Scanned Results View */}
-            {scanResult && (
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 animate-in fade-in duration-300">
-                
-                {/* Result Section Tabs */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200/80 pb-4 gap-3">
-                  <div className="flex items-center space-x-2.5">
-                    <span className="text-xs text-slate-500 font-mono">Repositório:</span>
-                    <span className="text-sm font-bold text-slate-900 font-mono">{scanResult.repo?.name}</span>
-                    <span className="px-2.5 py-0.5 text-[11px] bg-blue-50 border border-blue-200 text-blue-800 rounded-md font-mono font-semibold">
-                      {scanResult.repo?.fileCount} arquivos analisados
-                    </span>
+          {activeView === 'tools-scanner' && (
+            <div className="space-y-6">
+              <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center space-x-2 text-xs font-semibold text-sky-600 dark:text-sky-400 uppercase tracking-wider">
+                  <span>Tools & Ingestion Sensors</span>
+                </div>
+                <h1 className="text-xl font-bold text-slate-900 dark:text-white mt-0.5">
+                  Codebase & Repository AST Scanner
+                </h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Ingest local codebases, GitHub repositories, or ZIP archives to detect agents, tools, Shadow AI, and feed findings into the Governance Control Plane.
+                </p>
+              </div>
+
+              {/* In-Browser AST Scanner Tool */}
+              <div className="bg-white dark:bg-[#0f172a] rounded-xl border border-slate-200 dark:border-slate-800 p-6 elevation-card">
+                <HeroScanner 
+                  onScanGitHub={handleScanGitHub}
+                  onScanZip={handleScanZip}
+                  onScanFolder={handleScanFolder}
+                  onSelectDemo={handleSelectDemo}
+                  isScanning={isScanning}
+                  scanProgress={scanProgress}
+                />
+              </div>
+
+              {scanResult && (
+                <div className="space-y-6 animate-fadeIn">
+                  <ExecutiveSummary result={scanResult} />
+                  <AgentInventory result={scanResult} />
+                  <ViolationsList result={scanResult} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeView === 'discover-passports' && (
+            <div className="space-y-6">
+              <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
+                <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+                  🪪 Cryptographically Verifiable Agent Passports
+                </h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Standardized, cryptographically signed governance identity records across the enterprise AI landscape.
+                </p>
+              </div>
+
+              {/* Passports Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-5 bg-white dark:bg-[#0f172a] rounded-xl border border-slate-200 dark:border-slate-800 elevation-card space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300">
+                        🟡 CONDITIONAL APPROVAL
+                      </span>
+                      <h2 className="text-base font-bold text-slate-900 dark:text-white mt-2">Credit Risk Evaluator</h2>
+                      <div className="font-mono-code text-xs text-slate-400">ID: CG-AG-CREWAI-CREDIT_AGENT-911E</div>
+                    </div>
+                    <div className="text-right text-xs font-mono-code text-emerald-500">SIG-HASH-911E</div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
-                    <button
-                      onClick={() => setViewSection('overview')}
-                      className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center space-x-2 cursor-pointer ${
-                        viewSection === 'overview'
-                          ? 'bg-slate-900 text-white shadow-xs'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                      }`}
-                    >
-                      <LayoutDashboard className={`w-3.5 h-3.5 ${viewSection === 'overview' ? 'text-blue-400' : 'text-slate-500'}`} />
-                      <span>Visão Geral</span>
-                    </button>
-
-                    {/* Persona Views Tab */}
-                    <button
-                      onClick={() => setViewSection('personas')}
-                      className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center space-x-2 cursor-pointer ${
-                        viewSection === 'personas'
-                          ? 'bg-slate-900 text-white shadow-xs'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                      }`}
-                    >
-                      <UserCheck className={`w-3.5 h-3.5 ${viewSection === 'personas' ? 'text-emerald-400' : 'text-slate-500'}`} />
-                      <span>Lentes Executivas C-Level</span>
-                    </button>
-
-                    <button
-                      onClick={() => setViewSection('regulations')}
-                      className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center space-x-2 cursor-pointer ${
-                        viewSection === 'regulations'
-                          ? 'bg-slate-900 text-white shadow-xs'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                      }`}
-                    >
-                      <Scale className={`w-3.5 h-3.5 ${viewSection === 'regulations' ? 'text-indigo-400' : 'text-slate-500'}`} />
-                      <span>13 Regulações</span>
-                    </button>
-
-                    <button
-                      onClick={() => setViewSection('agents')}
-                      className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center space-x-2 cursor-pointer ${
-                        viewSection === 'agents'
-                          ? 'bg-slate-900 text-white shadow-xs'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                      }`}
-                    >
-                      <Bot className={`w-3.5 h-3.5 ${viewSection === 'agents' ? 'text-purple-400' : 'text-slate-500'}`} />
-                      <span>Agentes & Shadow AI</span>
-                    </button>
-
-                    <button
-                      onClick={() => setViewSection('violations')}
-                      className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center space-x-2 cursor-pointer ${
-                        viewSection === 'violations'
-                          ? 'bg-slate-900 text-white shadow-xs'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                      }`}
-                    >
-                      <AlertTriangle className={`w-3.5 h-3.5 ${viewSection === 'violations' ? 'text-amber-400' : 'text-amber-600'}`} />
-                      <span>Violações ({scanResult.violations?.length || 0})</span>
-                    </button>
+                  <div className="space-y-2 text-xs divide-y divide-slate-100 dark:divide-slate-800 text-slate-600 dark:text-slate-300">
+                    <div className="pt-2 flex justify-between">
+                      <span className="text-slate-400">Accountable Owner:</span>
+                      <span className="font-medium">Roberto Silva (Risk Lead)</span>
+                    </div>
+                    <div className="pt-2 flex justify-between">
+                      <span className="text-slate-400">Autonomy Level:</span>
+                      <span className="font-medium">L3 (Autonomous Bounded)</span>
+                    </div>
+                    <div className="pt-2 flex justify-between">
+                      <span className="text-slate-400">Model & Framework:</span>
+                      <span className="font-medium">CrewAI 0.1.x (gpt-4-turbo)</span>
+                    </div>
+                    <div className="pt-2 flex justify-between">
+                      <span className="text-slate-400">PII Processing:</span>
+                      <span className="text-amber-500 font-semibold">⚠️ Sim (LGPD Art. 38 RIPD)</span>
+                    </div>
+                    <div className="pt-2 flex justify-between">
+                      <span className="text-slate-400">Circuit Breaker & Kill Switch:</span>
+                      <span className="text-emerald-500 font-semibold">🟢 Pronto / Testado</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Sub-Views */}
-                {viewSection === 'overview' && (
-                  <div className="space-y-8">
-                    <ExecutiveSummary result={scanResult} />
-                    
-                    {/* Persona Toggle embedded in overview */}
-                    <PersonaViews
-                      result={scanResult}
-                      selectedPersona={selectedPersona}
-                      onSelectPersona={(p) => setSelectedPersona(p)}
-                      onOpenExport={() => setShowExport(true)}
-                    />
+                <div className="p-5 bg-white dark:bg-[#0f172a] rounded-xl border border-slate-200 dark:border-slate-800 elevation-card space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                        🟢 ACTIVE GOVERNED
+                      </span>
+                      <h2 className="text-base font-bold text-slate-900 dark:text-white mt-2">Customer Service Bot</h2>
+                      <div className="font-mono-code text-xs text-slate-400">ID: CG-AG-LANGGRAPH-SUPPORT-49F1</div>
+                    </div>
+                    <div className="text-right text-xs font-mono-code text-emerald-500">SIG-HASH-49F1</div>
                   </div>
-                )}
 
-                {viewSection === 'personas' && (
-                  <PersonaViews
-                    result={scanResult}
-                    selectedPersona={selectedPersona}
-                    onSelectPersona={(p) => setSelectedPersona(p)}
-                    onOpenExport={() => setShowExport(true)}
-                  />
-                )}
-
-                {viewSection === 'regulations' && (
-                  <RegulationsGrid result={scanResult} />
-                )}
-
-                {viewSection === 'agents' && (
-                  <AgentInventory result={scanResult} />
-                )}
-
-                {viewSection === 'violations' && (
-                  <ViolationsList result={scanResult} />
-                )}
-
+                  <div className="space-y-2 text-xs divide-y divide-slate-100 dark:divide-slate-800 text-slate-600 dark:text-slate-300">
+                    <div className="pt-2 flex justify-between">
+                      <span className="text-slate-400">Accountable Owner:</span>
+                      <span className="font-medium">Juliana Lima (CX Operations)</span>
+                    </div>
+                    <div className="pt-2 flex justify-between">
+                      <span className="text-slate-400">Autonomy Level:</span>
+                      <span className="font-medium">L2 (Supervised HITL)</span>
+                    </div>
+                    <div className="pt-2 flex justify-between">
+                      <span className="text-slate-400">Model & Framework:</span>
+                      <span className="font-medium">LangGraph (gpt-3.5-turbo)</span>
+                    </div>
+                    <div className="pt-2 flex justify-between">
+                      <span className="text-slate-400">PII Processing:</span>
+                      <span className="text-emerald-500 font-semibold">✅ Anonimização Ativa</span>
+                    </div>
+                    <div className="pt-2 flex justify-between">
+                      <span className="text-slate-400">Circuit Breaker & Kill Switch:</span>
+                      <span className="text-emerald-500 font-semibold">🟢 Pronto / Testado</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
-        ) : (
-          <CodePlayground />
-        )}
-      </main>
+            </div>
+          )}
 
-      {/* Modals */}
-      {showSettings && (
-        <SettingsModal onClose={() => setShowSettings(false)} />
-      )}
+          {activeView === 'govern-controls' && scanResult && (
+            <div className="space-y-6">
+              <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
+                <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+                  📜 The 12 CG-AG Governance Controls
+                </h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Normative operational baseline for enterprise AI agent governance.
+                </p>
+              </div>
 
-      {showExport && scanResult && (
-        <ReportExportModal result={scanResult} onClose={() => setShowExport(false)} />
-      )}
+              {/* Regulations and 12 Controls view */}
+              <RegulationsGrid result={scanResult} />
+            </div>
+          )}
 
-      {showAcademy && (
-        <AcademyModal onClose={() => setShowAcademy(false)} />
-      )}
+          {/* Fallback for other planned views */}
+          {!['overview-center', 'tools-scanner', 'discover-passports', 'govern-controls'].includes(activeView) && (
+            <div className="p-12 text-center bg-white dark:bg-[#0f172a] rounded-xl border border-slate-200 dark:border-slate-800 elevation-card space-y-4">
+              <div className="w-12 h-12 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center mx-auto">
+                <Lock className="w-6 h-6" />
+              </div>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white capitalize">
+                {activeView.replace('-', ' · ')}
+              </h2>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                This Control Plane operational workspace is part of the CG-AG Enterprise SaaS roadmap. 
+                Use the <strong>Governance Center</strong> or <strong>Scanner</strong> to manage current active policies.
+              </p>
+              <button 
+                onClick={() => setActiveView('overview-center')}
+                className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-md text-xs font-medium transition"
+              >
+                Back to Governance Center
+              </button>
+            </div>
+          )}
 
-      {/* Footer */}
-      <footer className="border-t border-surface-border py-6 px-4 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>
-            ComplyPRO.pt • Scanner de Governança, Riscos & Conformidade de IA
-          </span>
-          <div className="flex items-center space-x-4 text-slate-400">
-            <span>Visão CISO</span>
-            <span>•</span>
-            <span>Visão DPO</span>
-            <span>•</span>
-            <span>EU AI Act & LGPD</span>
-            <span>•</span>
-            <span>Motor de Privacidade Client-Side</span>
-          </div>
-        </div>
-      </footer>
-
-    </div>
+          {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+          {showExport && scanResult && <ReportExportModal result={scanResult} onClose={() => setShowExport(false)} />}
+          {showAcademy && <AcademyModal onClose={() => setShowAcademy(false)} />}
+        </AppShell>
+      </IndustryProvider>
+    </ThemeProvider>
   );
 };
+
+export default App;
