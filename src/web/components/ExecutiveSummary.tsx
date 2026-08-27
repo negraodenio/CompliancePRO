@@ -101,7 +101,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         
         {/* Overall Score Circular Card */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all flex items-center space-x-5 relative overflow-hidden group">
+        <div className="bg-white dark:bg-[#111827] p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all flex items-center space-x-5 relative overflow-hidden group">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-emerald-500" />
           <div className="relative w-22 h-22 flex items-center justify-center shrink-0">
             <svg className="w-22 h-22 transform -rotate-90">
@@ -157,7 +157,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
         </div>
 
         {/* EU AI Act Risk Tier - Purpose-First Classification */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all flex flex-col justify-between relative overflow-hidden">
+        <div className="bg-white dark:bg-[#111827] p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all flex flex-col justify-between relative overflow-hidden">
           <div className={`absolute top-0 left-0 right-0 h-1 ${purpose.riskTier === 'HIGH_RISK' ? 'bg-rose-500' : 'bg-amber-500'}`} />
           <div className="flex items-center justify-between">
             <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider font-mono">EU AI Act</span>
@@ -189,7 +189,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
         </div>
 
         {/* Shadow AI Card */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all flex flex-col justify-between relative overflow-hidden">
+        <div className="bg-white dark:bg-[#111827] p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all flex flex-col justify-between relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1 bg-purple-500" />
           <div className="flex items-center justify-between">
             <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider font-mono">Shadow AI & Agentes</span>
@@ -225,11 +225,11 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
         </div>
 
         {/* Violations & AI Trigger */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all flex flex-col justify-between relative overflow-hidden">
+        <div className="bg-white dark:bg-[#111827] p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all flex flex-col justify-between relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-indigo-600" />
           <div className="flex items-center justify-between">
             <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider font-mono">Auditoria & IA</span>
-            <span className="text-xs font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+            <span className="text-xs font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
               {totalViolations} achados ({criticalViolations} críticos)
             </span>
           </div>
@@ -261,11 +261,11 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
       </div>
 
       {/* 🌟 Termômetro de Maturidade de Governança de IA (Framework ComplyPRO) */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-5 shadow-2xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200">
+      <div className="bg-white dark:bg-[#111827] p-6 rounded-2xl border border-slate-200 space-y-5 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center space-x-2.5">
             <div className="p-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 font-bold">
-              <Layers className="w-4 h-4 text-slate-700" />
+              <Layers className="w-4 h-4 text-slate-700 dark:text-slate-300" />
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900 flex items-center space-x-2">
@@ -380,19 +380,19 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
         {/* 🔒 Blurred Enterprise Evolution Roadmap (Teaser) */}
         <div className="relative rounded-xl border border-slate-200 bg-slate-50 overflow-hidden p-4 group">
           {/* Blurred Content */}
-          <div className="filter blur-[3.5px] select-none pointer-events-none opacity-40 space-y-2 text-xs text-slate-700">
+          <div className="filter blur-[3.5px] select-none pointer-events-none opacity-40 space-y-2 text-xs text-slate-700 dark:text-slate-300">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="p-3 rounded-lg bg-white border border-slate-200">
-                <span className="font-bold block text-slate-900">Controle de Deriva (Model Drift Engine)</span>
-                <span className="text-slate-600">Alerta automático de alucinação de agentes em tempo real</span>
+              <div className="p-3 rounded-lg bg-white border border-slate-200 dark:border-slate-800">
+                <span className="font-bold block text-slate-900 dark:text-slate-100">Controle de Deriva (Model Drift Engine)</span>
+                <span className="text-slate-600 dark:text-slate-400">Alerta automático de alucinação de agentes em tempo real</span>
               </div>
-              <div className="p-3 rounded-lg bg-white border border-slate-200">
-                <span className="font-bold block text-slate-900">Approval Gate CI/CD</span>
-                <span className="text-slate-600">Bloqueio mandatório de merges que violem o Anexo III do EU AI Act</span>
+              <div className="p-3 rounded-lg bg-white border border-slate-200 dark:border-slate-800">
+                <span className="font-bold block text-slate-900 dark:text-slate-100">Approval Gate CI/CD</span>
+                <span className="text-slate-600 dark:text-slate-400">Bloqueio mandatório de merges que violem o Anexo III do EU AI Act</span>
               </div>
-              <div className="p-3 rounded-lg bg-white border border-slate-200">
-                <span className="font-bold block text-slate-900">Notificação de Incidentes à ANPD</span>
-                <span className="text-slate-600">Workflow automatizado de geração de relatório em 72 horas</span>
+              <div className="p-3 rounded-lg bg-white border border-slate-200 dark:border-slate-800">
+                <span className="font-bold block text-slate-900 dark:text-slate-100">Notificação de Incidentes à ANPD</span>
+                <span className="text-slate-600 dark:text-slate-400">Workflow automatizado de geração de relatório em 72 horas</span>
               </div>
             </div>
           </div>
@@ -444,13 +444,13 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
           <div className="w-full max-w-2xl bg-white border border-slate-200 rounded-2xl p-6 sm:p-7 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
             
             {/* Header */}
-            <div className="flex items-start justify-between pb-3 border-b border-slate-200">
+            <div className="flex items-start justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
               <div className="flex items-center space-x-3">
                 <div className="p-2.5 rounded-xl bg-slate-100 text-slate-800 border border-slate-200 font-bold">
-                  <Calculator className="w-5 h-5 text-slate-700" />
+                  <Calculator className="w-5 h-5 text-slate-700 dark:text-slate-300" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Metodologia Auditável de Pontuação</h3>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Metodologia Auditável de Pontuação</h3>
                   <p className="text-[11px] text-slate-500">Transparência matemática para CISOs, DPOs e Auditores</p>
                 </div>
               </div>
@@ -468,11 +468,11 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-slate-900 text-sm">1. Score por Regulação — Base 100</span>
-                  <span className="px-2 py-0.5 text-[10px] font-mono bg-white text-slate-700 font-bold rounded border border-slate-200">
+                  <span className="px-2 py-0.5 text-[10px] font-mono bg-white text-slate-700 font-bold rounded border border-slate-200 dark:border-slate-800">
                     Por Norma
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-600">
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">
                   Cada regulação aplicável começa com <strong>100 pontos</strong>. Cada violação identificada é subtraída de acordo com a sua gravidade técnica e jurídica:
                 </p>
                 
@@ -494,7 +494,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                     <span className="block font-bold">Média</span>
                     <span>−7 pontos</span>
                   </div>
-                  <div className="p-2 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+                  <div className="p-2 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 dark:border-slate-800">
                     <span className="block font-bold">Baixa</span>
                     <span>−3 pontos</span>
                   </div>
@@ -503,10 +503,10 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                 {/* Concrete Worked Example */}
                 <div className="p-3 rounded-lg bg-white border border-slate-200 space-y-1.5 text-[11px]">
                   <span className="font-bold text-slate-900 block">Exemplo Prático de Auditoria:</span>
-                  <p className="text-slate-600">
+                  <p className="text-slate-600 dark:text-slate-400">
                     Se uma regulação apresentar <strong>1 Crítica</strong>, <strong>2 Altas</strong>, <strong>1 Média</strong> e <strong>2 Baixas</strong>:
                   </p>
-                  <div className="font-mono text-slate-900 bg-slate-50 p-2 rounded border border-slate-200">
+                  <div className="font-mono text-slate-900 bg-slate-50 p-2 rounded border border-slate-200 dark:border-slate-800">
                     Score = 100 − (1 × 25) − (2 × 14) − (1 × 7) − (2 × 3)<br/>
                     Score = 100 − 25 − 28 − 7 − 6 = <strong>34/100</strong>
                   </div>
@@ -520,11 +520,11 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-slate-900 text-sm">2. Score Geral Ponderado pelo Contexto do Negócio</span>
-                  <span className="px-2 py-0.5 text-[10px] font-mono bg-white text-slate-700 font-bold rounded border border-slate-200">
+                  <span className="px-2 py-0.5 text-[10px] font-mono bg-white text-slate-700 font-bold rounded border border-slate-200 dark:border-slate-800">
                     Ponderação de Risco
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-600">
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">
                   O score geral consolida todas as normas atribuindo pesos contextuais ao domínio de aplicação do sistema:
                 </p>
 
@@ -533,9 +533,9 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                 </div>
 
                 {/* Finance Domain Worked Example Table */}
-                <div className="overflow-x-auto rounded-lg border border-slate-200">
+                <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
                   <table className="w-full text-left text-[11px] font-mono">
-                    <thead className="bg-slate-100 text-slate-700 border-b border-slate-200">
+                    <thead className="bg-slate-100 text-slate-700 border-b border-slate-200 dark:border-slate-800">
                       <tr>
                         <th className="py-2 px-3">Regulação</th>
                         <th className="py-2 px-3 text-center">Score</th>
@@ -543,36 +543,36 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                         <th className="py-2 px-3 text-right">Score × Peso</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200 bg-white text-slate-700">
+                    <tbody className="divide-y divide-slate-200 bg-white text-slate-700 dark:text-slate-300">
                       <tr>
-                        <td className="py-1.5 px-3 font-semibold text-slate-900">EU AI Act</td>
+                        <td className="py-1.5 px-3 font-semibold text-slate-900 dark:text-slate-100">EU AI Act</td>
                         <td className="py-1.5 px-3 text-center">70</td>
                         <td className="py-1.5 px-3 text-center">3</td>
                         <td className="py-1.5 px-3 text-right text-slate-900 font-bold">210</td>
                       </tr>
                       <tr>
-                        <td className="py-1.5 px-3 font-semibold text-slate-900">Res. BCB nº 4.893</td>
+                        <td className="py-1.5 px-3 font-semibold text-slate-900 dark:text-slate-100">Res. BCB nº 4.893</td>
                         <td className="py-1.5 px-3 text-center">80</td>
                         <td className="py-1.5 px-3 text-center">3</td>
                         <td className="py-1.5 px-3 text-right text-slate-900 font-bold">240</td>
                       </tr>
                       <tr>
-                        <td className="py-1.5 px-3 font-semibold text-slate-900">GDPR / LGPD</td>
+                        <td className="py-1.5 px-3 font-semibold text-slate-900 dark:text-slate-100">GDPR / LGPD</td>
                         <td className="py-1.5 px-3 text-center">90</td>
                         <td className="py-1.5 px-3 text-center">2</td>
                         <td className="py-1.5 px-3 text-right text-slate-900 font-bold">180</td>
                       </tr>
                       <tr>
-                        <td className="py-1.5 px-3 font-semibold text-slate-900">ISO/IEC 42001</td>
+                        <td className="py-1.5 px-3 font-semibold text-slate-900 dark:text-slate-100">ISO/IEC 42001</td>
                         <td className="py-1.5 px-3 text-center">95</td>
                         <td className="py-1.5 px-3 text-center">1</td>
                         <td className="py-1.5 px-3 text-right text-slate-900 font-bold">95</td>
                       </tr>
                     </tbody>
-                    <tfoot className="bg-slate-100 text-slate-900 font-bold border-t border-slate-200">
+                    <tfoot className="bg-slate-100 text-slate-900 font-bold border-t border-slate-200 dark:border-slate-800">
                       <tr>
                         <td className="py-2 px-3">Cálculo Consolidado</td>
-                        <td colSpan={2} className="py-2 px-3 text-center text-slate-600">725 / 9 pesos</td>
+                        <td colSpan={2} className="py-2 px-3 text-center text-slate-600 dark:text-slate-400">725 / 9 pesos</td>
                         <td className="py-2 px-3 text-right text-emerald-800 font-bold">= 80,6 / 100</td>
                       </tr>
                     </tfoot>
@@ -580,7 +580,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                 </div>
 
                 {/* Legal Audit-proof Disclaimer */}
-                <div className="p-3 rounded-lg bg-white border border-slate-200 text-[11px] text-slate-700">
+                <div className="p-3 rounded-lg bg-white border border-slate-200 text-[11px] text-slate-700 dark:text-slate-300">
                   <strong>Nota de Conformidade Jurídica:</strong> Os pesos representam <em>relevância contextual para priorização de controles operacionais</em>, não uma afirmação de que uma legislação é hierarquicamente superior a outra.
                 </div>
               </div>
@@ -594,7 +594,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                   </span>
                 </div>
 
-                <p className="text-[11px] text-slate-600">
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">
                   A pontuação técnica de código e a classificação regulatória de risco são <strong>dimensões distintas</strong>:
                 </p>
 
@@ -627,7 +627,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
             </div>
 
             {/* Footer */}
-            <div className="pt-2 flex items-center justify-between border-t border-slate-200">
+            <div className="pt-2 flex items-center justify-between border-t border-slate-200 dark:border-slate-800">
               <span className="text-[11px] text-slate-500">
                 Padrão de auditoria adotado por ComplyPRO.pt
               </span>
@@ -649,13 +649,13 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
           <div className="w-full max-w-3xl bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto">
             
             {/* Header */}
-            <div className="flex items-start justify-between pb-3 border-b border-slate-200">
+            <div className="flex items-start justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
               <div className="flex items-center space-x-3">
                 <div className="p-2.5 rounded-xl bg-slate-100 text-slate-800 border border-slate-200 font-bold">
-                  <Layers className="w-5 h-5 text-slate-700" />
+                  <Layers className="w-5 h-5 text-slate-700 dark:text-slate-300" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Como Calculamos o Nível de Maturidade</h3>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Como Calculamos o Nível de Maturidade</h3>
                   <p className="text-[11px] text-slate-500">Modelo de Maturidade ComplyPRO alinhado a ISO/IEC 42001, CMMI e NIST AI RMF</p>
                 </div>
               </div>
@@ -678,7 +678,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
                   <div className="space-y-1">
                     <span className="font-bold text-slate-800 block">A avaliação combina:</span>
-                    <ul className="list-disc list-inside space-y-0.5 text-slate-600">
+                    <ul className="list-disc list-inside space-y-0.5 text-slate-600 dark:text-slate-400">
                       <li>Evidências técnicas extraídas do código;</li>
                       <li>Inventário de agentes e modelos;</li>
                       <li>Controles de segurança e governance;</li>
@@ -687,7 +687,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                   </div>
                   <div className="space-y-1">
                     <span className="font-bold text-slate-800 block">Dimensões organizacionais:</span>
-                    <ul className="list-disc list-inside space-y-0.5 text-slate-600">
+                    <ul className="list-disc list-inside space-y-0.5 text-slate-600 dark:text-slate-400">
                       <li>Processos e responsabilidades;</li>
                       <li>Mecanismos de monitorização;</li>
                       <li>Práticas de gestão de risco;</li>
@@ -713,7 +713,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                     <span className="font-bold text-slate-900 text-xs font-mono">Nível 1 — Ad-Hoc / Não Gerenciado</span>
                     <span className="text-[10px] font-bold text-slate-700 bg-slate-200 px-2 py-0.5 rounded font-mono">Estado: Informal / Reativo</span>
                   </div>
-                  <p className="text-[11px] text-slate-600">
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
                     <strong>Estado:</strong> Práticas inexistentes, informais ou predominantemente reativas.
                   </p>
                   <div>
@@ -727,7 +727,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                       <li>Ausência de políticas ou controles básicos de AI Governance.</li>
                     </ul>
                   </div>
-                  <p className="text-[11px] text-slate-700 bg-white p-2 rounded border border-slate-200">
+                  <p className="text-[11px] text-slate-700 bg-white p-2 rounded border border-slate-200 dark:border-slate-800">
                     <strong>Característica principal:</strong> A organização utiliza IA, mas não possui mecanismos consistentes para governar os seus riscos.
                   </p>
                 </div>
@@ -738,7 +738,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                     <span className="font-bold text-slate-900 text-xs font-mono">Nível 2 — Emergente / Identificação</span>
                     <span className="text-[10px] font-bold text-slate-700 bg-slate-200 px-2 py-0.5 rounded font-mono">MAP (NIST AI RMF)</span>
                   </div>
-                  <p className="text-[11px] text-slate-600">
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
                     <strong>Estado:</strong> Primeiros mecanismos de identificação e controlo começam a existir.
                   </p>
                   <div>
@@ -752,7 +752,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                       <li>Primeiros processos de governance documentados.</li>
                     </ul>
                   </div>
-                  <p className="text-[11px] text-slate-700 bg-white p-2 rounded border border-slate-200">
+                  <p className="text-[11px] text-slate-700 bg-white p-2 rounded border border-slate-200 dark:border-slate-800">
                     <strong>Característica principal:</strong> A organização começou a identificar e mapear o seu ecossistema de IA. Este nível aproxima-se particularmente da lógica de <strong>MAP do NIST AI RMF</strong>, que procura estabelecer contexto e identificar riscos relacionados com o sistema de IA.
                   </p>
                 </div>
@@ -763,7 +763,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                     <span className="font-bold text-slate-900 text-xs font-mono">Nível 3 — Estruturado / Controles Implementados</span>
                     <span className="text-[10px] font-bold text-slate-700 bg-slate-200 px-2 py-0.5 rounded font-mono">Defined (CMMI)</span>
                   </div>
-                  <p className="text-[11px] text-slate-600">
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
                     <strong>Estado:</strong> Governance e controles começam a ser formalizados e incorporados ao ciclo de desenvolvimento.
                   </p>
                   <div>
@@ -779,7 +779,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                       <li>Processos documentados de avaliação e tratamento de riscos.</li>
                     </ul>
                   </div>
-                  <p className="text-[11px] text-slate-700 bg-white p-2 rounded border border-slate-200">
+                  <p className="text-[11px] text-slate-700 bg-white p-2 rounded border border-slate-200 dark:border-slate-800">
                     <strong>Característica principal:</strong> Os controles deixam de ser apenas recomendações e passam a fazer parte do processo operacional. Este nível corresponde à evolução para processos definidos e repetíveis, coerente com a progressão de maturidade utilizada pelo <strong>CMMI</strong>.
                   </p>
                 </div>
@@ -790,7 +790,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                     <span className="font-bold text-slate-900 text-xs font-mono">Nível 4 — Gerenciado & Quantificado</span>
                     <span className="text-[10px] font-bold text-slate-700 bg-slate-200 px-2 py-0.5 rounded font-mono">MEASURE (NIST AI RMF)</span>
                   </div>
-                  <p className="text-[11px] text-slate-600">
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
                     <strong>Estado:</strong> Os controles são operacionalizados, monitorizados e medidos.
                   </p>
                   <div>
@@ -807,7 +807,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                       <li>Gestão de risco integrada aos processos organizacionais.</li>
                     </ul>
                   </div>
-                  <p className="text-[11px] text-slate-700 bg-white p-2 rounded border border-slate-200">
+                  <p className="text-[11px] text-slate-700 bg-white p-2 rounded border border-slate-200 dark:border-slate-800">
                     <strong>Característica principal:</strong> A organização não apenas possui controles — consegue demonstrar que eles estão a funcionar. Este nível está particularmente alinhado com a dimensão <strong>MEASURE do NIST AI RMF</strong>, que contempla métodos, métricas, avaliação e monitorização dos riscos de IA.
                   </p>
                 </div>
@@ -818,7 +818,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                     <span className="font-bold text-slate-900 text-xs font-mono">Nível 5 — Otimizado & Melhoria Contínua</span>
                     <span className="text-[10px] font-bold text-slate-700 bg-slate-200 px-2 py-0.5 rounded font-mono">Optimizing (CMMI)</span>
                   </div>
-                  <p className="text-[11px] text-slate-600">
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
                     <strong>Estado:</strong> AI Governance funciona como um sistema contínuo de gestão, medição e melhoria.
                   </p>
                   <div>
@@ -835,7 +835,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                       <li>Melhoria contínua baseada em métricas e resultados.</li>
                     </ul>
                   </div>
-                  <p className="text-[11px] text-slate-700 bg-white p-2 rounded border border-slate-200">
+                  <p className="text-[11px] text-slate-700 bg-white p-2 rounded border border-slate-200 dark:border-slate-800">
                     <strong>Característica principal:</strong> A organização utiliza evidências e métricas para melhorar continuamente a sua capacidade de governar riscos de IA. Isto aproxima-se do conceito <strong>Optimizing do CMMI</strong>, cujo nível 5 é caracterizado por melhoria contínua baseada em dados.
                   </p>
                 </div>
@@ -844,13 +844,13 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
               {/* Section 3: Os Quatro Pilares do NIST AI RMF */}
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
                 <span className="font-bold text-slate-900 text-sm block">3. Os Quatro Pilares do NIST AI RMF</span>
-                <p className="text-[11px] text-slate-600">
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">
                   O ComplyPRO utiliza os quatro domínios do NIST AI RMF como <strong>dimensões de análise</strong>, não como níveis de maturidade:
                 </p>
                 <div className="p-3 bg-white rounded-lg border border-slate-200 font-mono text-center text-xs font-bold text-slate-800">
                   GOVERN (Transversal) &nbsp;→&nbsp; MAP &nbsp;→&nbsp; MEASURE &nbsp;→&nbsp; MANAGE
                 </div>
-                <p className="text-[11px] text-slate-600">
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">
                   Na realidade, o NIST trata <strong>Govern</strong> como uma função transversal, que informa e se integra com <em>Map, Measure</em> e <em>Manage</em>. A gestão de risco deve ocorrer continuamente ao longo do ciclo de vida do sistema de IA.
                 </p>
               </div>
@@ -858,14 +858,14 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
               {/* Section 4: Evidência Técnica ≠ Maturidade Organizacional */}
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
                 <span className="font-bold text-slate-900 text-sm block">4. Evidência Técnica ≠ Maturidade Organizacional</span>
-                <p className="text-[11px] text-slate-600">
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">
                   Um scanner de código estático fornece comprovação técnica essencial, mas maturidade empresarial plena requer contexto de governança e processos:
                 </p>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
                   <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-1">
                     <span className="font-bold text-emerald-800 block">✓ O Scanner de Código Prova:</span>
-                    <ul className="space-y-0.5 text-slate-600">
+                    <ul className="space-y-0.5 text-slate-600 dark:text-slate-400">
                       <li>• Agentes e modelos identificados;</li>
                       <li>• Ferramentas e prompts mapeados;</li>
                       <li>• Secrets e credenciais ausentes no código;</li>
@@ -874,7 +874,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                   </div>
                   <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-1">
                     <span className="font-bold text-amber-800 block">✗ O Código Sozinho Não Prova:</span>
-                    <ul className="space-y-0.5 text-slate-600">
+                    <ul className="space-y-0.5 text-slate-600 dark:text-slate-400">
                       <li>• Que a política é efetivamente aplicada;</li>
                       <li>• Que existe um responsável formal designado;</li>
                       <li>• Que a gestão aprovou determinado risco residual;</li>
@@ -883,13 +883,13 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                   </div>
                 </div>
 
-                <div className="p-3 bg-white rounded-lg border border-slate-200 font-mono text-center text-xs font-bold text-slate-900">
+                <div className="p-3 bg-white rounded-lg border border-slate-200 font-mono text-center text-xs font-bold text-slate-900 dark:text-slate-100">
                   Technical Evidence &nbsp;+&nbsp; Governance Evidence &nbsp;+&nbsp; Organizational Evidence &nbsp;=&nbsp; Score 360° Real
                 </div>
 
                 {/* Assessment Bridge */}
                 <div className="p-3 bg-slate-100 rounded-lg border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 pt-2">
-                  <span className="text-[11px] text-slate-700">
+                  <span className="text-[11px] text-slate-700 dark:text-slate-300">
                     O <strong>Diagnóstico de Processos (6 Questões)</strong> complementa o scanner para preencher a camada organizacional.
                   </span>
                   <button
@@ -907,7 +907,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
             </div>
 
             {/* Footer */}
-            <div className="pt-2 flex items-center justify-between border-t border-slate-200">
+            <div className="pt-2 flex items-center justify-between border-t border-slate-200 dark:border-slate-800">
               <span className="text-[11px] text-slate-500">
                 Modelo de Maturidade ComplyPRO • Alinhado a CMMI, ISO 42001 & NIST AI RMF
               </span>
@@ -925,14 +925,14 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
 
       {/* AI Generated Executive Report Panel */}
       {aiReport && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs relative animate-in fade-in duration-300">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+        <div className="bg-white dark:bg-[#111827] p-6 rounded-2xl border border-slate-200 shadow-2xs relative animate-in fade-in duration-300">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
             <div className="flex items-center space-x-2.5">
               <div className="p-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-800 font-bold">
-                <Sparkles className="w-4 h-4 text-slate-700" />
+                <Sparkles className="w-4 h-4 text-slate-700 dark:text-slate-300" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-slate-900">Parecer Executivo de Governança & Conformidade</h4>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">Parecer Executivo de Governança & Conformidade</h4>
                 <p className="text-[11px] text-slate-500">Análise jurídica e técnica consolidada</p>
               </div>
             </div>
@@ -954,7 +954,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
             </div>
           </div>
 
-          <div className="mt-4 text-xs leading-relaxed text-slate-700 whitespace-pre-wrap font-sans bg-slate-50 p-4 rounded-xl border border-slate-200">
+          <div className="mt-4 text-xs leading-relaxed text-slate-700 whitespace-pre-wrap font-sans bg-slate-50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
             {aiReport}
           </div>
         </div>

@@ -31,7 +31,7 @@ export const AgentInventory: React.FC<AgentInventoryProps> = ({ result }) => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-bold text-slate-900 flex items-center space-x-2">
-            <Bot className="w-5 h-5 text-slate-700" />
+            <Bot className="w-5 h-5 text-slate-700 dark:text-slate-300" />
             <span>Inventário de Agentes de IA & Arquitetura de Negócio (SIPOC)</span>
           </h2>
           <p className="text-xs text-slate-500">
@@ -66,13 +66,13 @@ export const AgentInventory: React.FC<AgentInventoryProps> = ({ result }) => {
             return (
               <div
                 key={idx}
-                className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-slate-300 transition-all space-y-4 shadow-2xs"
+                className="bg-white dark:bg-[#111827] p-5 rounded-2xl border border-slate-200 hover:border-slate-300 transition-all space-y-4 shadow-2xs"
               >
                 {/* Agent Card Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                   <div className="flex items-center space-x-3">
                     <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-800 shrink-0">
-                      <Bot className="w-5 h-5 text-slate-700" />
+                      <Bot className="w-5 h-5 text-slate-700 dark:text-slate-300" />
                     </div>
                     <div>
                       <div className="flex items-center space-x-2">
@@ -111,7 +111,7 @@ export const AgentInventory: React.FC<AgentInventoryProps> = ({ result }) => {
                 {/* Business Purpose in 1-2 Lines */}
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
                   <div className="flex items-center space-x-1.5 text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                    <Briefcase className="w-3.5 h-3.5 text-slate-600" />
+                    <Briefcase className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
                     <span>Função no Negócio:</span>
                   </div>
                   <p className="text-xs text-slate-700 leading-relaxed">
@@ -120,7 +120,7 @@ export const AgentInventory: React.FC<AgentInventoryProps> = ({ result }) => {
                 </div>
 
                 {/* RACI Ownership & Governance Bar (ISO 42001) */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] p-2.5 rounded-xl bg-slate-50 border border-slate-200 dark:border-slate-800">
                   <div>
                     <span className="text-[10px] text-slate-500 block font-semibold">Dono do Processo (Business Owner):</span>
                     <span className="font-bold text-slate-900 truncate block">{sipoc.processOwner}</span>
@@ -188,7 +188,7 @@ export const AgentInventory: React.FC<AgentInventoryProps> = ({ result }) => {
                 {/* 🔒 Sober Enterprise Feature Card (Teaser) */}
                 <div className="relative rounded-xl border border-slate-200 bg-slate-50 overflow-hidden p-3 group">
                   {/* Blurred Background Content */}
-                  <div className="filter blur-[3px] select-none pointer-events-none opacity-40 space-y-1 text-[11px] text-slate-600">
+                  <div className="filter blur-[3px] select-none pointer-events-none opacity-40 space-y-1 text-[11px] text-slate-600 dark:text-slate-400">
                     <div className="flex items-center justify-between font-mono">
                       <span>Telemetria de Tokens em Tempo Real: 142.420 tokens/dia</span>
                       <span className="text-emerald-700">Drift: 0.04% (Estável)</span>
@@ -233,7 +233,7 @@ export const AgentInventory: React.FC<AgentInventoryProps> = ({ result }) => {
                       <div className="flex flex-wrap gap-1.5">
                         {agent.tools && agent.tools.length > 0 ? (
                           agent.tools.map((t, i) => (
-                            <span key={i} className="px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] font-mono rounded border border-slate-200">
+                            <span key={i} className="px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] font-mono rounded border border-slate-200 dark:border-slate-800">
                               🛠️ {t}
                             </span>
                           ))
@@ -260,10 +260,10 @@ export const AgentInventory: React.FC<AgentInventoryProps> = ({ result }) => {
 
       {/* Shadow AI & Direct API Call Governance Section */}
       {shadowAI.length > 0 && (
-        <div className="bg-white p-5 rounded-2xl border border-amber-200 space-y-4 shadow-2xs">
+        <div className="bg-white dark:bg-[#111827] p-5 rounded-2xl border border-amber-200 space-y-4 shadow-2xs">
           <div className="flex items-center space-x-2 text-amber-800">
             <AlertCircle className="w-5 h-5 text-amber-700" />
-            <h3 className="text-sm font-bold text-slate-900">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
               Governança de Modelos & Chamadas Diretas de IA ({shadowAI.length} detectadas)
             </h3>
           </div>
@@ -293,11 +293,11 @@ export const AgentInventory: React.FC<AgentInventoryProps> = ({ result }) => {
       )}
 
       {/* Enterprise Suite Upsell Banner */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
+      <div className="bg-white dark:bg-[#111827] p-6 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
         <div className="space-y-1">
           <div className="flex items-center space-x-2 text-slate-800">
-            <Sparkles className="w-4 h-4 text-slate-700" />
-            <h4 className="text-sm font-bold text-slate-900">ComplyPRO Enterprise Governance Suite</h4>
+            <Sparkles className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+            <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">ComplyPRO Enterprise Governance Suite</h4>
           </div>
           <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
             Deseja orquestrar esteiras de aprovação de deploy, monitoramento de deriva de modelo (Drift) e inventário ativo de agentes em tempo real com auditoria ISO 42001?

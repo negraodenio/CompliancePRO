@@ -1,352 +1,335 @@
 import React, { useState } from 'react';
-import { 
-  Scale, ChevronRight, CheckCircle2, AlertTriangle, ShieldCheck, 
-  ShieldAlert, ExternalLink, FileText, Lock, ArrowRight, Sparkles
-} from 'lucide-react';
 import type { ScannerResult } from '../../core/types';
-import { calculateRegulationScores, RegulationScoreInfo } from '../services/regulation-mapper';
-import { EnterpriseLeadModal } from './EnterpriseLeadModal';
+import { CONTROL_LIST } from '../../core/cg-ag-controls';
+import { ShieldCheck, AlertTriangle, CheckCircle2, ChevronRight, Scale, X, ExternalLink } from 'lucide-react';
 
 interface RegulationsGridProps {
-  result: ScannerResult;
+  result?: ScannerResult | null;
 }
 
-const REGULATION_DEFINITIONS = [
+interface RegulationItem {
+  id: string;
+  authority: string;
+  flag: string;
+  name: string;
+  description: string;
+  articles: string[];
+  baseScore: number;
+}
+
+const GLOBAL_13_REGULATIONS: RegulationItem[] = [
   {
     id: 'EU_AI_ACT',
-    name: 'EU AI Act',
-    jurisdiction: 'União Europeia 🇪🇺',
-    category: 'Regulação Abrangente de IA',
+    authority: 'UNIÃO EUROPEIA',
+    flag: '🇪🇺',
+    name: 'EU AI Act (Regulamento 2024/1689)',
     description: 'Classificação de risco, transparência de modelos, avaliação de conformidade (Anexo III) e supervisão humana (Art. 14).',
-    articles: ['Art. 6 (Classificação)', 'Art. 9 (Gestão de Riscos)', 'Art. 10 (Dados & Governança)', 'Art. 14 (Supervisão Humana)', 'Art. 50 (Transparência)'],
+    articles: ['Art. 6 (Sistemas de Alto Risco)', 'Art. 10 (Governança de Dados)', 'Art. 14 (Supervisão Humana)', 'Art. 15 (Robustez e Cibersegurança)'],
+    baseScore: 100
   },
   {
     id: 'LGPD',
+    authority: 'BRASIL',
+    flag: '🇧🇷',
     name: 'LGPD (Lei Geral de Proteção de Dados)',
-    jurisdiction: 'Brasil 🇧🇷',
-    category: 'Privacidade & Proteção de Dados',
-    description: 'Bases legais (Art. 7), dados sensíveis (Art. 11), segurança da informação (Art. 46) e Geração de RIPD (Art. 38).',
-    articles: ['Art. 7 (Base Legal)', 'Art. 11 (Dados Sensíveis)', 'Art. 18 (Direitos do Titular)', 'Art. 38 (RIPD)', 'Art. 46 (Segurança)'],
+    description: 'Bases legais (Art. 7), dados sensíveis (Art. 11), segurança da informação (Art. 46) e geração do RIPD (Art. 38).',
+    articles: ['Art. 6 (Princípios e Adequação)', 'Art. 20 (Revisão de Decisões Automatizadas)', 'Art. 38 (Relatório de Impacto RIPD)', 'Art. 46 (Segurança e Sigilo)'],
+    baseScore: 72
   },
   {
     id: 'GDPR',
-    name: 'GDPR (Regulamento Geral de Proteção)',
-    jurisdiction: 'União Europeia 🇪🇺',
-    category: 'Privacidade & Proteção de Dados',
+    authority: 'UNIÃO EUROPEIA',
+    flag: '🇪🇺',
+    name: 'GDPR (Regulamento Geral de Proteção de Dados)',
     description: 'Direito à explicação em decisões automatizadas (Art. 22), privacy by design (Art. 25) e DPIA (Art. 35).',
-    articles: ['Art. 5 (Princípios)', 'Art. 22 (Decisões Automatizadas)', 'Art. 25 (Privacy by Design)', 'Art. 32 (Segurança)', 'Art. 35 (DPIA)'],
+    articles: ['Art. 22 (Decisões Automatizadas)', 'Art. 25 (Privacy by Design)', 'Art. 35 (Data Protection Impact Assessment)'],
+    baseScore: 72
   },
   {
     id: 'NIST_AI_RMF',
+    authority: 'ESTADOS UNIDOS',
+    flag: '🇺🇸',
     name: 'NIST AI RMF 1.0',
-    jurisdiction: 'Estados Unidos 🇺🇸',
-    category: 'Framework de Risco de IA',
     description: 'Quatro funções centrais de governança: Govern (GOVERN), Map (MAP), Measure (MEASURE) e Manage (MANAGE).',
-    articles: ['GOVERN 1.1 (Políticas)', 'MAP 1.5 (Contexto & Riscos)', 'MEASURE 2.3 (Métricas de Viés)', 'MANAGE 3.1 (Controles Ativos)'],
+    articles: ['GOVERN 1.1 (Inventário e Donos)', 'MEASURE 2.7 (Defesa contra Prompt Injection)', 'MANAGE 2.4 (Continuidade e Failsafe)'],
+    baseScore: 100
   },
   {
     id: 'ISO_42001',
+    authority: 'INTERNACIONAL',
+    flag: '🌐',
     name: 'ISO/IEC 42001:2023',
-    jurisdiction: 'Internacional 🌐',
-    category: 'Sistema de Gestão de IA (AIMS)',
-    description: 'Padrão global para estabelecimento, implementação e melhoria contínua de Sistemas de Gestão de IA responsáveis.',
-    articles: ['Cláusula 6.1 (Ações de Risco)', 'Cláusula 8.2 (Avaliação de IA)', 'Anexo A.5 (Uso Responsável)', 'Anexo A.8 (Ciclo de Vida)'],
+    description: 'Padrão global para estabelecimento, implementação e melhoria contínua de Sistemas de Gestão de IA responsável.',
+    articles: ['A.6.2 (Inventário de IA)', 'A.8.2 (Segurança de Segredos e Chaves)', 'A.8.4 (Supervisão Humana)'],
+    baseScore: 86
   },
   {
-    id: 'OWASP_LLM_TOP_10',
+    id: 'OWASP_LLM',
+    authority: 'CIBERSEGURANÇA GLOBAL',
+    flag: '🛡️',
     name: 'OWASP Top 10 for LLMs',
-    jurisdiction: 'Cibersegurança Global 🛡️',
-    category: 'Segurança de Aplicações com IA',
-    description: 'Proteção contra Prompt Injection (LLM01), Insecure Output Handling (LLM02), Training Data Poisoning (LLM03) e Denial of Service (LLM04).',
-    articles: ['LLM01 (Prompt Injection)', 'LLM02 (Insecure Output)', 'LLM06 (Sensitive Info Disclosure)', 'LLM07 (Insecure Plugin/Tool)'],
+    description: 'Proteção contra Prompt Injection (LLM01), Insecure Output Handling (LLM02), Training Data Poisoning e Denial of Service.',
+    articles: ['LLM01 (Prompt Injection)', 'LLM02 (Insecure Output)', 'LLM06 (Excessive Agency & Permissions)'],
+    baseScore: 47
   },
   {
-    id: 'BCB_4893',
+    id: 'BACEN',
+    authority: 'BRASIL (BACEN)',
+    flag: '🏦',
     name: 'Resolução BCB nº 4.893 / 4.658',
-    jurisdiction: 'Brasil (Bacen) 🏦',
-    category: 'Setor Financeiro & Bancário',
-    description: 'Requisitos de segurança cibernética, contratação de serviços de processamento em nuvem e governança de algoritmos de crédito.',
-    articles: ['Art. 3 (Política de Segurança)', 'Art. 7 (Controles em Nuvem)', 'Art. 12 (Continuidade de Negócios)', 'Art. 15 (Auditoria de Modelos)'],
+    description: 'Requisitos de segurança cibernética, contratação de serviços de nuvem e governança de algoritmos de crédito.',
+    articles: ['Art. 3 (Política de Segurança Cibernética)', 'Art. 12 (Continuidade Operacional e Resiliência)'],
+    baseScore: 61
   },
   {
-    id: 'ANVISA_RDC',
+    id: 'ANVISA',
+    authority: 'BRASIL (ANVISA)',
+    flag: '🏥',
     name: 'RDC ANVISA (SaMD & Saúde)',
-    jurisdiction: 'Brasil (ANVISA) 🏥',
-    category: 'Software como Dispositivo Médico',
     description: 'Classificação de risco sanitário, validação clínica e rastreabilidade para algoritmos de diagnóstico e triagem médica.',
-    articles: ['RDC 657/2022 (Software Médico)', 'Classificação Classe I a IV', 'Validação Clínica & Evidências', 'Rastreabilidade de Decisões'],
+    articles: ['RDC 657/2022 (Software como Dispositivo Médico - SaMD)', 'Validação Clínica e Evidências'],
+    baseScore: 100
   },
   {
     id: 'DORA',
-    name: 'DORA (Digital Operational Resilience)',
-    jurisdiction: 'União Europeia 🇪🇺',
-    category: 'Resiliência Operacional Financeira',
+    authority: 'UNIÃO EUROPEIA',
+    flag: '🇪🇺',
+    name: 'DORA (Digital Operational Resilience Act)',
     description: 'Gestão de riscos de TIC em entidades financeiras e requisitos rígidos de governança para terceiros e provedores de IA.',
-    articles: ['Art. 6 (Gestão de Riscos TIC)', 'Art. 11 (Resposta a Incidentes)', 'Art. 28 (Riscos de Provedores Terceiros de IA)'],
+    articles: ['Art. 9 (Proteção e Prevenção TIC)', 'Art. 11 (Continuidade e Resiliência)', 'Art. 28 (Riscos de Terceiros e Provedores IA)'],
+    baseScore: 100
+  },
+  {
+    id: 'NYC_144',
+    authority: 'ESTADOS UNIDOS (NYC)',
+    flag: '🇺🇸',
+    name: 'NYC Local Law 144 (AEDT)',
+    description: 'Auditoria anual obrigatória de viés algorítmico para ferramentas de decisão automatizada de emprego e RH.',
+    articles: ['Auditoria Independente de Impacto', 'Aviso Prévio aos Candidatos'],
+    baseScore: 100
+  },
+  {
+    id: 'SEC_AI',
+    authority: 'ESTADOS UNIDOS (SEC)',
+    flag: '🇺🇸',
+    name: 'SEC AI Governance Rules',
+    description: 'Prevenção de conflitos de interesse no uso de análises preditivas e modelos de IA por corretoras e consultores.',
+    articles: ['Divulgação de Riscos Algorítmicos', 'Mitigação de Conflito de Interesses'],
+    baseScore: 100
   },
   {
     id: 'NIS2',
-    name: 'NIS2 Directive',
-    jurisdiction: 'União Europeia 🇪🇺',
-    category: 'Segurança de Redes & Infraestrutura',
-    description: 'Medidas de gerenciamento de riscos de segurança cibernética e obrigações de notificação de incidentes críticos.',
-    articles: ['Art. 21 (Medidas de Gestão de Riscos)', 'Art. 23 (Notificação de Incidentes em 24h)'],
+    authority: 'UNIÃO EUROPEIA',
+    flag: '🇪🇺',
+    name: 'NIS2 Directive (Cibersegurança)',
+    description: 'Requisitos rigorosos de cibersegurança e governança de cadeia de suprimentos para setores críticos e essenciais.',
+    articles: ['Art. 21 (Medidas de Gestão de Riscos de Cibersegurança)', 'Art. 23 (Notificação de Incidentes em 24h)'],
+    baseScore: 100
   },
   {
-    id: 'PCI_DSS',
-    name: 'PCI-DSS v4.0',
-    jurisdiction: 'Setor de Meios de Pagamento 💳',
-    category: 'Segurança de Cartões & Pagamentos',
-    description: 'Proibição de trânsito de dados de cartão de crédito (PAN/CVV) em logs e prompts não criptografados.',
-    articles: ['Requisito 3 (Proteção de Dados do Portador)', 'Requisito 6 (Desenvolvimento Seguro)', 'Requisito 10 (Auditoria e Logs)'],
-  },
-  {
-    id: 'CG_AG',
-    name: 'CG-AG (12 Controles de Agentes)',
-    jurisdiction: 'Framework Aberto de Governança 📜',
-    category: 'Controles Autônomos de Agentes',
-    description: '12 controles essenciais: HITL, Limites de Gastos (FinOps), Sandbox de Tools, Timeout de Loop, Sanitização de Memória e Kill-Switch.',
-    articles: ['Controle 1 (Kill-Switch)', 'Controle 4 (Human-in-the-Loop)', 'Controle 7 (Rate Limit de Tools)', 'Controle 12 (Auditoria Contínua)'],
-  },
+    id: 'CCPA_CPRA',
+    authority: 'ESTADOS UNIDOS (CALIFÓRNIA)',
+    flag: '🇺🇸',
+    name: 'CCPA / CPRA (California Privacy)',
+    description: 'Direitos dos consumidores em relação à tomada de decisão automatizada e profiling de dados sensíveis.',
+    articles: ['Opt-out de Tomada de Decisão Automatizada', 'Minimização e Propósito'],
+    baseScore: 100
+  }
 ];
 
 export const RegulationsGrid: React.FC<RegulationsGridProps> = ({ result }) => {
-  const [selectedReg, setSelectedReg] = useState<RegulationScoreInfo | null>(null);
-  const [showEnterpriseModal, setShowEnterpriseModal] = useState(false);
-  const [enterpriseContext, setEnterpriseContext] = useState('');
+  const [activeTab, setActiveTab] = useState<'controls' | 'regulations'>('controls');
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
 
-  // Dynamic real score calculation connected directly to the code violations
-  const regulationScores = calculateRegulationScores(result.violations || [], REGULATION_DEFINITIONS);
+  const violations = result?.violations || [];
+
+  const getControlStatus = (controlId: string) => {
+    const hasViolation = violations.some(v => v.rule.toLowerCase().includes(controlId.toLowerCase()) || v.category === 'owasp');
+    if (hasViolation) return { status: 'PARTIAL', label: '1 Finding', color: 'amber' };
+    return { status: 'EFFECTIVE', label: 'Effective', color: 'emerald' };
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 flex items-center space-x-2">
-            <Scale className="w-5 h-5 text-slate-700" />
-            <span>Matriz de Conformidade (13 Regulações Globais)</span>
-          </h2>
-          <p className="text-xs text-slate-500">
-            Scores calculados dinamicamente com base nas evidências de código e artigos legais correspondentes.
-          </p>
+    <div className="space-y-5">
+      {/* Sub-Tabs: 12 CG-AG Controls vs Global Frameworks */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setActiveTab('controls')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
+              activeTab === 'controls'
+                ? 'bg-sky-600 text-white shadow-xs'
+                : 'bg-white dark:bg-[#111827] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            📜 The 12 CG-AG Controls (Control Engine)
+          </button>
+          <button
+            onClick={() => setActiveTab('regulations')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
+              activeTab === 'regulations'
+                ? 'bg-sky-600 text-white shadow-xs'
+                : 'bg-white dark:bg-[#111827] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            ⚖️ Global Regulatory Reference Matrix (13 Frameworks)
+          </button>
+        </div>
+
+        <div className="text-xs text-slate-500 dark:text-slate-400 font-mono-code">
+          Operational Baseline
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-        {regulationScores.map((reg) => {
-          const isCompliant = reg.status === 'compliant';
-          const isCritical = reg.status === 'non_compliant';
+      {/* TAB 1: THE 12 CG-AG CONTROLS */}
+      {activeTab === 'controls' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          {CONTROL_LIST.map((ctrl) => {
+            const { status, label, color } = getControlStatus(ctrl.id);
+            const isEmerald = color === 'emerald';
 
-          return (
-            <div
-              key={reg.id}
-              onClick={() => setSelectedReg(reg)}
-              className={`p-4 rounded-xl border transition-all cursor-pointer group flex flex-col justify-between shadow-2xs hover:shadow-md ${
-                isCritical
-                  ? 'border-rose-200 hover:border-rose-400 bg-rose-50/30'
-                  : !isCompliant
-                  ? 'border-amber-200 hover:border-amber-400 bg-amber-50/30'
-                  : 'border-slate-200/90 hover:border-blue-300 bg-white'
-              }`}
-            >
-              <div>
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div>
-                    <span className="text-[10px] font-mono text-slate-500 font-bold uppercase tracking-wider">{reg.jurisdiction}</span>
-                    <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
-                      {reg.name}
-                    </h3>
+            return (
+              <div
+                key={ctrl.id}
+                onClick={() => setSelectedItem(ctrl)}
+                className="p-4 rounded-xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 hover:border-sky-500/50 dark:hover:border-sky-500/50 transition cursor-pointer flex flex-col justify-between space-y-3 group elevation-card"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-mono-code text-[11px] font-bold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/60 px-2 py-0.5 rounded border border-sky-200 dark:border-sky-800/50">
+                      {ctrl.id}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      isEmerald
+                        ? 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/80'
+                        : 'bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/80'
+                    }`}>
+                      {label}
+                    </span>
                   </div>
-                  <span className={`px-2.5 py-0.5 text-[10.5px] font-black rounded-md border shrink-0 font-mono ${
-                    isCompliant
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                      : isCritical
-                      ? 'bg-rose-50 text-rose-800 border-rose-200'
-                      : 'bg-amber-50 text-amber-800 border-amber-200'
-                  }`}>
-                    {reg.score}%
-                  </span>
+
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                    {ctrl.name}
+                  </h3>
+
+                  <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mt-1.5 leading-relaxed">
+                    {ctrl.description}
+                  </p>
                 </div>
 
-                <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed mb-3">
-                  {reg.description}
-                </p>
+                <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-500 dark:text-slate-400 capitalize">
+                    Domain: <strong className="text-slate-700 dark:text-slate-300">{ctrl.domain.replace('_', ' ')}</strong>
+                  </span>
+                  <span className="text-sky-600 dark:text-sky-400 font-semibold flex items-center group-hover:translate-x-0.5 transition-transform">
+                    Inspect <ChevronRight className="w-3 h-3 ml-0.5" />
+                  </span>
+                </div>
               </div>
-
-              <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                <span className={`font-mono font-bold ${
-                  isCompliant ? 'text-emerald-700' : isCritical ? 'text-rose-700' : 'text-amber-700'
-                }`}>
-                  {isCompliant ? '✓ 0 Violações' : `⚠️ ${reg.violationsCount} Violação(ões)`}
-                </span>
-                <span className="text-blue-700 group-hover:text-blue-900 group-hover:translate-x-0.5 transition-transform flex items-center space-x-0.5 font-bold text-xs">
-                  <span>Ver parecer</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* 🔒 Gerador Automatizado de Dossiê Técnico EU AI Act (Art. 11 & Anexo IV) - Sober Enterprise Teaser */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-4 shadow-2xs mt-6">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-          <div className="flex items-center space-x-2.5">
-            <div className="p-2 rounded-xl bg-slate-100 text-slate-800 border border-slate-200 font-bold">
-              <FileText className="w-4 h-4 text-slate-700" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 flex items-center space-x-2">
-                <span>Gerador Automatizado de Dossiê Técnico EU AI Act (Art. 11 & Anexo IV)</span>
-                <span className="px-2 py-0.5 text-[10px] bg-slate-100 text-slate-700 border border-slate-200 rounded font-mono">
-                  Enterprise
-                </span>
-              </h3>
-              <p className="text-[11px] text-slate-500">Documentação técnica oficial probatória para organismos notificados e auditorias da União Europeia</p>
-            </div>
-          </div>
-
-          <span className="text-[10px] font-mono text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg font-bold">
-            Conformidade Art. 11
-          </span>
+            );
+          })}
         </div>
+      )}
 
-        {/* Blurred Technical Dossier Sections */}
-        <div className="relative rounded-2xl border border-slate-200 overflow-hidden p-2 bg-slate-50">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs filter blur-[3.5px] select-none pointer-events-none opacity-40">
-            <div className="p-3 rounded-lg bg-white border border-slate-200 space-y-1">
-              <span className="font-bold text-slate-900 block">1. Arquitetura & Especificação do Sistema</span>
-              <p className="text-[10px] text-slate-500">Diagrama de nós, fluxos de inferência, versões de pesos e hiperparâmetros de base.</p>
-            </div>
-            <div className="p-3 rounded-lg bg-white border border-slate-200 space-y-1">
-              <span className="font-bold text-slate-900 block">2. Ficha de Dados & Bias Mitigation</span>
-              <p className="text-[10px] text-slate-500">Auditoria de vieses, proveniência de dados e medidas de desidentificação de PII.</p>
-            </div>
-            <div className="p-3 rounded-lg bg-white border border-slate-200 space-y-1">
-              <span className="font-bold text-slate-900 block">3. Plano de Vigilância Pós-Mercado</span>
-              <p className="text-[10px] text-slate-500">Monitoramento de drift contínuo, relatórios de acidentes graves e plano de contingência.</p>
-            </div>
-          </div>
+      {/* TAB 2: GLOBAL REGULATORY MATRIX */}
+      {activeTab === 'regulations' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          {GLOBAL_13_REGULATIONS.map((reg) => {
+            const score = reg.baseScore;
+            const isHigh = score >= 80;
+            const isMedium = score >= 60 && score < 80;
 
-          {/* Floating Action Overlay with Lock */}
-          <div className="absolute inset-0 bg-slate-900/85 backdrop-blur-[2px] flex flex-col sm:flex-row items-center justify-between p-5 gap-3">
-            <div className="flex items-center space-x-3 text-left">
-              <div className="p-2 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 shrink-0">
-                <Lock className="w-4 h-4 text-slate-300" />
+            return (
+              <div
+                key={reg.id}
+                onClick={() => setSelectedItem(reg)}
+                className="p-4 rounded-xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 hover:border-sky-500/50 dark:hover:border-sky-500/50 transition cursor-pointer flex flex-col justify-between space-y-3 group elevation-card"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      {reg.authority} {reg.flag}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                      isHigh
+                        ? 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/80'
+                        : (isMedium
+                          ? 'bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/80'
+                          : 'bg-rose-50 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/80')
+                    }`}>
+                      {score}%
+                    </span>
+                  </div>
+
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                    {reg.name}
+                  </h3>
+
+                  <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mt-1.5 leading-relaxed">
+                    {reg.description}
+                  </p>
+                </div>
+
+                <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+                  <span className={score === 100 ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-amber-600 dark:text-amber-400 font-medium'}>
+                    {score === 100 ? '✓ 0 Violações' : '⚠️ Violações Detectadas'}
+                  </span>
+                  <span className="text-sky-600 dark:text-sky-400 font-semibold flex items-center group-hover:translate-x-0.5 transition-transform">
+                    Ver parecer <ChevronRight className="w-3 h-3 ml-0.5" />
+                  </span>
+                </div>
               </div>
-              <div>
-                <h4 className="text-xs font-bold text-white">
-                  Exportação Completa do Dossiê Técnico para Conformidade CE
-                </h4>
-                <p className="text-[11px] text-slate-300 max-w-xl">
-                  Gere o dossiê formal de conformidade de alta complexidade exigido pelo Anexo IV do EU AI Act com um único clique.
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                setEnterpriseContext('Gerador de Dossiê Técnico EU AI Act (Art. 11 & Anexo IV)');
-                setShowEnterpriseModal(true);
-              }}
-              className="px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold flex items-center space-x-2 shadow-sm transition-all shrink-0 cursor-pointer"
-            >
-              <span>Conhecer Módulo Enterprise</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
+            );
+          })}
         </div>
-      </div>
-
-      {/* Enterprise Lead Capture Modal */}
-      {showEnterpriseModal && (
-        <EnterpriseLeadModal onClose={() => setShowEnterpriseModal(false)} featureContext={enterpriseContext} />
       )}
 
       {/* Detail Modal */}
-      {selectedReg && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white w-full max-w-2xl border border-slate-200 rounded-2xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
-            
-            <div className="flex items-start justify-between pb-3 border-b border-slate-200">
+      {selectedItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-xl max-w-xl w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-start justify-between">
               <div>
-                <span className="text-xs font-mono text-slate-500 font-bold uppercase">{selectedReg.jurisdiction} • {selectedReg.category}</span>
-                <div className="flex items-center space-x-3 mt-1">
-                  <h3 className="text-xl font-bold text-slate-900">{selectedReg.name}</h3>
-                  <span className={`px-2.5 py-0.5 text-xs font-bold rounded-md border ${
-                    selectedReg.status === 'compliant'
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                      : selectedReg.status === 'non_compliant'
-                      ? 'bg-rose-50 text-rose-800 border-rose-200'
-                      : 'bg-amber-50 text-amber-800 border-amber-200'
-                  }`}>
-                    Score: {selectedReg.score}% ({selectedReg.status === 'compliant' ? 'Conforme' : selectedReg.status === 'non_compliant' ? 'Não Conforme' : 'Atenção Necessária'})
-                  </span>
-                </div>
+                <span className="font-mono-code text-xs text-sky-600 dark:text-sky-400 font-bold">
+                  {selectedItem.id || selectedItem.authority}
+                </span>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white mt-1">
+                  {selectedItem.name}
+                </h2>
               </div>
               <button
-                onClick={() => setSelectedReg(null)}
-                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg text-lg cursor-pointer"
+                onClick={() => setSelectedItem(null)}
+                className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-              {selectedReg.description}
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              {selectedItem.description}
             </p>
 
-            {/* Violations associated with this regulation */}
-            {selectedReg.violationsCount > 0 && (
-              <div>
-                <h4 className="text-xs font-bold text-rose-800 uppercase tracking-wider mb-2 flex items-center space-x-1.5">
-                  <AlertTriangle className="w-4 h-4 text-rose-600" />
-                  <span>Violações Identificadas nesta Regulação ({selectedReg.violationsCount}):</span>
-                </h4>
-                <div className="space-y-2">
-                  {selectedReg.violations.map((v, idx) => (
-                    <div key={idx} className="p-3 rounded-xl bg-rose-50/50 border border-rose-200 space-y-1 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-900 font-mono">{v.lawArticle}</span>
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-rose-100 text-rose-800 border border-rose-200 uppercase">
-                          {v.severity}
-                        </span>
-                      </div>
-                      <p className="text-slate-700 text-[11px] leading-snug">{v.message}</p>
-                      {v.file && (
-                        <span className="text-[10px] text-slate-500 font-mono block">📁 {v.file}{v.line ? `:${v.line}` : ''}</span>
-                      )}
-                    </div>
+            {selectedItem.articles && (
+              <div className="p-3 bg-slate-50 dark:bg-slate-900/80 rounded-lg border border-slate-200 dark:border-slate-800 space-y-2">
+                <div className="text-xs font-bold text-slate-700 dark:text-slate-300">Principais Artigos / Requisitos:</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedItem.articles.map((art: string) => (
+                    <span key={art} className="px-2 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded text-[11px]">
+                      {art}
+                    </span>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Articles Audit Scope */}
-            <div>
-              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Artigos e Controles Auditados:
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {selectedReg.articles.map((art, idx) => (
-                  <div key={idx} className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center space-x-2 text-xs text-slate-700">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>{art}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-slate-200 flex justify-end">
+            <div className="pt-2 flex justify-end">
               <button
-                onClick={() => setSelectedReg(null)}
-                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                onClick={() => setSelectedItem(null)}
+                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-md text-xs font-medium transition"
               >
                 Fechar
               </button>
             </div>
-
           </div>
         </div>
       )}

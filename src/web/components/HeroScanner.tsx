@@ -77,7 +77,7 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
 
       {/* Main Scanner Box (Crisp White Executive Card) */}
       <div className="max-w-3xl mx-auto">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md space-y-4 relative overflow-hidden">
+        <div className="bg-white dark:bg-[#111827] p-6 rounded-2xl border border-slate-200 shadow-md space-y-4 relative overflow-hidden">
           
           {/* Subtle Top Accent Line */}
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500" />
@@ -90,7 +90,7 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
             <div className="flex flex-col sm:flex-row items-center gap-2">
               <div className="relative flex-1 w-full">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <Github className="w-4 h-4 text-slate-700" />
+                  <Github className="w-4 h-4 text-slate-700 dark:text-slate-300" />
                 </div>
                 <input
                   type="text"
@@ -131,7 +131,7 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
               isDragOver ? 'border-blue-500 bg-blue-50/50' : 'border-slate-300 bg-slate-50/60 hover:bg-slate-50'
             }`}
           >
-            <div className="flex items-center space-x-2.5 text-slate-600">
+            <div className="flex items-center space-x-2.5 text-slate-600 dark:text-slate-400">
               <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
                 <Cloud className="w-4 h-4 shrink-0" />
               </div>
@@ -200,11 +200,11 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
         {/* Demo Projects Quick Start */}
         <div className="mt-8">
           <div className="relative flex py-2 items-center mb-4">
-            <div className="flex-grow border-t border-slate-200"></div>
+            <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
             <span className="flex-shrink mx-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
               Experimente com 1 clique (Projetos de Demonstração)
             </span>
-            <div className="flex-grow border-t border-slate-200"></div>
+            <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
@@ -293,14 +293,14 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
       </div>
 
       {/* Feature Highlights Grid (Sober Executive 4-Column Bottom) */}
-      <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto pt-8 border-t border-slate-200">
+      <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto pt-8 border-t border-slate-200 dark:border-slate-800">
         
         <div className="flex items-start space-x-3">
           <div className="p-2 rounded-xl bg-blue-50 text-blue-700 border border-blue-100 shrink-0">
             <CheckCircle className="w-4 h-4" />
           </div>
           <div className="space-y-1">
-            <h4 className="text-xs font-bold text-slate-900">Transparência Auditável</h4>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">Transparência Auditável</h4>
             <p className="text-[11px] text-slate-500 leading-relaxed">
               Metodologia de pontuação pública e explicável para CISOs, DPOs e Auditores.
             </p>
@@ -312,7 +312,7 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
             <Scale className="w-4 h-4" />
           </div>
           <div className="space-y-1">
-            <h4 className="text-xs font-bold text-slate-900">13 Regulações Suportadas</h4>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">13 Regulações Suportadas</h4>
             <p className="text-[11px] text-slate-500 leading-relaxed">
               Avaliação alinhada às principais normas de IA, privacidade, segurança e governança.
             </p>
@@ -324,7 +324,7 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
             <BarChart3 className="w-4 h-4" />
           </div>
           <div className="space-y-1">
-            <h4 className="text-xs font-bold text-slate-900">Relatórios Executivos</h4>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">Relatórios Executivos</h4>
             <p className="text-[11px] text-slate-500 leading-relaxed">
               Dashboards claros, evidências rastreáveis e planos de ação priorizados.
             </p>
@@ -336,7 +336,7 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
             <Lock className="w-4 h-4" />
           </div>
           <div className="space-y-1">
-            <h4 className="text-xs font-bold text-slate-900">Privacidade & Segurança</h4>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">Privacidade & Segurança</h4>
             <p className="text-[11px] text-slate-500 leading-relaxed">
               Análise local opcional. Seus dados não são armazenados nem utilizados para treinamento.
             </p>

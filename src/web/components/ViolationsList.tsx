@@ -107,7 +107,7 @@ export const ViolationsList: React.FC<ViolationsListProps> = ({ result }) => {
           filtered.map((v, idx) => (
             <div
               key={idx}
-              className="bg-white p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-all space-y-3 shadow-2xs"
+              className="bg-white dark:bg-[#111827] p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-all space-y-3 shadow-2xs"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1.5 flex-1">
@@ -115,7 +115,7 @@ export const ViolationsList: React.FC<ViolationsListProps> = ({ result }) => {
                     <span className={`px-2 py-0.5 text-[10px] font-bold rounded-md border ${getSeverityBadge(v.severity)}`}>
                       {v.severity?.toUpperCase()}
                     </span>
-                    <span className="text-xs font-mono text-slate-900 font-bold bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                    <span className="text-xs font-mono text-slate-900 font-bold bg-slate-100 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
                       {v.lawArticle}
                     </span>
                     <span className="text-[10px] bg-slate-50 px-2 py-0.5 rounded text-slate-600 border border-slate-200 font-mono">
