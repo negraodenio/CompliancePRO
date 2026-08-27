@@ -290,7 +290,7 @@ export const AgentsTeamsView: React.FC<{ result?: ScannerResult | null }> = ({ r
             onChange={(e) => setFilterAutonomy(e.target.value)}
             className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-sky-500"
           >
-            <option value="ALL">All Autonomy Tiers</option>
+            <option value="ALL">All CG-AG Autonomy Tiers</option>
             <option value="L1_ASSISTIVE">L1 Assistive</option>
             <option value="L2_SUPERVISED">L2 Supervised</option>
             <option value="L3_AUTONOMOUS_BOUNDED">L3 Autonomous Bounded</option>
@@ -319,7 +319,7 @@ export const AgentsTeamsView: React.FC<{ result?: ScannerResult | null }> = ({ r
               <tr>
                 <th className="py-3 px-4">Agent Name & Role</th>
                 <th className="py-3 px-4">Team & Topology</th>
-                <th className="py-3 px-4">Autonomy Tier</th>
+                <th className="py-3 px-4">CG-AG Autonomy Tier</th>
                 <th className="py-3 px-4">Model & Runtime</th>
                 <th className="py-3 px-4">Bounded Tools</th>
                 <th className="py-3 px-4">HITL Checkpoint</th>
@@ -530,7 +530,7 @@ export const AgentsTeamsView: React.FC<{ result?: ScannerResult | null }> = ({ r
                 {activeDrawerTab === 'autonomy' && (
                   <div className="space-y-4">
                     <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-                      <div className="font-bold text-slate-800 dark:text-slate-200">Autonomy Tier Classification</div>
+                      <div className="font-bold text-slate-800 dark:text-slate-200">CG-AG Autonomy Tier Classification</div>
                       <div className="text-sky-600 dark:text-sky-400 font-bold text-sm">{selectedAgent.autonomyLevel.replace(/_/g, ' ')}</div>
                       <p className="text-slate-500 text-[11px] leading-relaxed">
                         Under CG-AG Core Control 03, autonomous execution is bounded by explicit API policies, tool whitelists, and mandatory human escalation triggers.
@@ -661,7 +661,7 @@ export const AgentsTeamsView: React.FC<{ result?: ScannerResult | null }> = ({ r
 
                     <div className="space-y-3 text-xs divide-y divide-slate-800/60">
                       <div className="pt-2 flex justify-between">
-                        <span className="text-slate-400">Digital Signature:</span>
+                        <span className="text-slate-400">Integrity Hash (SHA-256):</span>
                         <span className="font-mono-code text-sky-300">{selectedAgent.passport.digitalSignature}</span>
                       </div>
                       <div className="pt-2 flex justify-between">
@@ -684,7 +684,7 @@ export const AgentsTeamsView: React.FC<{ result?: ScannerResult | null }> = ({ r
                         className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold transition shadow-xs flex items-center gap-1.5"
                       >
                         <ShieldCheck className="w-3.5 h-3.5" />
-                        <span>Verify Cryptographic Signature</span>
+                        <span>Verify Tamper-Evident Hash</span>
                       </button>
                     </div>
                   </div>

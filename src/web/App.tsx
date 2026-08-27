@@ -6,6 +6,7 @@ import { AppShell, ActiveNavView } from './components/AppShell';
 import { GovernanceCenter } from './views/GovernanceCenter';
 import { AiInventoryView } from './views/AiInventoryView';
 import { AgentsTeamsView } from './views/AgentsTeamsView';
+import { AssessmentsView } from './views/AssessmentsView';
 import { HeroScanner } from './components/HeroScanner';
 import { AgentInventory } from './components/AgentInventory';
 import { RegulationsGrid } from './components/RegulationsGrid';
@@ -175,6 +176,12 @@ export const App: React.FC = () => {
             />
           )}
 
+          {activeView === 'discover-assessments' && (
+            <AssessmentsView 
+              result={scanResult}
+            />
+          )}
+
           {activeView === 'discover-passports' && (
             <AgentsTeamsView 
               result={scanResult}
@@ -231,7 +238,7 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {!['overview-center', 'discover-inventory', 'discover-agents', 'discover-passports', 'tools-scanner', 'govern-controls'].includes(activeView) && (
+          {!['overview-center', 'discover-inventory', 'discover-agents', 'discover-passports', 'discover-assessments', 'tools-scanner', 'govern-controls'].includes(activeView) && (
             <div className="p-12 text-center bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-slate-800 elevation-card space-y-4">
               <div className="w-12 h-12 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center mx-auto">
                 <Lock className="w-6 h-6" />
