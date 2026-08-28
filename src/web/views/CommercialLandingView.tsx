@@ -61,7 +61,7 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
   onOpenAuth,
   onEnterApp,
 }) => {
-  const [activeScanTab, setActiveScanTab] = useState<'demo' | 'github' | 'zip' | 'folder'>('demo');
+  const [activeScanTab, setActiveScanTab] = useState<'github' | 'demo' | 'zip' | 'folder'>('github');
   const [gitUrl, setGitUrl] = useState('https://github.com/negraodenio/CompliancePRO');
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -219,36 +219,40 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
               {/* Input Method Switcher */}
               <div className="flex items-center p-1 rounded-xl bg-slate-950 border border-slate-800 text-xs font-semibold">
                 <button
-                  onClick={() => setActiveScanTab('demo')}
-                  className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
-                    activeScanTab === 'demo' ? 'bg-sky-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Enterprise Demos
-                </button>
-                <button
                   onClick={() => setActiveScanTab('github')}
-                  className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition cursor-pointer ${
                     activeScanTab === 'github' ? 'bg-sky-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  GitHub URL
+                  <Github className="w-3.5 h-3.5" />
+                  <span>GitHub URL</span>
+                </button>
+                <button
+                  onClick={() => setActiveScanTab('demo')}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition cursor-pointer ${
+                    activeScanTab === 'demo' ? 'bg-sky-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Enterprise Demos</span>
                 </button>
                 <button
                   onClick={() => setActiveScanTab('zip')}
-                  className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition cursor-pointer ${
                     activeScanTab === 'zip' ? 'bg-sky-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  ZIP File
+                  <FileArchive className="w-3.5 h-3.5" />
+                  <span>ZIP File</span>
                 </button>
                 <button
                   onClick={() => setActiveScanTab('folder')}
-                  className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition cursor-pointer ${
                     activeScanTab === 'folder' ? 'bg-sky-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  Local Folder
+                  <FolderUp className="w-3.5 h-3.5" />
+                  <span>Local Folder</span>
                 </button>
               </div>
             </div>
@@ -280,28 +284,54 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
               </div>
             )}
 
-            {/* TAB 2: GITHUB */}
+            {/* TAB 1: GITHUB URL */}
             {activeScanTab === 'github' && (
-              <form onSubmit={handleGitSubmit} className="flex flex-col sm:flex-row gap-2">
-                <div className="relative flex-1">
-                  <Github className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
-                  <input
-                    type="text"
-                    value={gitUrl}
-                    onChange={(e) => setGitUrl(e.target.value)}
-                    placeholder="https://github.com/org/ai-agent-repo"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-sky-500 font-mono"
-                  />
+              <div className="space-y-3 animate-fadeIn">
+                <form onSubmit={handleGitSubmit} className="flex flex-col sm:flex-row gap-2">
+                  <div className="relative flex-1">
+                    <Github className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                    <input
+                      type="text"
+                      value={gitUrl}
+                      onChange={(e) => setGitUrl(e.target.value)}
+                      placeholder="https://github.com/org/your-ai-agent-repo"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-sky-500 font-mono"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isScanning}
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-sky-500/25 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>{isScanning ? 'Scanning Codebase...' : 'Scan GitHub Repository'}</span>
+                  </button>
+                </form>
+
+                {/* Quick 1-Click Suggestions */}
+                <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+                  <span className="font-semibold text-slate-500">Quick Try:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGitUrl('https://github.com/negraodenio/CompliancePRO');
+                      onScanGitHub('https://github.com/negraodenio/CompliancePRO');
+                    }}
+                    className="px-2.5 py-1 rounded-md bg-slate-950 border border-slate-800 hover:border-sky-500/50 text-slate-300 hover:text-sky-400 font-mono transition cursor-pointer"
+                  >
+                    CompliancePRO (Core Repo)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (DEMO_PROJECTS[0]) onSelectDemo(DEMO_PROJECTS[0]);
+                    }}
+                    className="px-2.5 py-1 rounded-md bg-slate-950 border border-slate-800 hover:border-indigo-500/50 text-slate-300 hover:text-indigo-400 font-mono transition cursor-pointer"
+                  >
+                    FinTech Credit CrewAI
+                  </button>
                 </div>
-                <button
-                  type="submit"
-                  disabled={isScanning}
-                  className="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-lg transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>{isScanning ? 'Scanning...' : 'Scan Repository'}</span>
-                </button>
-              </form>
+              </div>
             )}
 
             {/* TAB 3: ZIP */}
