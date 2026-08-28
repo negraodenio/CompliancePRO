@@ -60,6 +60,12 @@ export const App: React.FC = () => {
   const [showExport, setShowExport] = useState(false);
   const [showAcademy, setShowAcademy] = useState(false);
 
+  useEffect(() => {
+    if (DEMO_PROJECTS && DEMO_PROJECTS.length > 0 && !scanResult) {
+      handleSelectDemo(DEMO_PROJECTS[0]);
+    }
+  }, []);
+
   const triggerConfetti = () => {
     confetti({
       particleCount: 50,
