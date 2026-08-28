@@ -37,6 +37,8 @@ import { ExecutiveSummary } from './components/ExecutiveSummary';
 import { ReportExportModal } from './components/ReportExportModal';
 import { SettingsModal } from './components/SettingsModal';
 import { AcademyModal } from './components/AcademyModal';
+import { CommercialLandingView } from './views/CommercialLandingView';
+import { AuthModal } from './components/AuthModal';
 
 import { fetchGitHubRepo } from './services/github-fetcher';
 import { readZipFile, readFolderFiles } from './services/zip-reader';
@@ -47,7 +49,9 @@ import type { ScannerResult } from '../core/types';
 import { Lock, Sparkles, Terminal, FileBadge, CheckSquare, Layers, CheckCircle2, Bot, ShieldCheck } from 'lucide-react';
 
 export const App: React.FC = () => {
+  const [pageMode, setPageMode] = useState<'landing' | 'app'>('landing');
   const [activeView, setActiveView] = useState<ActiveNavView>('overview-center');
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup' | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState({ message: '', percent: 0 });
   const [scanResult, setScanResult] = useState<ScannerResult | null>(null);
@@ -91,7 +95,9 @@ export const App: React.FC = () => {
       ScanGovernanceBridge.ingestScan(result);
       setScanProgress({ message: 'Scan Complete!', percent: 100 });
       triggerConfetti();
-      setActiveView('overview-center');
+      if (pageMode === 'app') {
+        setActiveView('overview-center');
+      }
     } catch (err: any) {
       alert(`GitHub Scan Error: ${err.message}`);
     } finally {
@@ -116,7 +122,9 @@ export const App: React.FC = () => {
       ScanGovernanceBridge.ingestScan(result);
       setScanProgress({ message: 'Scan Complete!', percent: 100 });
       triggerConfetti();
-      setActiveView('overview-center');
+      if (pageMode === 'app') {
+        setActiveView('overview-center');
+      }
     } catch (err: any) {
       alert(`ZIP Scan Error: ${err.message}`);
     } finally {
@@ -140,7 +148,9 @@ export const App: React.FC = () => {
       ScanGovernanceBridge.ingestScan(result);
       setScanProgress({ message: 'Scan Complete!', percent: 100 });
       triggerConfetti();
-      setActiveView('overview-center');
+      if (pageMode === 'app') {
+        setActiveView('overview-center');
+      }
     } catch (err: any) {
       alert(`Folder Scan Error: ${err.message}`);
     } finally {

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Check,
   GraduationCap, 
-  Shield, 
+  Shield,
+  Globe, 
   LayoutDashboard, 
   Layers, 
   Bot, 
@@ -77,6 +78,7 @@ export type ActiveNavView =
 interface AppShellProps {
   activeView: ActiveNavView;
   setActiveView: (view: ActiveNavView) => void;
+  onNavigateToLanding?: () => void;
   children: React.ReactNode;
   totalAgentsCount?: number;
   criticalGapsCount?: number;
@@ -85,6 +87,7 @@ interface AppShellProps {
 export const AppShell: React.FC<AppShellProps> = ({
   activeView,
   setActiveView,
+  onNavigateToLanding,
   children,
   totalAgentsCount = 27,
   criticalGapsCount = 3
@@ -234,7 +237,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         <div className="flex items-center space-x-3">
           <div 
             className="flex items-center space-x-2.5 cursor-pointer" 
-            onClick={() => setActiveView('overview-center')}
+            onClick={() => onNavigateToLanding ? onNavigateToLanding() : setActiveView('overview-center')}
           >
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-xs">
               <Shield className="w-4 h-4 text-white" />
@@ -252,6 +255,18 @@ export const AppShell: React.FC<AppShellProps> = ({
         {/* Center & Right Controls: Role Lens, Industry Profile, Org & User Profile, Environment & Theme */}
         <div className="flex items-center space-x-2.5">
           
+                    {/* Public Landing Page CTA */}
+          {onNavigateToLanding && (
+            <button
+              onClick={onNavigateToLanding}
+              className="hidden lg:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 hover:text-sky-500 text-xs font-semibold transition cursor-pointer"
+              title="Voltar para a Landing Page pública comercial"
+            >
+              <Globe className="w-3.5 h-3.5 text-sky-400" />
+              <span>Public Landing Page</span>
+            </button>
+          )}
+
           {/* 1. ROLE-BASED LENS SELECTOR (EXPERIENCE LAYER) */}
           <div className="relative">
             <button
