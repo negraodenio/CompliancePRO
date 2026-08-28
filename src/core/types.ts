@@ -431,6 +431,22 @@ export interface AgentIdentityBinding {
   roleMapped?: string;
 }
 
+export type CapabilityScope = 
+  | 'production' 
+  | 'test' 
+  | 'example' 
+  | 'benchmark' 
+  | 'fixture' 
+  | 'infrastructure' 
+  | 'documentation' 
+  | 'unknown';
+
+export interface CapabilityProvenance {
+  primaryScope: CapabilityScope;
+  scopes: CapabilityScope[];
+  filePaths: string[];
+}
+
 export interface AgentCapability {
   id: string;
   agentName: string;
@@ -457,6 +473,8 @@ export interface AgentCapability {
   };
 
   anomalies: CapabilityAnomaly[];
+  scope?: CapabilityScope;
+  provenance?: CapabilityProvenance;
 }
 
 export interface CapabilitiesSummary {

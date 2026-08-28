@@ -4,6 +4,8 @@ import {
   CapabilitiesSummary,
   CapabilityActionType,
   CapabilityAnomaly,
+  CapabilityProvenance,
+  CapabilityScope,
   CapabilityState,
   CapabilitySystemType,
   DetectedAgent,
@@ -19,6 +21,87 @@ interface RawGrant {
   snippet: string;
   isWildcard: boolean;
   roleOrUser?: string;
+}
+
+
+export function classifyScopeFromPath(filePath: string): CapabilityScope {
+  if (!filePath) return 'unknown';
+  const normalized = filePath.replace(/\\/g, '/').toLowerCase();
+  const segments = normalized.split('/');
+  const filename = segments[segments.length - 1] || '';
+
+  // 1. Tests & Specifications
+  if (
+    segments.some(s => s === 'tests' || s === 'test' || s === '__tests__' || s === 'spec' || s === 'specs') ||
+    filename.startsWith('test_') ||
+    filename.endsWith('.test.ts') ||
+    filename.endsWith('.test.tsx') ||
+    filename.endsWith('.test.js') ||
+    filename.endsWith('.test.py') ||
+    filename.endsWith('.spec.ts') ||
+    filename.endsWith('.spec.js') ||
+    filename.endsWith('_test.py') ||
+    filename.endsWith('_spec.rb')
+  ) {
+    return 'test';
+  }
+
+  // 2. Benchmarks & Performance Suites
+  if (
+    segments.some(s => s === 'bench' || s === 'benchmarks' || s === 'benchmark' || s === 'perf') ||
+    filename.startsWith('bench_') ||
+    filename.includes('.bench.') ||
+    filename.includes('_benchmark.')
+  ) {
+    return 'benchmark';
+  }
+
+  // 3. Examples, Demos & Samples
+  if (
+    segments.some(s => s === 'examples' || s === 'example' || s === 'samples' || s === 'sample' || s === 'demos' || s === 'demo') ||
+    filename.startsWith('example_') ||
+    filename.startsWith('demo_') ||
+    filename.startsWith('sample_')
+  ) {
+    return 'example';
+  }
+
+  // 4. Fixtures & Mocks
+  if (
+    segments.some(s => s === 'fixtures' || s === 'fixture' || s === 'mocks' || s === 'mock' || s === '__mocks__') ||
+    filename.startsWith('mock_') ||
+    filename.startsWith('fixture_')
+  ) {
+    return 'fixture';
+  }
+
+  // 5. Infrastructure & Cloud Configs
+  if (
+    segments.some(s => s === 'infra' || s === 'infrastructure' || s === 'terraform' || s === 'pulumi' || s === 'k8s' || s === 'kubernetes' || s === 'helm' || s === 'cloudformation') ||
+    filename.endsWith('.tf') ||
+    filename.endsWith('.tfvars')
+  ) {
+    return 'infrastructure';
+  }
+
+  // 6. Documentation
+  if (
+    segments.some(s => s === 'docs' || s === 'doc' || s === 'documentation') ||
+    filename.endsWith('.md') ||
+    filename.endsWith('.mdx') ||
+    filename.endsWith('.rst')
+  ) {
+    return 'documentation';
+  }
+
+  // 7. Production Application Code
+  if (
+    segments.some(s => s === 'src' || s === 'app' || s === 'server' || s === 'backend' || s === 'core' || s === 'lib' || s === 'libs' || s === 'pkg' || s === 'packages' || s === 'api' || s === 'service' || s === 'services' || s === 'web')
+  ) {
+    return 'production';
+  }
+
+  return 'unknown';
 }
 
 const SCHEMA_EXCLUDE_KEYWORDS = new Set([
@@ -264,6 +347,7 @@ export function detectCapabilities(
     const agentName = matchedAgent ? matchedAgent.name : `Agent_${filename.replace(/\.[^.]+$/, '')}`;
 
     // 2.1 DECLARED OPERATIONAL TOOLS & CAPABILITIES (Calibrated: ONE TOOL = ONE CAPABILITY)
+    const fileScope = classifyScopeFromPath(filePath);
     const declaredTools = extractDeclaredToolsFromContent(content);
     for (const cleanName of declaredTools) {
       capabilities.push({
@@ -277,6 +361,12 @@ export function detectCapabilities(
         filePath,
         isDestructive: /delete|drop|remove|destroy|truncate|terminate|wipe|kill/i.test(cleanName),
         accessesSensitiveData: /pii|customer|financial|patient|credit|cpf|tax|salary|account/i.test(cleanName),
+        scope: fileScope,
+        provenance: {
+          primaryScope: fileScope,
+          scopes: [fileScope],
+          filePaths: [filePath]
+        },
         anomalies: []
       });
     }
@@ -348,6 +438,7 @@ export function detectCapabilities(
 
         const matchingGrant = knownGrants.find(g => g.type === 'db_grant' && (g.isWildcard || g.resourceTarget.includes(table)));
 
+        const dbScope = classifyScopeFromPath(filePath);
         capabilities.push({
           id: `CAP-DB-${++capSeq}`,
           agentName,
@@ -361,6 +452,12 @@ export function detectCapabilities(
           codeSnippet: line.trim().slice(0, 120),
           isDestructive: false,
           accessesSensitiveData: hasSensitive,
+          scope: dbScope,
+          provenance: {
+            primaryScope: dbScope,
+            scopes: [dbScope],
+            filePaths: [filePath]
+          },
           authorizationEvidence: matchingGrant ? {
             type: 'db_grant',
             grantFile: matchingGrant.file,
@@ -375,6 +472,7 @@ export function detectCapabilities(
         const isDelete = /delete/i.test(line);
         const matchingIam = knownGrants.find(g => g.type === 'iam_policy' && g.systemName.includes('S3'));
 
+        const s3Scope = classifyScopeFromPath(filePath);
         capabilities.push({
           id: `CAP-S3-${++capSeq}`,
           agentName,
@@ -388,6 +486,12 @@ export function detectCapabilities(
           codeSnippet: line.trim().slice(0, 120),
           isDestructive: isDelete,
           accessesSensitiveData: true,
+          scope: s3Scope,
+          provenance: {
+            primaryScope: s3Scope,
+            scopes: [s3Scope],
+            filePaths: [filePath]
+          },
           authorizationEvidence: matchingIam ? {
             type: 'iam_policy',
             grantFile: matchingIam.file,
@@ -403,6 +507,7 @@ export function detectCapabilities(
       }
 
       if (/child_process\.(exec|spawn|execSync)|subprocess\.(Popen|run|call)|os\.system/i.test(line)) {
+        const execScope = classifyScopeFromPath(filePath);
         capabilities.push({
           id: `CAP-EXEC-${++capSeq}`,
           agentName,
@@ -416,6 +521,12 @@ export function detectCapabilities(
           codeSnippet: line.trim().slice(0, 120),
           isDestructive: true,
           accessesSensitiveData: false,
+          scope: execScope,
+          provenance: {
+            primaryScope: execScope,
+            scopes: [execScope],
+            filePaths: [filePath]
+          },
           anomalies: ['OBSERVED_BUT_UNAUTHORIZED', 'DESTRUCTIVE_ACTION_WITHOUT_HITL', 'PRIVILEGE_ESCALATION_RISK']
         });
       }
@@ -424,6 +535,7 @@ export function detectCapabilities(
         const isOffice = line.includes('microsoft');
         const matchingOauth = knownGrants.find(g => g.type === 'oauth_scope' && (isOffice ? g.systemName.includes('Office') : true));
 
+        const erpScope = classifyScopeFromPath(filePath);
         capabilities.push({
           id: `CAP-ERP-${++capSeq}`,
           agentName,
@@ -437,6 +549,12 @@ export function detectCapabilities(
           codeSnippet: line.trim().slice(0, 120),
           isDestructive: false,
           accessesSensitiveData: true,
+          scope: erpScope,
+          provenance: {
+            primaryScope: erpScope,
+            scopes: [erpScope],
+            filePaths: [filePath]
+          },
           authorizationEvidence: matchingOauth ? {
             type: 'oauth_scope',
             grantFile: matchingOauth.file,
@@ -457,6 +575,19 @@ export function detectCapabilities(
       dedupedMap.set(key, c);
     } else {
       const existing = dedupedMap.get(key)!;
+      // Preserve provenance sources across multiple occurrences without altering identity or count
+      if (existing.provenance && c.provenance) {
+        for (const s of c.provenance.scopes) {
+          if (!existing.provenance.scopes.includes(s)) {
+            existing.provenance.scopes.push(s);
+          }
+        }
+        for (const fp of c.provenance.filePaths) {
+          if (!existing.provenance.filePaths.includes(fp)) {
+            existing.provenance.filePaths.push(fp);
+          }
+        }
+      }
       for (const a of c.anomalies) {
         if (!existing.anomalies.includes(a)) existing.anomalies.push(a);
       }
