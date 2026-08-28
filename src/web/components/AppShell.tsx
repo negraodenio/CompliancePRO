@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { GraduationCap, 
+import { 
+  Check,
+  GraduationCap, 
   Shield, 
   LayoutDashboard, 
   Layers, 
@@ -14,7 +16,9 @@ import { GraduationCap,
   Zap, 
   FolderCheck, 
   BookOpen, 
-  FileDown, Crosshair, Award, 
+  FileDown, 
+  Crosshair, 
+  Award, 
   Terminal, 
   Share2, 
   ChevronDown, 
@@ -22,14 +26,25 @@ import { GraduationCap,
   Moon, 
   Building2,
   LockKeyhole,
-  CheckCircle2
+  CheckCircle2,
+  UserCheck,
+  Eye,
+  Sparkles,
+  Lock,
+  Users,
+  LogOut,
+  LogIn,
+  UserPlus
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useIndustry, INDUSTRY_PROFILES } from '../context/IndustryContext';
+import { useRoleLens, ROLE_LENSES, RoleLensDefinition } from '../context/RoleLensContext';
+import { useAuth } from '../context/AuthContext';
 import { DecisionStore } from '../services/decision-store';
 import { HitlStore } from '../services/hitl-store';
 import { RemediationStore } from '../services/remediation-store';
 import { IncidentStore } from '../services/incident-store';
+import { AuthModal } from './AuthModal';
 
 export type ActiveNavView = 
   | 'overview-center'
@@ -56,6 +71,7 @@ export type ActiveNavView =
   | 'tools-deployment'
   | 'tools-integrations'
   | 'learn-academy'
+  | 'manage-team'
   | 'settings';
 
 interface AppShellProps {
@@ -75,7 +91,23 @@ export const AppShell: React.FC<AppShellProps> = ({
 }) => {
   const { theme, toggleTheme } = useTheme();
   const { activeProfile, setActiveProfile, environment, setEnvironment } = useIndustry();
+  const { activeLens, setRoleLensById, isLensPrioritized } = useRoleLens();
+  const { 
+    isAuthenticated, 
+    user, 
+    activeOrganization, 
+    availableOrganizations, 
+    switchOrganization, 
+    logout, 
+    enterpriseRole 
+  } = useAuth();
+
   const [isIndustryMenuOpen, setIsIndustryMenuOpen] = useState(false);
+  const [isLensMenuOpen, setIsLensMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState<'login' | 'signup' | 'invite'>('login');
+
   const [pendingDecisionsCount, setPendingDecisionsCount] = useState(3);
   const [pendingHitlCount, setPendingHitlCount] = useState(2);
   const [pendingRemedCount, setPendingRemedCount] = useState(1);
@@ -101,6 +133,7 @@ export const AppShell: React.FC<AppShellProps> = ({
     const unsub2 = HitlStore.subscribe(refreshBadges);
     const unsub3 = RemediationStore.subscribe(refreshBadges);
     const unsub4 = IncidentStore.subscribe(refreshBadges);
+
     return () => {
       unsub1();
       unsub2();
@@ -109,6 +142,7 @@ export const AppShell: React.FC<AppShellProps> = ({
     };
   }, []);
 
+  // Standard Domain Navigation Groups (All 18+ Modules)
   const navItems = [
     {
       group: 'OVERVIEW',
@@ -138,18 +172,35 @@ export const AppShell: React.FC<AppShellProps> = ({
       group: 'OPERATE',
       items: [
         { id: 'operate-decisions', label: 'Decisions Pipeline', icon: Scale, badge: null },
-        { id: 'operate-approvals', label: 'HITL Approvals', icon: LockKeyhole, badge: pendingHitlCount > 0 ? `${pendingHitlCount} Pending` : null },
-        { id: 'operate-actions', label: 'Remediation Actions', icon: CheckCircle2, badge: pendingRemedCount > 0 ? `${pendingRemedCount} Verify` : null },
-        { id: 'operate-incidents', label: 'Incidents & Failsafe', icon: Zap, badge: activeIncidentsCount > 0 ? `${activeIncidentsCount} Contained` : null },
-        { id: 'operate-runtime', label: 'Runtime FinOps', icon: Activity, badge: null }
+        { id: 'operate-approvals', label: 'HITL Approvals', icon: CheckCircle2, badge: pendingHitlCount > 0 ? `${pendingHitlCount} Action` : null },
+        { id: 'operate-actions', label: 'Remediation Actions', icon: FolderCheck, badge: pendingRemedCount > 0 ? `${pendingRemedCount} Open` : null },
+        { id: 'operate-incidents', label: 'Incidents & Failsafe', icon: Zap, badge: activeIncidentsCount > 0 ? `${activeIncidentsCount} Active` : null },
+        { id: 'operate-runtime', label: 'Runtime FinOps', icon: Activity, badge: 'Tokens' }
       ]
     },
     {
       group: 'ASSURE',
       items: [
-        { id: 'assure-evidence', label: 'Protected Evidence', icon: FolderCheck, badge: 'Secured' },
-        { id: 'assure-audit', label: 'Audit Ledger', icon: BookOpen, badge: null },
-        { id: 'assure-reports', label: 'Regulatory Dossiers', icon: FileDown, Crosshair, Award, badge: 'RIPD' }
+        { id: 'assure-evidence', label: 'Protected Evidence', icon: LockKeyhole, badge: 'RFC 8785' },
+        { id: 'assure-audit', label: 'Audit Ledger', icon: BookOpen, badge: 'Immutable' },
+        { id: 'assure-reports', label: 'Regulatory Dossiers', icon: FileDown, badge: 'Annex IV' },
+        { id: 'assure-simulator', label: 'Governance Simulator', icon: Crosshair, badge: '10 Attacks' },
+        { id: 'assure-readiness', label: 'System Readiness', icon: Award, badge: 'Production' }
+      ]
+    },
+    {
+      group: 'OPERATIONS & TOOLS',
+      items: [
+        { id: 'tools-operations', label: 'Operations Center', icon: Activity, badge: 'Live' },
+        { id: 'tools-deployment', label: 'Production Deployment', icon: Zap, badge: 'Preflight' },
+        { id: 'tools-scanner', label: 'Codebase Scanner', icon: Terminal, badge: 'Sensor' },
+        { id: 'tools-integrations', label: 'MCP & Connectors', icon: Share2, badge: 'Stdio/SSE' }
+      ]
+    },
+    {
+      group: 'TEAM & IDENTITY',
+      items: [
+        { id: 'manage-team', label: 'Team & Access', icon: Users, badge: 'RBAC' }
       ]
     },
     {
@@ -157,50 +208,136 @@ export const AppShell: React.FC<AppShellProps> = ({
       items: [
         { id: 'learn-academy', label: 'CG-AG Academy', icon: GraduationCap, badge: '18 Modules' }
       ]
-    },
-    {
-      group: 'TOOLS',
-      items: [
-        { id: 'tools-scanner', label: 'Codebase Scanner', icon: Terminal, badge: 'Sensor' },
-        { id: 'tools-integrations', label: 'MCP & Connectors', icon: Share2, badge: 'Stdio/SSE' }
-      ]
     }
   ];
 
+  const findNavItem = (id: ActiveNavView) => {
+    for (const g of navItems) {
+      for (const item of g.items) {
+        if (item.id === id) return item;
+      }
+    }
+    return null;
+  };
+
+  const priorityNavItems = isLensPrioritized
+    ? activeLens.priorityViews.map(id => findNavItem(id)).filter(Boolean)
+    : [];
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 transition-colors duration-150">
+      
       {/* Top Application Bar */}
       <header className="h-14 border-b border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#0f172a] px-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-        {/* Left: Brand & Workspace */}
+        
+        {/* Left: Brand & Title */}
         <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2.5 cursor-pointer" onClick={() => setActiveView('overview-center')}>
-            <div className="w-8 h-8 rounded-lg bg-sky-600 flex items-center justify-center shadow-xs">
+          <div 
+            className="flex items-center space-x-2.5 cursor-pointer" 
+            onClick={() => setActiveView('overview-center')}
+          >
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-xs">
               <Shield className="w-4 h-4 text-white" />
             </div>
             <div>
-              <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
-                CG-AG <span className="font-normal text-xs text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/60 px-1.5 py-0.5 rounded border border-sky-200 dark:border-sky-800/50">Governance OS</span>
-              </span>
+              <div className="flex items-center space-x-1.5">
+                <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">CG-AG</span>
+                <span className="text-[10px] font-mono font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 px-1.5 py-0.2 rounded border border-sky-200 dark:border-sky-800">OS v1.2</span>
+              </div>
+              <p className="text-[9px] text-slate-400 font-medium tracking-wide uppercase">Governance Control Plane</p>
             </div>
           </div>
+        </div>
 
-          <div className="h-4 w-px bg-slate-200 dark:border-slate-800" />
-
-          {/* Workspace & Industry Selector */}
+        {/* Center & Right Controls: Role Lens, Industry Profile, Org & User Profile, Environment & Theme */}
+        <div className="flex items-center space-x-2.5">
+          
+          {/* 1. ROLE-BASED LENS SELECTOR (EXPERIENCE LAYER) */}
           <div className="relative">
-            <button 
-              onClick={() => setIsIndustryMenuOpen(!isIndustryMenuOpen)}
-              className="flex items-center space-x-2 text-xs bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 transition"
+            <button
+              onClick={() => {
+                setIsLensMenuOpen(!isLensMenuOpen);
+                setIsIndustryMenuOpen(false);
+                setIsUserMenuOpen(false);
+              }}
+              className={`flex items-center space-x-2 px-3 py-1.5 rounded-xl border text-xs font-semibold transition cursor-pointer shadow-2xs ${
+                activeLens.id === 'all-modules'
+                  ? 'bg-slate-100 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                  : 'bg-gradient-to-r from-sky-500/10 via-indigo-500/10 to-transparent border-sky-500/30 text-sky-700 dark:text-sky-300'
+              }`}
+              title="Personalize sua perspectiva de trabalho por cargo/perfil corporativo"
             >
-              <Building2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{activeProfile.sampleOrg}</span>
-              <span className="text-slate-300 dark:text-slate-600">|</span>
-              <span className="text-sky-600 dark:text-sky-400 font-medium">{activeProfile.icon} {activeProfile.name}</span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
+              <span className="text-sm">{activeLens.icon}</span>
+              <div className="flex flex-col text-left">
+                <span className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-mono font-bold leading-none">Role Lens</span>
+                <span className="text-xs font-bold leading-tight truncate max-w-[110px] sm:max-w-[150px]">{activeLens.shortLabel}</span>
+              </div>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
+            </button>
+
+            {isLensMenuOpen && (
+              <div className="absolute right-0 mt-1.5 w-88 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl py-2 z-50 animate-fadeIn">
+                <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800/70">
+                  <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                    Role-Based Lenses • Perspectiva de Cargo
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Reorganiza a esteira de trabalho e prioriza os módulos mais relevantes para o seu papel.
+                  </p>
+                </div>
+
+                <div className="max-h-84 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/50 p-1.5 space-y-1">
+                  {ROLE_LENSES.map((lens) => (
+                    <button
+                      key={lens.id}
+                      onClick={() => {
+                        setRoleLensById(lens.id, true);
+                        setIsLensMenuOpen(false);
+                      }}
+                      className={`w-full text-left p-2.5 rounded-xl text-xs flex items-start space-x-3 transition cursor-pointer ${
+                        activeLens.id === lens.id
+                          ? 'bg-sky-50 dark:bg-sky-950/50 border border-sky-200 dark:border-sky-800/80'
+                          : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                      }`}
+                    >
+                      <span className="text-xl shrink-0 mt-0.5">{lens.icon}</span>
+                      <div className="flex-1 space-y-0.5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-900 dark:text-white">{lens.name}</span>
+                          {activeLens.id === lens.id && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-sky-500/20 text-sky-400 border border-sky-500/30">
+                              ATIVA
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                          {lens.tagline}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 2. INDUSTRY GOVERNANCE PROFILE */}
+          <div className="relative hidden sm:block">
+            <button
+              onClick={() => {
+                setIsIndustryMenuOpen(!isIndustryMenuOpen);
+                setIsLensMenuOpen(false);
+                setIsUserMenuOpen(false);
+              }}
+              className="flex items-center space-x-2 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold transition cursor-pointer shadow-2xs"
+            >
+              <span className="text-sm">{activeProfile.icon}</span>
+              <span className="hidden md:inline text-slate-700 dark:text-slate-300 font-medium truncate max-w-[120px]">{activeProfile.name}</span>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
             </button>
 
             {isIndustryMenuOpen && (
-              <div className="absolute left-0 mt-1.5 w-84 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl py-2 z-50">
+              <div className="absolute right-0 mt-1.5 w-84 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl py-2 z-50">
                 <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                   Select Industry Governance Profile
                 </div>
@@ -212,17 +349,17 @@ export const AppShell: React.FC<AppShellProps> = ({
                         setActiveProfile(p);
                         setIsIndustryMenuOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-2.5 text-xs flex items-start space-x-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition ${
+                      className={`w-full text-left px-3 py-2.5 text-xs flex items-start space-x-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition cursor-pointer ${
                         activeProfile.id === p.id ? 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300' : 'text-slate-700 dark:text-slate-300'
                       }`}
                     >
                       <span className="text-lg">{p.icon}</span>
                       <div className="flex-1">
-                        <div className="font-semibold flex items-center justify-between">
+                        <div className="font-bold flex items-center justify-between">
                           <span>{p.name}</span>
-                          {activeProfile.id === p.id && <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400">ACTIVE</span>}
+                          {activeProfile.id === p.id && <span className="text-[10px] text-sky-600 font-mono">ACTIVE</span>}
                         </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">{p.description}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">{p.sampleOrg}</p>
                       </div>
                     </button>
                   ))}
@@ -230,84 +367,166 @@ export const AppShell: React.FC<AppShellProps> = ({
               </div>
             )}
           </div>
-        </div>
 
-        {/* Right: Environment, Audit Badge & User Profile */}
-        <div className="flex items-center space-x-3">
-          <div className="hidden sm:flex items-center space-x-1 bg-slate-100 dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px]">
-            {(['Production', 'Staging', 'Sandbox'] as const).map((env) => (
+          {/* 3. USER PROFILE & ORGANIZATION SWITCHER */}
+          <div className="relative">
+            {isAuthenticated && user ? (
               <button
-                key={env}
-                onClick={() => setEnvironment(env)}
-                className={`px-2.5 py-0.5 rounded font-medium transition ${
-                  environment === env 
-                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs font-semibold' 
-                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                }`}
+                onClick={() => {
+                  setIsUserMenuOpen(!isUserMenuOpen);
+                  setIsLensMenuOpen(false);
+                  setIsIndustryMenuOpen(false);
+                }}
+                className="flex items-center space-x-2 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
               >
-                {env}
+                <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white text-[11px] font-bold">
+                  {user.fullName?.charAt(0) || 'U'}
+                </div>
+                <div className="hidden lg:flex flex-col text-left">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-[100px]">
+                    {activeOrganization?.name || 'Workspace'}
+                  </span>
+                  <span className="text-[9px] text-slate-400 font-mono">
+                    {enterpriseRole}
+                  </span>
+                </div>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </button>
-            ))}
+            ) : (
+              <button
+                onClick={() => {
+                  setAuthModalTab('login');
+                  setIsAuthModalOpen(true);
+                }}
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Entrar</span>
+              </button>
+            )}
+
+            {isUserMenuOpen && isAuthenticated && user && (
+              <div className="absolute right-0 mt-1.5 w-72 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl py-2 z-50 animate-fadeIn">
+                <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white block truncate">{user.fullName}</span>
+                  <span className="text-[11px] text-slate-400 truncate block">{user.email}</span>
+                  <div className="mt-1.5 flex items-center space-x-1.5">
+                    <span className="px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-500 border border-sky-500/20 text-[10px] font-mono font-bold">
+                      {enterpriseRole}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[10px] font-mono font-bold">
+                      {activeOrganization?.planTier?.toUpperCase() || 'FREE'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Organization Switcher */}
+                {availableOrganizations.length > 1 && (
+                  <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase font-mono block mb-1">
+                      Alternar Organização
+                    </span>
+                    <div className="space-y-1">
+                      {availableOrganizations.map((org) => (
+                        <button
+                          key={org.id}
+                          onClick={() => {
+                            switchOrganization(org.id);
+                            setIsUserMenuOpen(false);
+                          }}
+                          className={`w-full text-left px-2 py-1.5 rounded-lg text-xs flex items-center justify-between transition cursor-pointer ${
+                            activeOrganization?.id === org.id
+                              ? 'bg-sky-50 dark:bg-sky-950 text-sky-600 dark:text-sky-400 font-bold'
+                              : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          <span className="truncate">{org.name}</span>
+                          {activeOrganization?.id === org.id && <Check className="w-3.5 h-3.5 shrink-0" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="p-1 space-y-0.5">
+                  <button
+                    onClick={() => {
+                      setActiveView('manage-team');
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl flex items-center space-x-2 transition cursor-pointer"
+                  >
+                    <Users className="w-4 h-4 text-slate-400" />
+                    <span>Gerenciar Equipe & Acessos</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      logout();
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl flex items-center space-x-2 transition cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4 text-rose-500" />
+                    <span>Sair da Conta</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="hidden md:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/70 text-xs">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-semibold text-[11px]">Evidence Integrity Active</span>
-          </div>
-
+          {/* 4. THEME TOGGLE */}
           <button 
             onClick={toggleTheme}
             title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-            className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
           >
-            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
           </button>
-
-          <div className="flex items-center space-x-2 pl-2 border-l border-slate-200 dark:border-slate-800">
-            <div className="w-7 h-7 rounded-full bg-slate-800 text-sky-400 border border-slate-700 flex items-center justify-center font-bold text-xs">
-              RA
-            </div>
-            <div className="hidden lg:block text-left">
-              <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-tight">Roberto Silva</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">CISO & Accountable Lead</div>
-            </div>
-          </div>
         </div>
       </header>
 
-      {/* Main Workspace Body */}
+      {/* Main App Workspace Layout */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Control Plane Sidebar */}
-        <aside className="w-60 border-r border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#0f172a] flex flex-col justify-between overflow-y-auto shrink-0 select-none">
+        
+        {/* Left Sidebar Navigation */}
+        <aside className="w-64 border-r border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#0f172a] flex flex-col justify-between overflow-y-auto shrink-0 select-none">
           <div className="p-3 space-y-4">
-            {navItems.map((group) => (
-              <div key={group.group}>
-                <div className="px-2.5 mb-1.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 tracking-wider uppercase">
-                  {group.group}
+            
+            {/* LENS PRIORITIES SECTION (Elevated Top Workflow) */}
+            {isLensPrioritized && priorityNavItems.length > 0 && (
+              <div className="p-2.5 rounded-2xl bg-gradient-to-b from-sky-500/10 via-indigo-500/5 to-transparent border border-sky-500/20 space-y-2">
+                <div className="flex items-center justify-between px-1.5">
+                  <div className="flex items-center space-x-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-sky-500 animate-pulse" />
+                    <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 tracking-wider uppercase font-mono">
+                      {activeLens.shortLabel} Workflow
+                    </span>
+                  </div>
+                  <span className="text-[9px] font-mono text-slate-400">PRIORITY</span>
                 </div>
+
                 <div className="space-y-0.5">
-                  {group.items.map((item) => {
+                  {priorityNavItems.map((item: any) => {
                     const Icon = item.icon;
                     const isActive = activeView === item.id;
                     return (
                       <button
-                        key={item.id}
+                        key={`priority-${item.id}`}
                         onClick={() => setActiveView(item.id as ActiveNavView)}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition ${
+                        className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
                           isActive
-                            ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-semibold border border-sky-200/80 dark:border-sky-800/50'
-                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
+                            ? 'bg-sky-600 text-white shadow-sm'
+                            : 'text-slate-800 dark:text-slate-200 bg-white/70 dark:bg-slate-900/70 hover:bg-white dark:hover:bg-slate-800 border border-slate-200/60 dark:border-slate-800'
                         }`}
                       >
-                        <div className="flex items-center space-x-2.5">
-                          <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-sky-600 dark:text-sky-400' : 'text-slate-400 dark:text-slate-500'}`} />
-                          <span>{item.label}</span>
+                        <div className="flex items-center space-x-2.5 truncate">
+                          <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-sky-500 dark:text-sky-400'}`} />
+                          <span className="truncate">{item.label}</span>
                         </div>
                         {item.badge && (
-                          <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${
-                            isActive
-                              ? 'bg-sky-200/60 dark:bg-sky-900/60 text-sky-800 dark:text-sky-200'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                          <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono shrink-0 ${
+                            isActive ? 'bg-white/20 text-white' : 'bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300'
                           }`}>
                             {item.badge}
                           </span>
@@ -317,13 +536,61 @@ export const AppShell: React.FC<AppShellProps> = ({
                   })}
                 </div>
               </div>
-            ))}
+            )}
+
+            {/* FULL ARCHITECTURE DOMAIN GROUPS */}
+            <div className="space-y-4">
+              {navItems.map((group) => (
+                <div key={group.group}>
+                  <div className="px-2.5 mb-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 tracking-wider uppercase">
+                    {group.group}
+                  </div>
+                  <div className="space-y-0.5">
+                    {group.items.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = activeView === item.id;
+                      const isPriority = isLensPrioritized && activeLens.priorityViews.includes(item.id as ActiveNavView);
+
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => setActiveView(item.id as ActiveNavView)}
+                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+                            isActive
+                              ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-semibold border border-sky-200/80 dark:border-sky-800/50'
+                              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2.5 truncate">
+                            <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-sky-600 dark:text-sky-400' : 'text-slate-400'}`} />
+                            <span className="truncate">{item.label}</span>
+                          </div>
+                          {item.badge ? (
+                            <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono shrink-0 ${
+                              item.badge.includes('Active') || item.badge.includes('Pending') || item.badge.includes('Action')
+                                ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                            }`}>
+                              {item.badge}
+                            </span>
+                          ) : isPriority ? (
+                            <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" title="Item prioritário para seu papel" />
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
           </div>
 
-          <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+          {/* Sidebar Footer */}
+          <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-1">
             <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-              <span className="font-mono-code text-[10px]">CG-AG OS v1.2.0</span>
-              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+              <span className="font-mono text-[10px]">{activeLens.shortLabel}</span>
+              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold text-[10px]">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Operational
               </span>
             </div>
@@ -337,6 +604,14 @@ export const AppShell: React.FC<AppShellProps> = ({
           </div>
         </main>
       </div>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialTab={authModalTab}
+      />
+
     </div>
   );
 };

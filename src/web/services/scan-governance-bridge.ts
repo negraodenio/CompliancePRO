@@ -133,13 +133,21 @@ export class ScanGovernanceBridge {
     const rawAgents = result.source?.agents || [];
     const extractedAgents: IngestedAgentEntity[] = rawAgents.map((ag: any, idx: number) => {
       const agentId = ag.id || ('AGT-SCAN-' + String(idx + 1).padStart(3, '0') + '-' + ag.name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8));
-      const tools = (ag.tools || []).map((t: any) => ({
+      const agentCapabilities = (result.agentCapabilities || []).filter(c => c.agentName === ag.name || ag.name.includes(c.agentName) || c.agentName.includes(ag.name));
+      const discoveredTools = agentCapabilities.map(c => ({
+        name: `${c.systemName}: ${c.resourceTarget} [${c.action}]`,
+        permission: (c.action === 'DELETE' || c.action === 'ADMIN' || c.isDestructive ? 'EXECUTE_HIGH_PRIVILEGE' : c.action === 'WRITE' ? 'READ_WRITE' : 'READ_ONLY') as any,
+        boundary: `${c.systemName} (${c.state})`
+      }));
+
+      const tools = discoveredTools.length > 0 ? discoveredTools : (ag.tools || []).map((t: any) => ({
         name: typeof t === 'string' ? t : t.name || 'CustomTool',
         permission: (typeof t === 'object' && t.permission ? t.permission : 'READ_WRITE') as any,
         boundary: typeof t === 'object' && t.boundary ? t.boundary : 'Local Application Scope'
       }));
 
-      const isHighRisk = tools.some((t: any) => t.permission === 'EXECUTE_HIGH_PRIVILEGE') || (ag.autonomyLevel && ag.autonomyLevel.includes('L4'));
+      const hasDestructiveCap = agentCapabilities.some(c => c.isDestructive || c.anomalies.includes('EXCESSIVE_WILDCARD_PERMISSION'));
+      const isHighRisk = hasDestructiveCap || tools.some((t: any) => t.permission === 'EXECUTE_HIGH_PRIVILEGE') || (ag.autonomyLevel && ag.autonomyLevel.includes('L4'));
 
       return {
         id: agentId,

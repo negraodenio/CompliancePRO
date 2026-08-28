@@ -2,7 +2,9 @@ import { AcademyView } from './views/AcademyView';
 import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { ThemeProvider } from './context/ThemeContext';
+import { AuthProvider } from './context/AuthContext';
 import { IndustryProvider } from './context/IndustryContext';
+import { RoleLensProvider } from './context/RoleLensContext';
 import { AppShell, ActiveNavView } from './components/AppShell';
 import { GovernanceCenter } from './views/GovernanceCenter';
 import { AiInventoryView } from './views/AiInventoryView';
@@ -24,6 +26,7 @@ import { GovernanceSimulatorView } from './views/GovernanceSimulatorView';
 import { OperationsCenterView } from './views/OperationsCenterView';
 import { ProductionDeploymentView } from './views/ProductionDeploymentView';
 import { SystemReadinessView } from './views/SystemReadinessView';
+import { TeamManagementView } from './views/TeamManagementView';
 import { HeroScanner } from './components/HeroScanner';
 import { AgentInventory } from './components/AgentInventory';
 import { RegulationsGrid } from './components/RegulationsGrid';
@@ -168,7 +171,9 @@ export const App: React.FC = () => {
 
   return (
     <ThemeProvider>
-      <IndustryProvider>
+      <AuthProvider>
+        <IndustryProvider>
+        <RoleLensProvider onNavigate={(view) => setActiveView(view)}>
         <AppShell 
           activeView={activeView} 
           setActiveView={setActiveView}
@@ -408,11 +413,15 @@ export const App: React.FC = () => {
             />
           )}
 
+                    {activeView === 'manage-team' && (
+            <TeamManagementView />
+          )}
+
           {activeView === 'govern-controls' && (
             <ControlsMatrixView result={scanResult} />
           )}
 
-          {!['overview-center', 'discover-inventory', 'discover-agents', 'discover-passports', 'discover-assessments', 'govern-risk', 'govern-policies', 'govern-compliance', 'operate-decisions', 'operate-approvals', 'operate-actions', 'tools-scanner', 'govern-controls', 'assure-simulator', 'assure-reports', 'assure-audit', 'assure-evidence', 'operate-runtime', 'operate-incidents'].includes(activeView) && (
+          {!['overview-center', 'discover-inventory', 'discover-agents', 'discover-passports', 'discover-assessments', 'govern-risk', 'govern-policies', 'govern-compliance', 'operate-decisions', 'operate-approvals', 'operate-actions', 'tools-scanner', 'govern-controls', 'assure-simulator', 'assure-reports', 'assure-audit', 'assure-evidence', 'operate-runtime', 'operate-incidents', 'manage-team'].includes(activeView) && (
             <div className="p-12 text-center bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-slate-800 elevation-card space-y-4">
               <div className="w-12 h-12 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center mx-auto">
                 <Lock className="w-6 h-6" />
@@ -437,7 +446,9 @@ export const App: React.FC = () => {
           {showExport && scanResult && <ReportExportModal result={scanResult} onClose={() => setShowExport(false)} />}
           {showAcademy && <AcademyModal onClose={() => setShowAcademy(false)} />}
         </AppShell>
+              </RoleLensProvider>
       </IndustryProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 };

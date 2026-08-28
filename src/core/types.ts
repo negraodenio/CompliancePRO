@@ -47,6 +47,10 @@ export interface ScannerResult {
   cicd?: import('../connectors/types').CiCdSignal[];
   /** Cloud AI infrastructure declarations from IaC files. */
   iacAi?: import('../connectors/types').IacAiSignal[];
+  /** AI Agent Capabilities & Permissions Discovery */
+  capabilitiesSummary?: CapabilitiesSummary;
+  agentCapabilities?: AgentCapability[];
+  agentIdentities?: AgentIdentityBinding[];
 }
 
 export interface RepoMetadata {
@@ -375,3 +379,94 @@ export interface ScannerEnrichment {
 }
 
 export type ScanResult = ScannerResult;
+
+
+// ==============================================================================
+// AI AGENT CAPABILITY, IDENTITY & PERMISSION DISCOVERY CONTRACTS
+// ==============================================================================
+
+export type CapabilityState = 
+  | 'OBSERVED_CAPABILITY'
+  | 'DECLARED_CAPABILITY'
+  | 'AUTHORIZED_CAPABILITY'
+  | 'USED_CAPABILITY'
+  | 'UNKNOWN_AUTHORIZATION';
+
+export type CapabilitySystemType = 
+  | 'database' 
+  | 'cloud_storage' 
+  | 'erp_crm' 
+  | 'mcp_server' 
+  | 'rest_api' 
+  | 'system_exec' 
+  | 'messaging' 
+  | 'office_365'
+  | 'llm_service';
+
+export type CapabilityActionType = 
+  | 'READ' 
+  | 'WRITE' 
+  | 'EXECUTE' 
+  | 'DELETE' 
+  | 'ADMIN' 
+  | 'WILDCARD';
+
+export type CapabilityAnomaly = 
+  | 'OBSERVED_BUT_UNAUTHORIZED'
+  | 'DECLARED_BUT_UNUSED'
+  | 'AUTHORIZED_BUT_UNUSED'
+  | 'EXCESSIVE_WILDCARD_PERMISSION'
+  | 'DESTRUCTIVE_ACTION_WITHOUT_HITL'
+  | 'IDENTITY_MISMATCH'
+  | 'PRIVILEGE_ESCALATION_RISK'
+  | 'CROSS_SYSTEM_ACCESS'
+  | 'SENSITIVE_DATA_ACCESS'
+  | 'CAPABILITY_DRIFT';
+
+export interface AgentIdentityBinding {
+  agentName: string;
+  identityType: 'service_account' | 'iam_role' | 'api_key' | 'oauth_token' | 'user_delegation' | 'unassigned';
+  identityName: string;
+  sourceFile: string;
+  roleMapped?: string;
+}
+
+export interface AgentCapability {
+  id: string;
+  agentName: string;
+  systemType: CapabilitySystemType;
+  systemName: string;
+  resourceTarget: string;
+  action: CapabilityActionType;
+  state: CapabilityState;
+  
+  filePath: string;
+  lineNumber?: number;
+  codeSnippet?: string;
+  isDestructive: boolean;
+  accessesSensitiveData: boolean;
+  
+  identity?: AgentIdentityBinding;
+
+  authorizationEvidence?: {
+    type: 'iam_policy' | 'oauth_scope' | 'db_grant' | 'rbac_role' | 'k8s_role' | 'none';
+    grantFile?: string;
+    grantSnippet?: string;
+    isWildcard: boolean;
+    grantedScope?: string;
+  };
+
+  anomalies: CapabilityAnomaly[];
+}
+
+export interface CapabilitiesSummary {
+  totalCapabilities: number;
+  observedCount: number;
+  declaredCount: number;
+  authorizedCount: number;
+  unknownAuthorizationCount: number;
+  usedCount: number;
+  destructiveCount: number;
+  wildcardCount: number;
+  anomaliesCount: number;
+}

@@ -25,6 +25,7 @@ import { classifyAllAgents, summarizeAIAct } from '../../core/classifier';
 import { detectConfigAgents } from '../../core/agent-detector';
 import { estimateModelCost } from '../../core/model-parser';
 import { detectCiCd, detectIacAi } from '../../connectors/cicd-iac';
+import { detectCapabilities } from '../../core/capability-detector';
 
 export interface ScanOptions {
   repoName?: string;
@@ -139,6 +140,9 @@ export async function runLocalScan(
     teams: ['AI Ethics', 'Security', 'Legal'],
   };
 
+  // 11. AI Agent Capability, Identity & Permission Discovery Engine
+  const { capabilities, identities, summary: capabilitiesSummary } = detectCapabilities(files, source);
+
   const result: ScannerResult = {
     repo: {
       name: repoName,
@@ -173,6 +177,9 @@ export async function runLocalScan(
     aiActSummary,
     cicd,
     iacAi,
+    capabilitiesSummary,
+    agentCapabilities: capabilities,
+    agentIdentities: identities,
     _costEstimate: {
       totalMonthlyUsd: totalMonthlyCost,
       estimatedMonthlyTokens,

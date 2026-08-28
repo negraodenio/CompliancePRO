@@ -1,0 +1,15 @@
+{
+  "5dcca2fad4aff0cdc0d2c6d67815f1170257a06ac492588d4957aa7ed242ac57": {
+    "id": "bd51f9b4-0cf1-43f6-aa4b-c9c0080c3840",
+    "organization_id": "7ddf20d4-14da-4371-bbc8-47611c694b5a",
+    "email": "test.dpo@enterprise.ai",
+    "enterprise_role": "DPO",
+    "admin_role": "member",
+    "token_hash": "5dcca2fad4aff0cdc0d2c6d67815f1170257a06ac492588d4957aa7ed242ac57",
+    "invited_by": null,
+    "status": "PENDING",
+    "expires_at": "2026-09-04T00:52:46.613150+00:00",
+    "created_at": "2026-08-28T00:52:46.613150+00:00",
+    "accepted_at": null
+  }
+}

@@ -1,0 +1,368 @@
+import {
+  AgentCapability,
+  AgentIdentityBinding,
+  CapabilitiesSummary,
+  CapabilityActionType,
+  CapabilityAnomaly,
+  CapabilityState,
+  CapabilitySystemType,
+  DetectedAgent,
+  SourceAnalysis
+} from './types';
+
+interface RawGrant {
+  type: 'iam_policy' | 'oauth_scope' | 'db_grant' | 'rbac_role' | 'k8s_role';
+  systemName: string;
+  resourceTarget: string;
+  actions: string[];
+  file: string;
+  snippet: string;
+  isWildcard: boolean;
+  roleOrUser?: string;
+}
+
+export function detectCapabilities(
+  files: Map<string, string>,
+  source: SourceAnalysis
+): {
+  capabilities: AgentCapability[];
+  identities: AgentIdentityBinding[];
+  summary: CapabilitiesSummary;
+} {
+  const capabilities: AgentCapability[] = [];
+  const identities: AgentIdentityBinding[] = [];
+  const knownGrants: RawGrant[] = [];
+
+  // 1. EXTRACT AUTHORIZATION GRANTS
+  for (const [filePath, content] of Array.from(files)) {
+    if (!content || content.length > 500000) continue;
+
+    if (filePath.endsWith('.tf') || filePath.endsWith('.json') || filePath.endsWith('.yaml') || filePath.endsWith('.yml')) {
+      if (/aws_iam_policy|aws_iam_role_policy/i.test(content) || /"Statement"\s*:\s*\[/i.test(content)) {
+        const hasWildcardAction = /"Action"\s*:\s*("\*"|\[\s*"\*"\s*\])/i.test(content) || /actions?\s*=\s*\[\s*"\*"\s*\]/i.test(content);
+        const hasWildcardResource = /"Resource"\s*:\s*("\*"|\[\s*"\*"\s*\])/i.test(content) || /resources?\s*=\s*\[\s*"\*"\s*\]/i.test(content);
+        
+        let systemName = 'AWS Cloud';
+        if (/s3|aws_s3/i.test(content)) systemName = 'AWS S3 Storage';
+        else if (/dynamodb|aws_dynamodb/i.test(content)) systemName = 'AWS DynamoDB';
+        else if (/sqs|sns/i.test(content)) systemName = 'AWS SQS/SNS';
+        
+        knownGrants.push({
+          type: 'iam_policy',
+          systemName,
+          resourceTarget: hasWildcardResource ? '*' : 'scoped_resource',
+          actions: hasWildcardAction ? ['*'] : ['scoped_action'],
+          file: filePath,
+          snippet: 'IAM Policy Statement definition',
+          isWildcard: hasWildcardAction || hasWildcardResource,
+          roleOrUser: 'terraform_iam_role'
+        });
+      }
+
+      if (/kind:\s*(ClusterRole|Role)\b/i.test(content)) {
+        const isWildcardVerb = /verbs:\s*\[\s*"\*"\s*\]/.test(content) || /-\s*"\*"\s*$/.test(content);
+        knownGrants.push({
+          type: 'k8s_role',
+          systemName: 'Kubernetes Cluster',
+          resourceTarget: '*',
+          actions: isWildcardVerb ? ['*'] : ['get', 'list'],
+          file: filePath,
+          snippet: 'Kubernetes RBAC Role definition',
+          isWildcard: isWildcardVerb,
+          roleOrUser: 'k8s_service_account'
+        });
+      }
+    }
+
+    if (/\.sql$/i.test(filePath) || /GRANT\s+/i.test(content)) {
+      const grantMatches = content.match(/GRANT\s+([\w\s,]+)\s+ON\s+([\w\.\*]+)\s+TO\s+([\w"']+)/gi);
+      if (grantMatches) {
+        for (const gm of grantMatches) {
+          const isAll = /ALL\s+PRIVILEGES/i.test(gm);
+          knownGrants.push({
+            type: 'db_grant',
+            systemName: 'Database (SQL)',
+            resourceTarget: gm.split(/ON\s+/i)[1]?.split(/\s+TO/i)[0]?.trim() || 'table',
+            actions: isAll ? ['*'] : ['SELECT', 'INSERT'],
+            file: filePath,
+            snippet: gm.slice(0, 100),
+            isWildcard: isAll,
+            roleOrUser: gm.split(/TO\s+/i)[1]?.trim() || 'db_user'
+          });
+        }
+      }
+    }
+
+    if (/scopes?\s*:\s*\[([^\]]+)\]/i.test(content) || /scope\s*=\s*['"]([^'"]+)['"]/i.test(content)) {
+      const scopeMatch = content.match(/scopes?\s*:\s*\[([^\]]+)\]/i) || content.match(/scope\s*=\s*['"]([^'"]+)['"]/i);
+      if (scopeMatch && scopeMatch[1]) {
+        const rawScopes = scopeMatch[1].replace(/['"]/g, '').split(/[,\s]+/);
+        for (const s of rawScopes) {
+          if (s.trim().length > 2) {
+            knownGrants.push({
+              type: 'oauth_scope',
+              systemName: s.includes('mail') || s.includes('graph') ? 'Microsoft Office 365' : s.includes('slack') ? 'Slack MCP' : 'OAuth API',
+              resourceTarget: s.trim(),
+              actions: s.includes('write') || s.includes('send') ? ['WRITE'] : ['READ'],
+              file: filePath,
+              snippet: `OAuth Scope: ${s.trim()}`,
+              isWildcard: s === '*' || s.includes('all'),
+              roleOrUser: 'oauth_app'
+            });
+          }
+        }
+      }
+    }
+
+    if (/service_account|client_email|GOOGLE_APPLICATION_CREDENTIALS|serviceAccountKey/i.test(content)) {
+      identities.push({
+        agentName: 'SystemAgent',
+        identityType: 'service_account',
+        identityName: filePath.split('/').pop() || 'service_account.json',
+        sourceFile: filePath
+      });
+    }
+  }
+
+  // 2. DISCOVER AGENTS, TOOLS, MCP & CODE ACTIONS
+  const agentsList = source.agents || [];
+  let capSeq = 0;
+
+  for (const [filePath, content] of Array.from(files)) {
+    if (!content || content.length > 500000) continue;
+    const filename = filePath.split('/').pop() || filePath;
+    const lines = content.split('\n');
+
+    const matchedAgent = agentsList.find(a => 
+      (a.filePath && a.filePath === filePath) || 
+      filePath.toLowerCase().includes(a.name.toLowerCase()) ||
+      content.includes(a.name)
+    );
+    const agentName = matchedAgent ? matchedAgent.name : `Agent_${filename.replace(/\.[^.]+$/, '')}`;
+
+    // 2.1 DECLARED CAPABILITIES
+    const declaredToolsMatch = content.match(/tools\s*=\s*\[([^\]]*)\]/i);
+    if (declaredToolsMatch && declaredToolsMatch[1]) {
+      const toolNames = declaredToolsMatch[1].replace(/['"]/g, '').split(',');
+      for (const tn of toolNames) {
+        const cleanName = tn.trim();
+        if (cleanName && cleanName.length > 1 && !cleanName.startsWith('@')) {
+          capabilities.push({
+            id: `CAP-DEC-${++capSeq}`,
+            agentName,
+            systemType: 'llm_service',
+            systemName: 'Agent Framework Tooling',
+            resourceTarget: cleanName,
+            action: 'EXECUTE',
+            state: 'DECLARED_CAPABILITY',
+            filePath,
+            isDestructive: /delete|drop|remove|destroy|truncate|terminate/i.test(cleanName),
+            accessesSensitiveData: /pii|customer|financial|patient|credit|cpf|tax/i.test(cleanName),
+            anomalies: []
+          });
+        }
+      }
+    }
+
+    // 2.2 MCP TOOLS
+    if (/@modelcontextprotocol\/sdk|mcp\.server|StdioServerTransport/i.test(content) || /ListToolsRequestSchema/i.test(content)) {
+      const mcpToolMatches = content.match(/server\.tool\s*\(\s*['"]([^'"]+)['"]/g);
+      const mcpToolNames = mcpToolMatches 
+        ? mcpToolMatches.map(m => m.replace(/server\.tool\s*\(\s*['"]/, '').replace(/['"]$/, ''))
+        : ['mcp_stdio_tool'];
+
+      for (const mTool of mcpToolNames) {
+        capabilities.push({
+          id: `CAP-MCP-${++capSeq}`,
+          agentName,
+          systemType: 'mcp_server',
+          systemName: 'Model Context Protocol (MCP)',
+          resourceTarget: mTool.trim(),
+          action: 'EXECUTE',
+          state: 'OBSERVED_CAPABILITY',
+          filePath,
+          isDestructive: /delete|exec|shell|drop|rm/i.test(mTool),
+          accessesSensitiveData: /user|contact|invoice|lead/i.test(mTool),
+          anomalies: ['OBSERVED_BUT_UNAUTHORIZED']
+        });
+      }
+    }
+
+    // 2.3 AST ACTIONS PER LINE
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      if (/DROP\s+TABLE|TRUNCATE\s+TABLE|DELETE\s+FROM/i.test(line)) {
+        const tableMatch = line.match(/(?:DROP\s+TABLE|TRUNCATE\s+TABLE|DELETE\s+FROM)\s+([\w\."]+)/i);
+        const table = tableMatch ? tableMatch[1].replace(/["']/g, '') : 'database_table';
+        const hasSensitive = /customer|user|account|patient|card|auth|token/i.test(table);
+
+        const matchingGrant = knownGrants.find(g => g.type === 'db_grant' && (g.isWildcard || g.resourceTarget.includes(table)));
+
+        capabilities.push({
+          id: `CAP-DB-${++capSeq}`,
+          agentName,
+          systemType: 'database',
+          systemName: 'Relational Database (SQL)',
+          resourceTarget: table,
+          action: 'DELETE',
+          state: matchingGrant ? 'AUTHORIZED_CAPABILITY' : 'UNKNOWN_AUTHORIZATION',
+          filePath,
+          lineNumber: i + 1,
+          codeSnippet: line.trim().slice(0, 120),
+          isDestructive: true,
+          accessesSensitiveData: hasSensitive,
+          authorizationEvidence: matchingGrant ? {
+            type: 'db_grant',
+            grantFile: matchingGrant.file,
+            grantSnippet: matchingGrant.snippet,
+            isWildcard: matchingGrant.isWildcard
+          } : undefined,
+          anomalies: matchingGrant 
+            ? ['DESTRUCTIVE_ACTION_WITHOUT_HITL'] 
+            : ['OBSERVED_BUT_UNAUTHORIZED', 'DESTRUCTIVE_ACTION_WITHOUT_HITL']
+        });
+      }
+      else if (/\.from\(['"](\w+)['"]\)\.(select|insert|update)/i.test(line) || /SELECT\s+.*FROM\s+(\w+)/i.test(line)) {
+        const tableMatch = line.match(/\.from\(['"](\w+)['"]\)/i) || line.match(/FROM\s+(\w+)/i);
+        const isWrite = line.includes('insert') || line.includes('update');
+        const table = tableMatch ? tableMatch[1] : 'table';
+        const hasSensitive = /cpf|email|credit|salary|phone|address|patient|health|customer|invoice|user/i.test(table) || /cpf|salary|credit_score|password|ssn/i.test(line);
+
+        const matchingGrant = knownGrants.find(g => g.type === 'db_grant' && (g.isWildcard || g.resourceTarget.includes(table)));
+
+        capabilities.push({
+          id: `CAP-DB-${++capSeq}`,
+          agentName,
+          systemType: 'database',
+          systemName: 'PostgreSQL / Database',
+          resourceTarget: table,
+          action: isWrite ? 'WRITE' : 'READ',
+          state: matchingGrant ? 'AUTHORIZED_CAPABILITY' : 'OBSERVED_CAPABILITY',
+          filePath,
+          lineNumber: i + 1,
+          codeSnippet: line.trim().slice(0, 120),
+          isDestructive: false,
+          accessesSensitiveData: hasSensitive,
+          authorizationEvidence: matchingGrant ? {
+            type: 'db_grant',
+            grantFile: matchingGrant.file,
+            grantSnippet: matchingGrant.snippet,
+            isWildcard: matchingGrant.isWildcard
+          } : undefined,
+          anomalies: matchingGrant ? [] : ['OBSERVED_BUT_UNAUTHORIZED']
+        });
+      }
+
+      if (/boto3\.client\(['"]s3['"]\)|s3Client\.send|new\s+S3Client/i.test(line) || /deleteObject|deleteBucket|delete_object/i.test(line)) {
+        const isDelete = /delete/i.test(line);
+        const matchingIam = knownGrants.find(g => g.type === 'iam_policy' && g.systemName.includes('S3'));
+
+        capabilities.push({
+          id: `CAP-S3-${++capSeq}`,
+          agentName,
+          systemType: 'cloud_storage',
+          systemName: 'AWS S3 Cloud Storage',
+          resourceTarget: matchingIam?.isWildcard ? '*' : 's3://enterprise-data-bucket',
+          action: isDelete ? 'DELETE' : matchingIam?.isWildcard ? 'WILDCARD' : 'WRITE',
+          state: matchingIam ? 'AUTHORIZED_CAPABILITY' : 'UNKNOWN_AUTHORIZATION',
+          filePath,
+          lineNumber: i + 1,
+          codeSnippet: line.trim().slice(0, 120),
+          isDestructive: isDelete,
+          accessesSensitiveData: true,
+          authorizationEvidence: matchingIam ? {
+            type: 'iam_policy',
+            grantFile: matchingIam.file,
+            grantSnippet: matchingIam.snippet,
+            isWildcard: matchingIam.isWildcard
+          } : undefined,
+          anomalies: matchingIam?.isWildcard 
+            ? ['EXCESSIVE_WILDCARD_PERMISSION'] 
+            : matchingIam 
+              ? [] 
+              : ['OBSERVED_BUT_UNAUTHORIZED']
+        });
+      }
+
+      if (/child_process\.(exec|spawn|execSync)|subprocess\.(Popen|run|call)|os\.system/i.test(line)) {
+        capabilities.push({
+          id: `CAP-EXEC-${++capSeq}`,
+          agentName,
+          systemType: 'system_exec',
+          systemName: 'Operating System Shell (CLI)',
+          resourceTarget: '/bin/sh / bash',
+          action: 'EXECUTE',
+          state: 'UNKNOWN_AUTHORIZATION',
+          filePath,
+          lineNumber: i + 1,
+          codeSnippet: line.trim().slice(0, 120),
+          isDestructive: true,
+          accessesSensitiveData: false,
+          anomalies: ['OBSERVED_BUT_UNAUTHORIZED', 'DESTRUCTIVE_ACTION_WITHOUT_HITL', 'PRIVILEGE_ESCALATION_RISK']
+        });
+      }
+
+      if (/graph\.microsoft\.com|salesforce\.com|hubspot\.com|zendesk\.com/i.test(line)) {
+        const isOffice = line.includes('microsoft');
+        const matchingOauth = knownGrants.find(g => g.type === 'oauth_scope' && (isOffice ? g.systemName.includes('Office') : true));
+
+        capabilities.push({
+          id: `CAP-ERP-${++capSeq}`,
+          agentName,
+          systemType: isOffice ? 'office_365' : 'erp_crm',
+          systemName: isOffice ? 'Microsoft 365 Graph API' : 'ERP / CRM Cloud',
+          resourceTarget: isOffice ? 'Mail & OneDrive' : 'Customer & Deals Records',
+          action: 'READ',
+          state: matchingOauth ? 'AUTHORIZED_CAPABILITY' : 'UNKNOWN_AUTHORIZATION',
+          filePath,
+          lineNumber: i + 1,
+          codeSnippet: line.trim().slice(0, 120),
+          isDestructive: false,
+          accessesSensitiveData: true,
+          authorizationEvidence: matchingOauth ? {
+            type: 'oauth_scope',
+            grantFile: matchingOauth.file,
+            grantSnippet: matchingOauth.snippet,
+            isWildcard: matchingOauth.isWildcard
+          } : undefined,
+          anomalies: matchingOauth ? ['CROSS_SYSTEM_ACCESS'] : ['OBSERVED_BUT_UNAUTHORIZED', 'CROSS_SYSTEM_ACCESS']
+        });
+      }
+    }
+  }
+
+  // 3. DEDUPLICATION & SUMMARY
+  const dedupedMap = new Map<string, AgentCapability>();
+  for (const c of capabilities) {
+    const key = `${c.agentName}:${c.systemType}:${c.resourceTarget}:${c.action}`;
+    if (!dedupedMap.has(key)) {
+      dedupedMap.set(key, c);
+    } else {
+      const existing = dedupedMap.get(key)!;
+      for (const a of c.anomalies) {
+        if (!existing.anomalies.includes(a)) existing.anomalies.push(a);
+      }
+    }
+  }
+
+  const finalCapabilities = Array.from(dedupedMap.values());
+
+  const summary: CapabilitiesSummary = {
+    totalCapabilities: finalCapabilities.length,
+    observedCount: finalCapabilities.filter(c => c.state === 'OBSERVED_CAPABILITY').length,
+    declaredCount: finalCapabilities.filter(c => c.state === 'DECLARED_CAPABILITY').length,
+    authorizedCount: finalCapabilities.filter(c => c.state === 'AUTHORIZED_CAPABILITY').length,
+    unknownAuthorizationCount: finalCapabilities.filter(c => c.state === 'UNKNOWN_AUTHORIZATION').length,
+    usedCount: finalCapabilities.filter(c => c.state === 'USED_CAPABILITY' || c.state === 'OBSERVED_CAPABILITY').length,
+    destructiveCount: finalCapabilities.filter(c => c.isDestructive).length,
+    wildcardCount: finalCapabilities.filter(c => c.action === 'WILDCARD' || c.authorizationEvidence?.isWildcard).length,
+    anomaliesCount: finalCapabilities.reduce((acc, c) => acc + c.anomalies.length, 0)
+  };
+
+  return {
+    capabilities: finalCapabilities,
+    identities,
+    summary
+  };
+}
