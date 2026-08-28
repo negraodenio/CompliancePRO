@@ -70,9 +70,22 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
 
   const findingsDecomp = xray.findingsDecomposition || {
     totalTechnicalFindings: violations.length,
-    highPriorityGovernanceFindings: violations.filter(v => v.severity === 'critical' || v.severity === 'high').length,
-    productionScopeHighRiskFindings: violations.filter(v => v.severity === 'critical' || v.severity === 'high').length
+    highPriorityGovernanceFindings: scopeDecomp.productionCount,
+    productionScopeHighRiskFindings: scopeDecomp.productionCount
   };
+
+  // Sort capabilities: production first -> infrastructure -> example -> benchmark -> test -> unknown
+  const sortedCapabilities = [...capabilities].sort((a, b) => {
+    const scopePriority = (s?: string) => {
+      if (s === 'production') return 1;
+      if (s === 'infrastructure') return 2;
+      if (s === 'example') return 3;
+      if (s === 'benchmark') return 4;
+      if (s === 'test' || s === 'fixture') return 5;
+      return 6;
+    };
+    return scopePriority(a.scope) - scopePriority(b.scope);
+  });
 
   useEffect(() => {
     FunnelAnalytics.track('SNAPSHOT_VIEWED', {
@@ -97,6 +110,23 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
       case 'UNKNOWN_AUTHORIZATION':
       default:
         return 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20';
+    }
+  };
+
+  const getScopeBadge = (scope?: string) => {
+    switch (scope) {
+      case 'production':
+        return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold';
+      case 'infrastructure':
+        return 'bg-sky-500/20 text-sky-300 border-sky-500/40';
+      case 'test':
+      case 'fixture':
+        return 'bg-slate-800 text-slate-400 border-slate-700';
+      case 'example':
+      case 'benchmark':
+        return 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+      default:
+        return 'bg-slate-800/80 text-slate-500 border-slate-700';
     }
   };
 
@@ -142,10 +172,10 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
                 01 · AI Governance Snapshot
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-                Technical Ground Truth from {result.repo?.name || 'Scanned Project'}
+                Discover what your AI code exposes — before you deploy, govern or audit it.
               </h2>
-              <p className="text-sm text-slate-300 leading-relaxed">
-                We discovered <strong className="text-sky-300">{agents.length} AI components</strong> and <strong className="text-cyan-300">{capabilities.length} operational capabilities</strong> in your scanned code.
+              <p className="text-sm text-slate-300 leading-relaxed max-w-4xl">
+                Technical Ground Truth from <strong className="text-white">{result.repo?.name || 'Scanned Project'}</strong>: We discovered <strong className="text-sky-300">{agents.length} AI components</strong> and <strong className="text-cyan-300">{capabilities.length} operational capabilities</strong> in your scanned code.
                 Below is the exact decomposition across production exposure, non-production supporting findings, and missing governance evidence.
               </p>
             </div>
@@ -172,22 +202,22 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
             <p className="text-[10px] text-slate-400">Total Code Invocations</p>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-900/80 border border-emerald-500/20 bg-emerald-950/10 space-y-1">
+          <div className="p-4 rounded-2xl bg-slate-900/80 border border-emerald-500/30 bg-emerald-950/15 space-y-1">
             <div className="flex items-center justify-between text-emerald-400">
               <span className="text-[11px] font-semibold uppercase tracking-wider">Production</span>
               <Server className="w-4 h-4 text-emerald-400" />
             </div>
             <p className="text-2xl font-bold text-emerald-400 font-mono">{scopeDecomp.productionCount}</p>
-            <p className="text-[10px] text-emerald-400/80">Production-Scope Caps</p>
+            <p className="text-[10px] text-emerald-400/80">Production Exposure</p>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
             <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[11px] font-semibold uppercase tracking-wider">Supporting / Test</span>
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Supporting</span>
               <FolderGit2 className="w-4 h-4 text-slate-400" />
             </div>
-            <p className="text-2xl font-bold text-slate-300 font-mono">{scopeDecomp.nonProductionCount}</p>
-            <p className="text-[10px] text-slate-400">Tests, Benchmarks & Demos</p>
+            <p className="text-2xl font-bold text-slate-300 font-mono">{scopeDecomp.nonProductionCount + scopeDecomp.infrastructureCount}</p>
+            <p className="text-[10px] text-slate-400">Infra, Tests & Demos</p>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-900/80 border border-rose-500/20 bg-rose-950/10 space-y-1">
@@ -225,7 +255,7 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
             </span>
             <span className="flex items-center gap-1.5 text-sky-400">
               <span className="w-2 h-2 rounded-full bg-sky-400" />
-              <strong>{scopeDecomp.infrastructureCount}</strong> Infrastructure
+              <strong>{scopeDecomp.infrastructureCount}</strong> Infrastructure & Migrations
             </span>
             {scopeDecomp.unknownCount > 0 && (
               <span className="flex items-center gap-1.5 text-slate-400">
@@ -237,7 +267,7 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
           <div className="flex items-center gap-3 text-[11px] text-slate-400 border-t md:border-t-0 md:border-l border-slate-800 pt-2 md:pt-0 md:pl-4">
             <span><strong>{findingsDecomp.totalTechnicalFindings}</strong> Technical Code Findings</span>
             <span>•</span>
-            <span className="text-amber-400"><strong>{findingsDecomp.highPriorityGovernanceFindings}</strong> High-Priority Governance</span>
+            <span className="text-amber-400 font-bold"><strong>{findingsDecomp.highPriorityGovernanceFindings}</strong> High-Priority Governance Findings</span>
           </div>
         </div>
       </section>
@@ -259,9 +289,12 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
             <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
               What does this AI actually do to your business?
             </h3>
+            <p className="text-xs text-slate-300 leading-relaxed pt-0.5">
+              The scanned code indicates that AI components participate in software development workflows, including data inspection, file operations and automated task execution.
+            </p>
           </div>
           {xray.domainContext && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-mono">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-mono flex-shrink-0">
               <Building2 className="w-3.5 h-3.5 text-indigo-400" />
               <span>Inferred Domain: <strong>{xray.domainContext.domain}</strong></span>
               <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-200">
@@ -362,13 +395,13 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
             </div>
           </div>
 
-          <div className="p-5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
-            <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-              <Shield className="w-4 h-4 text-rose-400" />
+          <div className="p-5 rounded-2xl bg-slate-950/60 border border-emerald-500/30 bg-emerald-950/10 space-y-2">
+            <div className="flex items-center gap-2 text-emerald-400 text-xs font-semibold uppercase tracking-wider">
+              <Server className="w-4 h-4 text-emerald-400" />
               <span>Production Exposure</span>
             </div>
-            <p className="text-sm font-bold text-slate-200">{xray.impact.productionExposureSummary || 'Based on capabilities in production code'}</p>
-            <p className="text-[11px] text-rose-400/90 font-mono">Status: {xray.impact.governanceStatus}</p>
+            <p className="text-sm font-bold text-white">{scopeDecomp.productionCount} capabilities identified in production code</p>
+            <p className="text-[11px] text-rose-400/90 font-mono">Governance: Evidence Not Verified in Scanned Scope</p>
           </div>
         </div>
       </section>
@@ -382,7 +415,7 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
           <div className="flex items-center space-x-2 text-sky-400">
             <Shield className="w-5 h-5 text-sky-400" />
             <span className="text-xs font-mono font-bold uppercase tracking-wider">
-              04 · Canonical Governance Invariant
+              04 · Production Exposure & Canonical Governance Invariant
             </span>
           </div>
           <h3 className="text-lg sm:text-xl font-extrabold text-white">
@@ -393,7 +426,7 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
           </p>
         </div>
 
-        {/* Capabilities Discovery Matrix */}
+        {/* Capabilities Discovery Matrix (Ordered by Production Exposure) */}
         <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4 shadow-xl">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
             <div>
@@ -401,11 +434,16 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
                 Discovered Agent Capabilities & Permission Boundaries
               </h4>
               <p className="text-xs text-slate-400">
-                The canonical chain: Agent → Identity → Role → System → Resource → Action → Authorization Evidence
+                Prioritized by operational scope: Production Exposure → Infrastructure → Non-Production / Supporting Tools
               </p>
             </div>
-            <div className="text-xs font-mono text-cyan-400 font-bold">
-              {capabilities.length} Capabilities Discovered
+            <div className="flex items-center gap-2 text-xs font-mono">
+              <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
+                {scopeDecomp.productionCount} Production
+              </span>
+              <span className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                {capabilities.length} Total
+              </span>
             </div>
           </div>
 
@@ -414,6 +452,7 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-slate-800 text-slate-400 font-mono text-[11px]">
+                    <th className="py-2.5 px-3">Scope</th>
                     <th className="py-2.5 px-3">Agent / Origin</th>
                     <th className="py-2.5 px-3">System & Resource</th>
                     <th className="py-2.5 px-3">Action</th>
@@ -423,11 +462,16 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 font-mono">
-                  {capabilities.slice(0, 8).map((cap, idx) => (
-                    <tr key={idx} className="hover:bg-slate-800/30 transition">
+                  {sortedCapabilities.slice(0, 10).map((cap, idx) => (
+                    <tr key={idx} className={`hover:bg-slate-800/30 transition ${cap.scope === 'production' ? 'bg-emerald-950/5' : ''}`}>
+                      <td className="py-3 px-3">
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-mono border ${getScopeBadge(cap.scope)}`}>
+                          {cap.scope ? cap.scope.toUpperCase() : 'UNKNOWN'}
+                        </span>
+                      </td>
                       <td className="py-3 px-3">
                         <span className="font-semibold text-sky-300 block">{cap.agentName}</span>
-                        <span className="text-[10px] text-slate-500 font-mono">Scope: {cap.scope || 'unknown'}</span>
+                        <span className="text-[10px] text-slate-500 font-mono truncate max-w-[140px] block">{cap.filePath || 'scanned file'}</span>
                       </td>
                       <td className="py-3 px-3">
                         <span className="text-slate-200 block truncate max-w-[200px]" title={cap.resourceTarget}>
@@ -475,9 +519,9 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
                   ))}
                 </tbody>
               </table>
-              {capabilities.length > 8 && (
+              {capabilities.length > 10 && (
                 <p className="text-center text-xs text-slate-400 pt-3">
-                  Showing 8 of {capabilities.length} capabilities. Unlock full inventory in CG-AG Governance OS.
+                  Showing top 10 of {capabilities.length} capabilities. Unlock full inventory in CG-AG Governance OS.
                 </p>
               )}
             </div>

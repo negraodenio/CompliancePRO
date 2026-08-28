@@ -381,6 +381,7 @@ export function detectCapabilities(
         : ['mcp_stdio_tool'];
 
       for (const mTool of mcpToolNames) {
+        const mcpScope = classifyScopeFromPath(filePath);
         capabilities.push({
           id: `CAP-MCP-${++capSeq}`,
           agentName,
@@ -392,6 +393,12 @@ export function detectCapabilities(
           filePath,
           isDestructive: /delete|exec|shell|drop|rm/i.test(mTool),
           accessesSensitiveData: /user|contact|invoice|lead/i.test(mTool),
+          scope: mcpScope,
+          provenance: {
+            primaryScope: mcpScope,
+            scopes: [mcpScope],
+            filePaths: [filePath]
+          },
           anomalies: ['OBSERVED_WITHOUT_VERIFIED_AUTH']
         });
       }
@@ -402,11 +409,15 @@ export function detectCapabilities(
       const line = lines[i];
       
       if (/DROP\s+TABLE|TRUNCATE\s+TABLE|DELETE\s+FROM/i.test(line)) {
-        const tableMatch = line.match(/(?:DROP\s+TABLE|TRUNCATE\s+TABLE|DELETE\s+FROM)\s+([\w\."]+)/i);
-        const table = tableMatch ? tableMatch[1].replace(/["']/g, '') : 'database_table';
+        const tableMatch = line.match(/(?:DROP\s+TABLE(?:\s+IF\s+EXISTS)?|TRUNCATE\s+TABLE|DELETE\s+FROM)\s+([\w\."]+)/i);
+        let table = tableMatch ? tableMatch[1].replace(/["']/g, '') : 'database_table';
+        if (table.toUpperCase() === 'IF' || table.toUpperCase() === 'EXISTS') {
+          table = 'database_table';
+        }
         const hasSensitive = /customer|user|account|patient|card|auth|token/i.test(table);
 
         const matchingGrant = knownGrants.find(g => g.type === 'db_grant' && (g.isWildcard || g.resourceTarget.includes(table)));
+        const delDbScope = classifyScopeFromPath(filePath);
 
         capabilities.push({
           id: `CAP-DB-${++capSeq}`,
@@ -421,6 +432,12 @@ export function detectCapabilities(
           codeSnippet: line.trim().slice(0, 120),
           isDestructive: true,
           accessesSensitiveData: hasSensitive,
+          scope: delDbScope,
+          provenance: {
+            primaryScope: delDbScope,
+            scopes: [delDbScope],
+            filePaths: [filePath]
+          },
           authorizationEvidence: matchingGrant ? {
             type: 'db_grant',
             grantFile: matchingGrant.file,
