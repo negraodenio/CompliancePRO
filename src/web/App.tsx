@@ -215,28 +215,37 @@ export const App: React.FC = () => {
                     {activeView === 'tools-deployment' && <ProductionDeploymentView />}
           {activeView === 'tools-scanner' && (
             <div className="space-y-6">
-              <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
-                <div className="flex items-center space-x-2 text-xs font-semibold text-sky-600 dark:text-sky-400 uppercase tracking-wider">
-                  <span>Tools & Ingestion Sensors</span>
+              {/* Header Banner */}
+              <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-sky-950/40 to-slate-900 border border-slate-800 text-white shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+                <div className="relative z-10 space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <span className="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-wider uppercase bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                      SENSOR & INGESTION SUITE
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800/80 text-slate-300 border border-slate-700">
+                      AST v1.4.0
+                    </span>
+                  </div>
+                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center space-x-2.5">
+                    <Terminal className="w-6 h-6 text-sky-400" />
+                    <span>Codebase & Repository AST Scanner</span>
+                  </h1>
+                  <p className="text-xs sm:text-sm text-slate-400 max-w-3xl leading-relaxed">
+                    Ingestão e análise estática profunda de repositórios para detecção contínua de agentes de IA, fluxos SIPOC, ferramentas MCP, Shadow AI e violações regulatórias.
+                  </p>
                 </div>
-                <h1 className="text-xl font-bold text-slate-900 dark:text-white mt-0.5">
-                  Codebase & Repository AST Scanner
-                </h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Ingest local codebases, GitHub repositories, or ZIP archives to detect agents, tools, Shadow AI, and feed findings into the Governance Control Plane.
-                </p>
               </div>
 
-              <div className="bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-slate-800 p-6 elevation-card">
-                <HeroScanner 
-                  onScanGitHub={handleScanGitHub}
-                  onScanZip={handleScanZip}
-                  onScanFolder={handleScanFolder}
-                  onSelectDemo={handleSelectDemo}
-                  isScanning={isScanning}
-                  scanProgress={scanProgress}
-                />
-              </div>
+              {/* Ingestion Console & Workstation */}
+              <HeroScanner 
+                onScanGitHub={handleScanGitHub}
+                onScanZip={handleScanZip}
+                onScanFolder={handleScanFolder}
+                onSelectDemo={handleSelectDemo}
+                isScanning={isScanning}
+                scanProgress={scanProgress}
+              />
 
               {scanResult && (
                 <div className="space-y-6 animate-fadeIn">
@@ -266,21 +275,21 @@ export const App: React.FC = () => {
                       <div className="flex items-center gap-2 flex-wrap">
                         <button
                           onClick={() => setActiveView('discover-agents')}
-                          className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm"
+                          className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm cursor-pointer"
                         >
                           <Bot className="w-3.5 h-3.5" />
                           <span>Ver Agentes & SIPOC ({scanResult.source?.agents?.length || 0}) ➔</span>
                         </button>
                         <button
                           onClick={() => setActiveView('operate-decisions')}
-                          className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition border border-slate-700 flex items-center space-x-1.5"
+                          className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition border border-slate-700 flex items-center space-x-1.5 cursor-pointer"
                         >
                           <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
                           <span>Decisões & Riscos ➔</span>
                         </button>
                         <button
                           onClick={() => setActiveView('assure-evidence')}
-                          className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition border border-slate-700 flex items-center space-x-1.5"
+                          className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition border border-slate-700 flex items-center space-x-1.5 cursor-pointer"
                         >
                           <Lock className="w-3.5 h-3.5 text-cyan-400" />
                           <span>Evidência RFC 8785 ➔</span>
@@ -318,15 +327,6 @@ export const App: React.FC = () => {
 
                   {/* Clean Code Violations & AST Findings Sensor Output */}
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2 text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                        <Terminal className="w-4 h-4 text-sky-500" />
-                        <span>Diagnóstico de Código AST & Regras de Conformidade</span>
-                      </div>
-                      <span className="text-xs text-slate-500">
-                        {(scanResult.violations?.length || 0) + (scanResult.risks?.length || 0)} violações identificadas no repositório
-                      </span>
-                    </div>
                     <ViolationsList result={scanResult} />
                   </div>
                 </div>
