@@ -23,6 +23,7 @@ import {
   Database,
   BookOpen,
   FileBadge,
+  FileDown,
   Check,
   Binary
 } from 'lucide-react';
@@ -53,6 +54,32 @@ export const ProtectedEvidenceView: React.FC<{ result?: ScannerResult | null }> 
     refreshState();
     return EvidenceStore.subscribe(refreshState);
   }, []);
+
+  const handleDownloadEvidence = (record: any) => {
+    if (!record) return;
+    const data = {
+      evidenceId: record.evidenceId,
+      title: record.title,
+      sourceEntity: record.sourceEntity,
+      controlId: record.controlId,
+      controlName: record.controlName,
+      integrityDigest: record.integrityDigest,
+      canonicalizationStatus: record.canonicalizationStatus,
+      retentionPolicy: record.retentionPolicy,
+      auditLedgerRef: record.auditLedgerRef,
+      payloadData: record.payloadData,
+      downloadedAt: new Date().toISOString()
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Evidence_Proof_${record.evidenceId}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const handleVerifyIntegrity = (evidenceId: string) => {
     const res = EvidenceStore.verifyRecordIntegrity(evidenceId);
@@ -433,6 +460,14 @@ export const ProtectedEvidenceView: React.FC<{ result?: ScannerResult | null }> 
                       <pre className="p-3 bg-slate-900 text-slate-200 font-mono-code text-[11px] rounded-lg overflow-x-auto">
                         {JSON.stringify(selectedRecord.payloadData, null, 2)}
                       </pre>
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadEvidence(selectedRecord)}
+                        className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                      >
+                        <FileDown className="w-4 h-4" />
+                        <span>Download Canonical Evidence Proof (JSON)</span>
+                      </button>
                     </div>
                   </div>
                 )}

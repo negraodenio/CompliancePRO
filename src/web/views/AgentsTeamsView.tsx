@@ -225,6 +225,34 @@ const INITIAL_AGENTS: AgentEntity[] = [
 
 export const AgentsTeamsView: React.FC<{ result?: ScannerResult | null }> = ({ result }) => {
   const { activeProfile } = useIndustry();
+
+  const handleExportPassport = (agent: any) => {
+    if (!agent) return;
+    const passportData = {
+      passportType: 'DIGITAL_AGENT_GOVERNANCE_PASSPORT',
+      agentId: agent.id,
+      agentName: agent.name,
+      framework: agent.framework,
+      autonomyLevel: agent.autonomyLevel,
+      passport: agent.passport,
+      owner: agent.owner,
+      identity: agent.identity,
+      capabilities: agent.capabilities,
+      tools: agent.tools,
+      hitlCheckpoint: agent.hitlCheckpoint,
+      exportedAt: new Date().toISOString()
+    };
+
+    const blob = new Blob([JSON.stringify(passportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Agent_Passport_${agent.id}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAutonomy, setFilterAutonomy] = useState<string>('ALL');
   const [filterTeam, setFilterTeam] = useState<string>('ALL');
@@ -959,10 +987,17 @@ const matchSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) 
                       </div>
                     </div>
 
-                    <div className="pt-2 flex justify-end">
+                    <div className="pt-2 flex flex-wrap justify-end gap-2">
+                      <button
+                        onClick={() => handleExportPassport(selectedAgent)}
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 rounded-lg text-xs font-semibold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5 text-sky-400" />
+                        <span>Export Digital Passport (JSON)</span>
+                      </button>
                       <button
                         onClick={() => alert(`Passport [${selectedAgent.passport.passportId}] Verified against tamper-evident root hash!`)}
-                        className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold transition shadow-xs flex items-center gap-1.5"
+                        className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
                       >
                         <ShieldCheck className="w-3.5 h-3.5" />
                         <span>Verify Tamper-Evident Hash</span>

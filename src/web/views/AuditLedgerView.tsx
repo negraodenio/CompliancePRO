@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
+  FileDown,
   BookOpen, 
   ShieldCheck, 
   AlertTriangle, 
@@ -57,6 +58,40 @@ export const AuditLedgerView: React.FC<{ result?: ScannerResult | null }> = ({ r
     refreshState();
     return AuditLedgerStore.subscribe(refreshState);
   }, []);
+
+  const handleExportLedgerProof = () => {
+    const list = AuditLedgerStore.getBlocks();
+    const verif = AuditLedgerStore.verifyEntireLedger();
+    const exportData = {
+      ledgerType: 'RFC8785_CRYPTOGRAPHIC_AUDIT_LEDGER',
+      exportedAt: new Date().toISOString(),
+      totalBlocks: list.length,
+      chainIntegrityStatus: verif.isChainValid ? '100%_VERIFIED' : 'TAMPER_DETECTED',
+      rootBlockHash: list[list.length - 1]?.blockHash || '',
+      blocks: list.map(b => ({
+        blockHeight: b.blockHeight,
+        blockId: b.blockId,
+        timestamp: b.timestamp,
+        controlId: b.controlId,
+        eventType: b.eventType,
+        actor: b.actor,
+        blockHash: b.blockHash,
+        previousHash: b.previousHash,
+        isTampered: b.isTampered,
+        payloadHash: b.payloadHash
+      }))
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Audit_Ledger_Proof_Chain_${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const handleVerifyChain = () => {
     setIsVerifying(true);
@@ -120,10 +155,17 @@ export const AuditLedgerView: React.FC<{ result?: ScannerResult | null }> = ({ r
           <button
             onClick={handleVerifyChain}
             disabled={isVerifying}
-            className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold shadow-xs transition flex items-center gap-1.5"
+            className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isVerifying ? 'animate-spin' : ''}`} />
             <span>Verify Entire Ledger</span>
+          </button>
+          <button
+            onClick={handleExportLedgerProof}
+            className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <FileDown className="w-3.5 h-3.5 text-purple-400" />
+            <span>Export Ledger Proof (JSON)</span>
           </button>
         </div>
       </div>
