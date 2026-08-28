@@ -211,6 +211,85 @@ DATABASE_URL=postgres://admin:TopSecretPassword123@db.enterprise.internal/prod
   assert(!jsonDump.includes('TopSecretPassword123'), "Sanitization: Raw database password is never stored in capabilities metadata");
 });
 
+
+import { ScanGovernanceBridge } from '../src/web/services/scan-governance-bridge';
+import { ScannerResult } from '../src/core/types';
+
+// 6. EXPERIENCE LAYER: SCANNER -> BRIDGE -> AGENT PASSPORT & SIPOC
+testGroup("Experience Layer: Real Capability Flow to Agent Passport & SIPOC", () => {
+  const files = new Map<string, string>();
+  
+  files.set('agents/credit_underwriter.py', `
+import psycopg2
+def run_agent():
+    cur = psycopg2.connect().cursor()
+    cur.execute("SELECT ssn, credit_score FROM customer_invoices")
+  `);
+
+  const { capabilities, identities, summary } = detectCapabilities(files, mockSource);
+
+  const mockScanResult: ScannerResult = {
+    repo: { name: 'credit-repo', owner: 'ComplyPRO', fullName: 'complypro/credit-repo', fileCount: 1 } as any,
+    packages: {} as any,
+    configs: {} as any,
+    source: {
+      ...mockSource,
+      agents: [
+        {
+          name: 'CreditUnderwriterAgent',
+          type: 'ai_persona',
+          tools: ['sql_query'],
+          models: ['gpt-4o'],
+          riskLevel: 'high',
+          critical: true,
+          filePath: 'agents/credit_underwriter.py'
+        }
+      ]
+    },
+    risks: [],
+    compliance: {} as any,
+    owner: {} as any,
+    shadowAI: [],
+    certification: {} as any,
+    violations: [],
+    enrichment: {} as any,
+    agentCapabilities: capabilities,
+    agentIdentities: identities,
+    capabilitiesSummary: summary
+  };
+
+  // Ingest via bridge
+  ScanGovernanceBridge.clearIngestedData();
+  ScanGovernanceBridge.ingestScan(mockScanResult, { sourceRepository: 'complypro/credit-repo' });
+
+  const ingested = ScanGovernanceBridge.getIngestedAgents();
+  assert(ingested.length === 1, "Exactly 1 real agent ingested into bridge");
+  
+  const agent = ingested[0];
+  assert(agent.name === 'CreditUnderwriterAgent', "Ingested agent is CreditUnderwriterAgent");
+  assert(agent.capabilities !== undefined, "Capabilities array attached to IngestedAgentEntity");
+  assert(agent.capabilities!.length >= 1, "At least 1 capability attached to agent");
+  
+  const cap = agent.capabilities![0];
+  assert(cap.systemType === 'database', "Capability system is database");
+  assert(cap.state === 'OBSERVED_CAPABILITY', "Preserves OBSERVED_CAPABILITY state in Agent Passport");
+  assert(cap.anomalies.includes('OBSERVED_BUT_UNAUTHORIZED'), "Preserves OBSERVED_BUT_UNAUTHORIZED anomaly in Agent Passport");
+});
+
+// 7. EMPTY CAPABILITY SCAN PRESERVES EMPTY STATE (ZERO MOCK DATA)
+testGroup("Empty Capabilities Result in Clean Empty State (Zero Mock Data)", () => {
+  const emptyFiles = new Map<string, string>();
+  emptyFiles.set('README.md', '# Just documentation');
+
+  const { capabilities, summary } = detectCapabilities(emptyFiles, {
+    ...mockSource,
+    agents: [{ name: 'DocAgent', type: 'service', tools: [], models: [], riskLevel: 'low', critical: false }]
+  });
+
+  assert(capabilities.length === 0, "Zero capabilities discovered for doc repository");
+  assert(summary.totalCapabilities === 0, "Summary totalCapabilities is 0");
+});
+
 console.log("==================================================================");
 console.log(`>>> CAPABILITY DISCOVERY SUITE: ALL ${testCount} TEST GROUPS PASSED <<<`);
 console.log("==================================================================\n");

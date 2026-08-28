@@ -70,6 +70,8 @@ export interface AgentEntity {
     assuranceTier: 'ASSURED_TIER_1' | 'PROVISIONAL_TIER_2';
   };
   description: string;
+  capabilities?: import('../../core/types').AgentCapability[];
+  identity?: import('../../core/types').AgentIdentityBinding;
 }
 
 const INITIAL_AGENTS: AgentEntity[] = [
@@ -647,6 +649,129 @@ const matchSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) 
                         <span className="font-semibold text-slate-800 dark:text-slate-200">{sipoc.technicalCustodian}</span>
                       </div>
                     </div>
+
+                    {/* CAPABILITY & AUTHORIZATION BOUNDARY (DISCOVERED AST EVIDENCE) */}
+                    <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center space-x-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-sky-500" />
+                          <span>Fronteira de Capacidades & Autorizações (Capability Boundaries)</span>
+                        </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-mono bg-sky-500/10 text-sky-500 border border-sky-500/20">
+                          {selectedAgent.capabilities?.length || 0} Capabilities
+                        </span>
+                      </div>
+
+                      {/* Agent Identity Binding Card */}
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-xs flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase block">Identidade de Execução (Identity Binding):</span>
+                          <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
+                            {selectedAgent.identity?.identityName || 'UNKNOWN'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase block">Tipo de Identidade:</span>
+                          <span className="font-mono text-slate-600 dark:text-slate-400">
+                            {selectedAgent.identity?.identityType || 'unassigned'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase block">Role / Perfil Mapeado:</span>
+                          <span className="font-mono text-slate-600 dark:text-slate-400">
+                            {selectedAgent.identity?.roleMapped || 'UNKNOWN'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Capabilities Table / Cards */}
+                      {selectedAgent.capabilities && selectedAgent.capabilities.length > 0 ? (
+                        <div className="space-y-2">
+                          {selectedAgent.capabilities.map((cap) => {
+                            const isAuthorized = cap.state === 'AUTHORIZED_CAPABILITY';
+                            const isUnknown = cap.state === 'UNKNOWN_AUTHORIZATION';
+                            const isObserved = cap.state === 'OBSERVED_CAPABILITY';
+                            const isDeclared = cap.state === 'DECLARED_CAPABILITY';
+                            const isUsed = cap.state === 'USED_CAPABILITY';
+
+                            const stateBadgeClass = isAuthorized
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                              : isDeclared
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                              : isObserved
+                              ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30'
+                              : isUsed
+                              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30'
+                              : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30';
+
+                            return (
+                              <div
+                                key={cap.id}
+                                className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 text-xs"
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div>
+                                    <div className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                                      <span>{cap.systemName}</span>
+                                      <span className="text-slate-400 font-normal">?</span>
+                                      <span className="font-mono text-sky-600 dark:text-sky-400">{cap.resourceTarget}</span>
+                                    </div>
+                                    <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                                      {cap.filePath}{cap.lineNumber ? `:${cap.lineNumber}` : ''}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-col items-end gap-1">
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${stateBadgeClass}`}>
+                                      {cap.state}
+                                    </span>
+                                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold font-mono ${
+                                      cap.isDestructive ? 'bg-rose-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                                    }`}>
+                                      {cap.action} {cap.isDestructive ? '(DESTRUTIVO)' : ''}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Authorization Evidence */}
+                                <div className="p-2 rounded bg-slate-100/70 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/50 text-[11px]">
+                                  <span className="text-[10px] font-bold uppercase text-slate-500 block mb-0.5">Evidência de Autorização:</span>
+                                  {cap.authorizationEvidence ? (
+                                    <div className="text-emerald-700 dark:text-emerald-300 font-mono text-[10px]">
+                                      [{cap.authorizationEvidence.type.toUpperCase()}] {cap.authorizationEvidence.grantSnippet || cap.authorizationEvidence.grantFile}
+                                      {cap.authorizationEvidence.isWildcard ? ' (Wildcard Grant *)' : ''}
+                                    </div>
+                                  ) : (
+                                    <div className="text-rose-600 dark:text-rose-400 text-[10px]">
+                                      UNKNOWN_AUTHORIZATION (Sem concessão explícita em IAM/SQL/OAuth)
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Anomalies */}
+                                {cap.anomalies && cap.anomalies.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 pt-1">
+                                    {cap.anomalies.map((anom, aIdx) => (
+                                      <span
+                                        key={aIdx}
+                                        className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                                      >
+                                        ? {anom}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 text-center text-xs text-slate-500">
+                          <ShieldAlert className="w-4 h-4 mx-auto mb-1.5 text-slate-400" />
+                          <span>No capabilities discovered in this scan.</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -799,6 +924,14 @@ const matchSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) 
                       <div className="pt-2 flex justify-between">
                         <span className="text-slate-400">Evidence Retention Policy:</span>
                         <span className="text-slate-300">Configured (1825d / 5y Standard)</span>
+                      </div>
+                      <div className="pt-2 flex justify-between">
+                        <span className="text-slate-400">Discovered Identity:</span>
+                        <span className="font-mono-code text-white">{selectedAgent.identity?.identityName || 'UNKNOWN'}</span>
+                      </div>
+                      <div className="pt-2 flex justify-between">
+                        <span className="text-slate-400">Discovered Capabilities:</span>
+                        <span className="font-mono-code text-emerald-300">{selectedAgent.capabilities?.length || 0} Verified</span>
                       </div>
                     </div>
 

@@ -88,6 +88,8 @@ export interface IngestedAgentEntity {
   createdFromScan: boolean;
   scanId: string;
   sourceRepository: string;
+  capabilities?: import('../../core/types').AgentCapability[];
+  identity?: import('../../core/types').AgentIdentityBinding;
 }
 
 export class ScanGovernanceBridge {
@@ -149,6 +151,11 @@ export class ScanGovernanceBridge {
       const hasDestructiveCap = agentCapabilities.some(c => c.isDestructive || c.anomalies.includes('EXCESSIVE_WILDCARD_PERMISSION'));
       const isHighRisk = hasDestructiveCap || tools.some((t: any) => t.permission === 'EXECUTE_HIGH_PRIVILEGE') || (ag.autonomyLevel && ag.autonomyLevel.includes('L4'));
 
+      const agentIdentity = (result.agentIdentities || []).find(i =>
+        i.agentName === ag.name ||
+        (ag.filePath && i.sourceFile === ag.filePath)
+      );
+
       return {
         id: agentId,
         name: ag.name,
@@ -188,7 +195,9 @@ export class ScanGovernanceBridge {
         sourceType: 'REAL_SCAN',
         createdFromScan: true,
         scanId,
-        sourceRepository
+        sourceRepository,
+        capabilities: agentCapabilities,
+        identity: agentIdentity
       };
     });
 
