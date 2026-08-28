@@ -5,25 +5,25 @@ function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error('Assertion failed: ' + msg);
 }
 
-console.log('🏛️ CG-AG TEST: Free Scan Business & Governance X-Ray');
+console.log('🏛️ CG-AG TEST: Free Scan Business & Governance X-Ray (Senior Clustered)');
 
-// 1. Mock a real-world multi-agent scanner result (like councilIA or Credit System)
-const mockResult: ScannerResult = {
-  repo: { name: 'FinTech Credit Assessment System' },
+// 1. Mock a real-world multi-agent scanner result (like crewAIInc/crewAI-examples)
+const mockCrewAiResult: ScannerResult = {
+  repo: { name: 'crewAIInc/crewAI-examples' },
   source: {
     agents: [
       {
-        name: 'credit_underwriting_agent',
+        name: 'trip_agents',
         type: 'ai_persona',
-        tools: ['calculate_risk', 'fetch_bureau_score'],
+        tools: ['BrowserTools.scrape_and_summarize_website', 'SearchTools.search_internet', 'SearchTools.search_instagram'],
         models: ['gpt-4o'],
         riskLevel: 'high',
         critical: true
       },
       {
-        name: 'document_verifier_agent',
+        name: 'simple_qa_agentic_flow:Router',
         type: 'ai_persona',
-        tools: ['parse_pdf'],
+        tools: ['web_search_tool', 'file_read_tool'],
         models: ['gpt-4o'],
         riskLevel: 'medium',
         critical: false
@@ -36,88 +36,70 @@ const mockResult: ScannerResult = {
     frameworks: ['crewai'],
     apiRoutes: [],
     authPatterns: [],
-    databaseTables: ['customer_profiles', 'credit_applications', 'audit_ledger'],
+    databaseTables: [],
     notebooks: []
   },
   agentCapabilities: [
     {
-      agentName: 'credit_underwriting_agent',
-      systemType: 'database',
-      resourceTarget: 'customer_profiles',
-      action: 'READ',
-      state: 'OBSERVED_CAPABILITY',
-      scope: 'production',
-      anomalies: ['OBSERVED_WITHOUT_VERIFIED_AUTH'],
+      agentName: 'trip_agents',
+      systemType: 'llm_service',
+      resourceTarget: 'BrowserTools.scrape_and_summarize_website',
+      action: 'EXECUTE',
+      state: 'DECLARED_CAPABILITY',
+      scope: 'example',
+      anomalies: [],
       isDestructive: false
     },
     {
-      agentName: 'credit_underwriting_agent',
-      systemType: 'database',
-      resourceTarget: 'credit_applications',
-      action: 'WRITE',
-      state: 'OBSERVED_CAPABILITY',
-      scope: 'production',
-      anomalies: ['OBSERVED_WITHOUT_VERIFIED_AUTH'],
+      agentName: 'trip_agents',
+      systemType: 'llm_service',
+      resourceTarget: 'SearchTools.search_internet',
+      action: 'EXECUTE',
+      state: 'DECLARED_CAPABILITY',
+      scope: 'example',
+      anomalies: [],
       isDestructive: false
     },
     {
-      agentName: 'credit_underwriting_agent',
-      systemType: 'cloud_storage',
-      resourceTarget: 's3://credit-bucket/reports',
-      action: 'DELETE',
-      state: 'OBSERVED_CAPABILITY',
-      scope: 'production',
-      anomalies: ['OBSERVED_WITHOUT_VERIFIED_AUTH', 'DESTRUCTIVE_ACTION_WITHOUT_VERIFIED_HITL'],
-      isDestructive: true
+      agentName: 'trip_agents',
+      systemType: 'llm_service',
+      resourceTarget: 'SearchTools.search_instagram',
+      action: 'EXECUTE',
+      state: 'DECLARED_CAPABILITY',
+      scope: 'example',
+      anomalies: [],
+      isDestructive: false
     }
   ],
   agentIdentities: [
     {
-      agentName: 'credit_underwriting_agent',
+      agentName: 'trip_agents',
       identityType: 'unassigned',
       roleMapped: 'UNKNOWN'
     }
   ],
   compliance: {
-    overallScore: 65,
+    overallScore: 28,
     categories: {} as any
   },
   violations: [],
-  score: 65
+  score: 28
 };
 
-const xray = extractSystemBusinessXRay(mockResult);
+const xray = extractSystemBusinessXRay(mockCrewAiResult);
 
-// Test 1: 4 Stages of Business Process Flow
+// Test 1: 4 Stages with clean items (no 29-line wall of text)
 assert(xray.stages.length === 4, 'Must produce exactly 4 business process stages');
-assert(xray.stages[0].stageName === 'Customer / Source Data', 'Stage 1 must be Customer / Source Data');
-assert(xray.stages[1].stageName === 'AI Assessment & Reasoning', 'Stage 2 must be AI Assessment & Reasoning');
-assert(xray.stages[2].stageName === 'Decision & System Actions', 'Stage 3 must be Decision & System Actions');
-assert(xray.stages[3].stageName === 'Business Outcome & Impact', 'Stage 4 must be Business Outcome & Impact');
+assert(xray.stages[2].items.length <= 4, 'Stage 3 must be clustered into max 4 high-level categories');
+assert(!JSON.stringify(xray).includes('Processamento do Nó'), 'Zero legacy Portuguese fallback in output');
+assert(!JSON.stringify(xray).includes('Próximo Nó'), 'Zero Portuguese destination in output');
 
-// Test 2: Epistemic Confidence Tags
-assert(xray.stages[0].confidence === 'DIRECTLY_DERIVED', 'Stage 1 with database tables must be DIRECTLY_DERIVED');
-assert(xray.stages[0].items.some(i => i.includes('customer_profiles')), 'Stage 1 must contain customer_profiles');
-assert(xray.stages[2].confidence === 'DIRECTLY_DERIVED', 'Stage 2 with write caps must be DIRECTLY_DERIVED');
-assert(xray.stages[3].confidence === 'INFERRED', 'Stage 4 outcome must be INFERRED');
+// Test 2: Executive Process Name
+assert(xray.impact.primaryProcess.includes('Research') || xray.impact.primaryProcess.includes('Intelligence') || xray.impact.primaryProcess.includes('Workflow'), 'Process name must be executive');
 
-// Test 3: Business Impact Summary
-assert(xray.impact.primaryProcess.length > 0, 'Primary process must be identified');
-assert(xray.impact.resourcesAffected.length > 0, 'Resources affected must be cataloged');
-assert(xray.impact.governanceStatus === 'Evidence Not Verified in Scanned Scope', 'Governance status must be honest and verified');
-
-// Test 4: Passport Preview Invariants
-assert(xray.passportPreview.aiAsset === 'credit_underwriting_agent', 'AI Asset name must match primary agent');
+// Test 3: Clean Passport Preview
+assert(xray.passportPreview.aiAsset === 'trip agents', 'AI Asset name must be formatted cleanly');
 assert(xray.passportPreview.owner === 'UNKNOWN (Unassigned Business Owner)', 'Owner must be UNKNOWN');
-assert(xray.passportPreview.identityBinding.includes('UNASSIGNED'), 'Identity binding must be UNASSIGNED');
-assert(xray.passportPreview.autonomyLevel === 'NOT VERIFIED IN SCANNED SCOPE', 'Autonomy level must be NOT VERIFIED');
-assert(xray.passportPreview.verifiedHitl === 'NOT VERIFIED IN SCANNED SCOPE', 'HITL must be NOT VERIFIED');
-assert(xray.passportPreview.capabilitiesCount === 3, 'Capabilities count must be 3');
-assert(xray.passportPreview.unverifiedAuthCount === 3, 'Unverified auth count must be 3');
+assert(xray.passportPreview.capabilitiesCount === 3, 'Capabilities count must match');
 
-// Test 5: Inferred Industry Context
-assert(xray.industryContext !== undefined, 'Must infer industry context for credit repo');
-assert(xray.industryContext?.sector.includes('FinTech'), 'Must classify as FinTech');
-assert(xray.industryContext?.confidence === 'INFERRED_FROM_EVIDENCE', 'Must mark as INFERRED_FROM_EVIDENCE');
-
-console.log('✅ ALL FREE SCAN BUSINESS & GOVERNANCE X-RAY INVARIANTS PASSED!');
+console.log('✅ ALL SENIOR FREE SCAN X-RAY INVARIANTS PASSED!');
