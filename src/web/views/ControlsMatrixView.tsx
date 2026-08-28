@@ -138,8 +138,18 @@ export const ControlsMatrixView: React.FC<{ result?: ScannerResult | null }> = (
   const [selectedControl, setSelectedControl] = useState<ExtendedControlRecord | null>(null);
   const [activeDrawerTab, setActiveDrawerTab] = useState<'normative' | 'scope' | 'policies' | 'risk' | 'evidence' | 'regulations'>('normative');
 
+  const { isControlMandatory } = useIndustry();
+
+  const sortedControls = useMemo(() => {
+    return [...EXTENDED_CONTROLS].sort((a, b) => {
+      const aMan = isControlMandatory(a.id) ? 1 : 0;
+      const bMan = isControlMandatory(b.id) ? 1 : 0;
+      return bMan - aMan;
+    });
+  }, [EXTENDED_CONTROLS, activeProfile, isControlMandatory]);
+
   const filteredControls = useMemo(() => {
-    return EXTENDED_CONTROLS.filter((ctrl) => {
+    return sortedControls.filter((ctrl) => {
       const matchSearch = ctrl.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           ctrl.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           ctrl.description.toLowerCase().includes(searchTerm.toLowerCase()) ||

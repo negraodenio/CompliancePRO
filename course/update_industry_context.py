@@ -1,4 +1,8 @@
-import React, { createContext, useContext, useState } from 'react';
+with open('../src/web/context/IndustryContext.tsx', 'r', encoding='utf-8') as f:
+    text = f.read()
+
+# Enhance IndustryProfile interface and list
+enhanced_context_code = """import React, { createContext, useContext, useState } from 'react';
 
 export interface IndustryProfile {
   id: string;
@@ -171,3 +175,9 @@ export const IndustryProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 };
 
 export const useIndustry = () => useContext(IndustryContext);
+"""
+
+with open('../src/web/context/IndustryContext.tsx', 'w', encoding='utf-8') as f:
+    f.write(enhanced_context_code)
+
+print('Updated IndustryContext.tsx with rich helpers')

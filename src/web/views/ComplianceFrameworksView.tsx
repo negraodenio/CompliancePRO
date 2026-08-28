@@ -37,9 +37,19 @@ export const ComplianceFrameworksView: React.FC<{ result?: ScannerResult | null 
   const [selectedClause, setSelectedClause] = useState<RegulatoryClauseMapping | null>(null);
   const [activeDrawerTab, setActiveDrawerTab] = useState<'overview' | 'crosswalk' | 'gaps' | 'dossier' | 'evidence'>('overview');
 
+  const { isRegulationPriority } = useIndustry();
+
+  const sortedFrameworks = useMemo(() => {
+    return [...frameworks].sort((a, b) => {
+      const aPri = isRegulationPriority(a.name) || isRegulationPriority(a.id) ? 1 : 0;
+      const bPri = isRegulationPriority(b.name) || isRegulationPriority(b.id) ? 1 : 0;
+      return bPri - aPri;
+    });
+  }, [frameworks, activeProfile, isRegulationPriority]);
+
   const currentFramework = useMemo(() => {
-    return frameworks.find(f => f.id === selectedFrameworkId) || frameworks[0];
-  }, [frameworks, selectedFrameworkId]);
+    return sortedFrameworks.find(f => f.id === selectedFrameworkId) || sortedFrameworks[0];
+  }, [sortedFrameworks, selectedFrameworkId]);
 
   const filteredClauses = useMemo(() => {
     return currentFramework.clauses.filter((c) => {
@@ -128,7 +138,8 @@ export const ComplianceFrameworksView: React.FC<{ result?: ScannerResult | null 
 
       {/* FRAMEWORK SELECTOR TABS */}
       <div className="flex border-b border-slate-200 dark:border-slate-800 space-x-2 overflow-x-auto pb-0.5">
-        {frameworks.map((fw) => {
+        {sortedFrameworks.map((fw) => {
+          const isPriority = isRegulationPriority(fw.name) || isRegulationPriority(fw.id);
           const isSelected = fw.id === selectedFrameworkId;
           return (
             <button

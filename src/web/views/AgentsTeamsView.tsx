@@ -662,6 +662,30 @@ const matchSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) 
                         </span>
                       </div>
 
+                      {/* Industry Governance Context Box */}
+                      <div className="p-3 rounded-xl bg-gradient-to-r from-sky-500/10 via-indigo-500/5 to-slate-900/20 border border-sky-500/30 text-xs space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 font-bold text-sky-700 dark:text-sky-300">
+                            <span>{activeProfile.icon}</span>
+                            <span>Contexto Setorial: {activeProfile.name}</span>
+                          </div>
+                          <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30">
+                            INDUSTRY LENS ACTIVE
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                          {activeProfile.description}
+                        </p>
+                        <div className="pt-1 flex flex-wrap gap-1 items-center text-[10px]">
+                          <span className="text-slate-500 font-semibold">Regulações em Foco:</span>
+                          {activeProfile.regulations.map((reg, rIdx) => (
+                            <span key={rIdx} className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono">
+                              {reg}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
                       {/* Agent Identity Binding Card */}
                       <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-xs flex flex-wrap items-center justify-between gap-2">
                         <div>
