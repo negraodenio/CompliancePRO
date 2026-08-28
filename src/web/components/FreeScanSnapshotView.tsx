@@ -43,7 +43,7 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
   const identities = result.agentIdentities || [];
   const capSummary = result.capabilitiesSummary;
 
-  const totalUnknownAuth = capSummary?.unknownAuthorizationCount ?? capabilities.filter(c => c.state === 'UNKNOWN_AUTHORIZATION').length;
+  const totalUnknownAuth = capSummary?.unknownAuthorizationCount ?? capabilities.filter(c => c.state === 'UNKNOWN_AUTHORIZATION' || !c.authorizationEvidence).length;
   const highRiskFindings = (result.violations || []).filter(v => v.severity === 'critical' || v.severity === 'high');
   const destructiveActions = capabilities.filter(c => c.isDestructive);
   const averageScore = Math.round(result.compliance?.overallScore ?? 0);
@@ -179,7 +179,7 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Your code exposes physical execution capabilities (e.g. database queries, cloud storage modifications, shell commands). <strong>A code import or function call NEVER constitutes legal or technical authorization.</strong> Unless supported by explicit IAM policies, database grants, or OAuth scopes, capabilities remain in state <span className="font-mono text-rose-400 font-bold">UNKNOWN_AUTHORIZATION</span>.
+              Your code reveals declared and coded capabilities (e.g. tool definitions, database operations, cloud storage actions, shell executions). <strong>A code import or function call NEVER constitutes legal or technical authorization.</strong> Unless supported by explicit IAM policies, database grants, or OAuth scopes, capabilities remain in state <span className="font-mono text-rose-400 font-bold">UNKNOWN_AUTHORIZATION</span>.
             </p>
           </div>
         </div>

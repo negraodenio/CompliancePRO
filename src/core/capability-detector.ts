@@ -21,6 +21,110 @@ interface RawGrant {
   roleOrUser?: string;
 }
 
+const SCHEMA_EXCLUDE_KEYWORDS = new Set([
+  'function', 'object', 'string', 'number', 'integer', 'boolean', 'array',
+  'null', 'parameters', 'properties', 'required', 'description', 'type',
+  'items', 'enum', 'default', 'title', '$schema', 'definitions', 'additionalproperties',
+  'self', 'cls', 'true', 'false', 'none', 'name', 'tool', 'tools', 'func', 'fn',
+  'directory', 'query_engine', 'max_results', 'verbose', 'llm', 'model', 'temperature',
+  'api_key', 'instructions', 'role', 'goal', 'backstory', 'expected_output',
+  'show_tool_calls', 'stream', 'timeout', 'format'
+]);
+
+export function extractDeclaredToolsFromContent(content: string): string[] {
+  const discovered: string[] = [];
+  const functionAliases = new Map<string, string>(); // funcName -> customToolName
+
+  // 1. JSON / Dict schema functions (OpenAI Assistants API, Chat Completions Tools, Anthropic Tool Use, Bedrock, Gemini)
+  const toolsBlocks = content.matchAll(/(?:tools|functions)\s*(?:=|:|\()\s*\[([\s\S]*?)\](?:\s*\)|\s*,|\s*;|\s*\n)/gi);
+  for (const tb of toolsBlocks) {
+    const blockContent = tb[1];
+    const schemaNameMatches = blockContent.matchAll(/(?:["']name["']|\bname\b)\s*:\s*["']([a-zA-Z0-9_\-\.]+)["']/g);
+    for (const m of schemaNameMatches) {
+      const raw = m[1].trim();
+      if (raw && !SCHEMA_EXCLUDE_KEYWORDS.has(raw.toLowerCase()) && raw.length > 1) {
+        discovered.push(raw);
+      }
+    }
+  }
+
+  // Also standalone function: { name: "..." } or FunctionTool definitions
+  const standaloneFuncMatches = content.matchAll(/(?:function|tool)\s*:\s*\{\s*(?:[\s\S]*?)(?:["']name["']|\bname\b)\s*:\s*["']([a-zA-Z0-9_\-\.]+)["']/gi);
+  for (const m of standaloneFuncMatches) {
+    const raw = m[1].trim();
+    if (raw && !SCHEMA_EXCLUDE_KEYWORDS.has(raw.toLowerCase()) && raw.length > 1) {
+      discovered.push(raw);
+    }
+  }
+
+  // 2. @tool decorator in LangChain / CrewAI / Smolagents / AutoGen with alias mapping
+  const decoratorMatches = content.matchAll(/@tool(?:\((?:name\s*=\s*)?["']?([^"')\s]+)?["']?\))?\s*(?:\r?\n|\s)+def\s+([a-zA-Z0-9_]+)/g);
+  for (const m of decoratorMatches) {
+    const named = m[1];
+    const funcName = m[2];
+    let target = funcName.trim();
+    if (named && !named.includes('=') && named !== 'True' && named !== 'False') {
+      target = named.trim();
+      functionAliases.set(funcName.trim(), target);
+    }
+    if (target && !SCHEMA_EXCLUDE_KEYWORDS.has(target.toLowerCase())) {
+      discovered.push(target);
+    }
+  }
+
+  // 3. Tool class instantiations: Tool(name="..."), StructuredTool(name="..."), FunctionTool.from_function(func)
+  const wrapperMatches = content.matchAll(/(?:StructuredTool|FunctionTool|QueryEngineTool|Tool)(?:\.from_defaults|\.from_function)?\s*\(\s*(?:(?:name\s*=\s*)?["']([a-zA-Z0-9_\-\.]+)["']|([a-zA-Z0-9_]+))/g);
+  for (const m of wrapperMatches) {
+    const toolName = m[1] || m[2];
+    if (toolName && !SCHEMA_EXCLUDE_KEYWORDS.has(toolName.toLowerCase())) {
+      const resolved = functionAliases.get(toolName.trim()) || toolName.trim();
+      discovered.push(resolved);
+    }
+  }
+
+  // 4. tools = [...] or from_tools([...]) or bind_tools([...])
+  const toolArrayMatches = content.matchAll(/(?:tools|functions|from_tools|bind_tools)\s*(?:=|:|\()\s*\[([^\]]*)\]/gi);
+  for (const tm of toolArrayMatches) {
+    const rawList = tm[1];
+    if (!rawList.includes('{')) {
+      const items = rawList.split(',');
+      for (const item of items) {
+        const itemTrimmed = item.trim();
+        const innerFunc = itemTrimmed.match(/(?:from_function|from_defaults)\s*\(\s*([a-zA-Z0-9_]+)/);
+        if (innerFunc && !SCHEMA_EXCLUDE_KEYWORDS.has(innerFunc[1].toLowerCase())) {
+          const resolved = functionAliases.get(innerFunc[1].trim()) || innerFunc[1].trim();
+          discovered.push(resolved);
+          continue;
+        }
+
+        const classCall = itemTrimmed.match(/^([a-zA-Z0-9_]+)\s*\(/);
+        if (classCall && !SCHEMA_EXCLUDE_KEYWORDS.has(classCall[1].toLowerCase())) {
+          const resolved = functionAliases.get(classCall[1].trim()) || classCall[1].trim();
+          discovered.push(resolved);
+          continue;
+        }
+
+        const bare = itemTrimmed.replace(/\(.*\)/g, '').replace(/['"]/g, '').trim();
+        if (bare && /^[a-zA-Z0-9_\-\.]+$/.test(bare) && !SCHEMA_EXCLUDE_KEYWORDS.has(bare.toLowerCase())) {
+          const resolved = functionAliases.get(bare) || bare;
+          discovered.push(resolved);
+        }
+      }
+    }
+  }
+
+  // Deduplicate preserving discovery order
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const d of discovered) {
+    if (!seen.has(d)) {
+      seen.add(d);
+      result.push(d);
+    }
+  }
+  return result;
+}
+
 export function detectCapabilities(
   files: Map<string, string>,
   source: SourceAnalysis
@@ -140,28 +244,22 @@ export function detectCapabilities(
     );
     const agentName = matchedAgent ? matchedAgent.name : `Agent_${filename.replace(/\.[^.]+$/, '')}`;
 
-    // 2.1 DECLARED CAPABILITIES
-    const declaredToolsMatch = content.match(/tools\s*=\s*\[([^\]]*)\]/i);
-    if (declaredToolsMatch && declaredToolsMatch[1]) {
-      const toolNames = declaredToolsMatch[1].replace(/['"]/g, '').split(',');
-      for (const tn of toolNames) {
-        const cleanName = tn.trim();
-        if (cleanName && cleanName.length > 1 && !cleanName.startsWith('@')) {
-          capabilities.push({
-            id: `CAP-DEC-${++capSeq}`,
-            agentName,
-            systemType: 'llm_service',
-            systemName: 'Agent Framework Tooling',
-            resourceTarget: cleanName,
-            action: 'EXECUTE',
-            state: 'DECLARED_CAPABILITY',
-            filePath,
-            isDestructive: /delete|drop|remove|destroy|truncate|terminate/i.test(cleanName),
-            accessesSensitiveData: /pii|customer|financial|patient|credit|cpf|tax/i.test(cleanName),
-            anomalies: []
-          });
-        }
-      }
+    // 2.1 DECLARED OPERATIONAL TOOLS & CAPABILITIES (Calibrated: ONE TOOL = ONE CAPABILITY)
+    const declaredTools = extractDeclaredToolsFromContent(content);
+    for (const cleanName of declaredTools) {
+      capabilities.push({
+        id: `CAP-DEC-${++capSeq}`,
+        agentName,
+        systemType: 'llm_service',
+        systemName: 'Agent Framework Tooling',
+        resourceTarget: cleanName,
+        action: 'EXECUTE',
+        state: 'DECLARED_CAPABILITY',
+        filePath,
+        isDestructive: /delete|drop|remove|destroy|truncate|terminate|wipe|kill/i.test(cleanName),
+        accessesSensitiveData: /pii|customer|financial|patient|credit|cpf|tax|salary|account/i.test(cleanName),
+        anomalies: []
+      });
     }
 
     // 2.2 MCP TOOLS
@@ -353,7 +451,7 @@ export function detectCapabilities(
     observedCount: finalCapabilities.filter(c => c.state === 'OBSERVED_CAPABILITY').length,
     declaredCount: finalCapabilities.filter(c => c.state === 'DECLARED_CAPABILITY').length,
     authorizedCount: finalCapabilities.filter(c => c.state === 'AUTHORIZED_CAPABILITY').length,
-    unknownAuthorizationCount: finalCapabilities.filter(c => c.state === 'UNKNOWN_AUTHORIZATION').length,
+    unknownAuthorizationCount: finalCapabilities.filter(c => c.state === 'UNKNOWN_AUTHORIZATION' || !c.authorizationEvidence).length,
     usedCount: finalCapabilities.filter(c => c.state === 'USED_CAPABILITY' || c.state === 'OBSERVED_CAPABILITY').length,
     destructiveCount: finalCapabilities.filter(c => c.isDestructive).length,
     wildcardCount: finalCapabilities.filter(c => c.action === 'WILDCARD' || c.authorizationEvidence?.isWildcard).length,
