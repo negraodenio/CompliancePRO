@@ -26,7 +26,11 @@ import {
   Activity,
   FileSearch,
   ExternalLink,
-  Fingerprint
+  Fingerprint,
+  Code2,
+  Server,
+  FolderGit2,
+  HelpCircle
 } from 'lucide-react';
 import type { ScannerResult, AgentCapability } from '../../core/types';
 import { extractSystemBusinessXRay } from '../services/agent-sipoc-mapper';
@@ -49,13 +53,26 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
   const capabilities = result.agentCapabilities || [];
   const identities = result.agentIdentities || [];
   const capSummary = result.capabilitiesSummary;
+  const violations = result.violations || [];
 
   const totalUnknownAuth = capSummary?.unknownAuthorizationCount ?? capabilities.filter(c => c.state === 'UNKNOWN_AUTHORIZATION' || !c.authorizationEvidence).length;
-  const highRiskFindings = (result.violations || []).filter(v => v.severity === 'critical' || v.severity === 'high');
   const averageScore = Math.round(result.compliance?.overallScore ?? 0);
 
-  // Extract Business & Governance X-Ray (SIPOC, Impact, Passport Preview)
+  // Extract Business & Governance X-Ray (Scope decomposition, SIPOC, Impact, Passport Preview)
   const xray = extractSystemBusinessXRay(result);
+
+  const scopeDecomp = xray.scopeDecomposition || {
+    productionCount: capabilities.filter(c => c.scope === 'production').length,
+    nonProductionCount: capabilities.filter(c => c.scope === 'test' || c.scope === 'example' || c.scope === 'benchmark' || c.scope === 'fixture').length,
+    infrastructureCount: capabilities.filter(c => c.scope === 'infrastructure').length,
+    unknownCount: capabilities.filter(c => c.scope === 'unknown' || !c.scope).length
+  };
+
+  const findingsDecomp = xray.findingsDecomposition || {
+    totalTechnicalFindings: violations.length,
+    highPriorityGovernanceFindings: violations.filter(v => v.severity === 'critical' || v.severity === 'high').length,
+    productionScopeHighRiskFindings: violations.filter(v => v.severity === 'critical' || v.severity === 'high').length
+  };
 
   useEffect(() => {
     FunnelAnalytics.track('SNAPSHOT_VIEWED', {
@@ -83,12 +100,13 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
     }
   };
 
-  const getConfidenceBadge = (conf: 'DIRECTLY_DERIVED' | 'INFERRED' | 'UNKNOWN') => {
+  const getConfidenceBadge = (conf: 'DIRECTLY_DERIVED' | 'INFERRED' | 'NOT_VERIFIED' | 'UNKNOWN') => {
     switch (conf) {
       case 'DIRECTLY_DERIVED':
         return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
       case 'INFERRED':
         return 'bg-sky-500/15 text-sky-400 border-sky-500/30';
+      case 'NOT_VERIFIED':
       case 'UNKNOWN':
       default:
         return 'bg-amber-500/15 text-amber-400 border-amber-500/30';
@@ -119,15 +137,16 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
               </button>
             </div>
 
-            <div className="max-w-3xl space-y-2">
-              <div className="text-xs font-mono font-semibold text-sky-400 tracking-wider uppercase">
+            <div className="space-y-2">
+              <div className="text-xs font-mono font-bold text-sky-400 tracking-widest uppercase">
                 01 · AI Governance Snapshot
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
                 Technical Ground Truth from {result.repo?.name || 'Scanned Project'}
               </h2>
               <p className="text-sm text-slate-300 leading-relaxed">
-                We discovered <strong className="text-sky-300">{agents.length} AI agents</strong> and agent-like components in your scanned code. Now see which business processes they may affect — and what governance evidence is missing.
+                We discovered <strong className="text-sky-300">{agents.length} AI components</strong> and <strong className="text-cyan-300">{capabilities.length} operational capabilities</strong> in your scanned code.
+                Below is the exact decomposition across production exposure, non-production supporting findings, and missing governance evidence.
               </p>
             </div>
           </div>
@@ -137,7 +156,7 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
             <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[11px] font-semibold uppercase tracking-wider">AI Agents</span>
+              <span className="text-[11px] font-semibold uppercase tracking-wider">AI Components</span>
               <Bot className="w-4 h-4 text-sky-400" />
             </div>
             <p className="text-2xl font-bold text-white font-mono">{agents.length}</p>
@@ -146,24 +165,33 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
 
           <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
             <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[11px] font-semibold uppercase tracking-wider">AI Models</span>
-              <Cpu className="w-4 h-4 text-indigo-400" />
-            </div>
-            <p className="text-2xl font-bold text-white font-mono">{models.length}</p>
-            <p className="text-[10px] text-slate-400">Endpoints & LLMs</p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
-            <div className="flex items-center justify-between text-slate-400">
               <span className="text-[11px] font-semibold uppercase tracking-wider">Capabilities</span>
               <Layers className="w-4 h-4 text-cyan-400" />
             </div>
             <p className="text-2xl font-bold text-white font-mono">{capabilities.length}</p>
-            <p className="text-[10px] text-slate-400">Tools, DB, S3, APIs</p>
+            <p className="text-[10px] text-slate-400">Total Code Invocations</p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-900/80 border border-emerald-500/20 bg-emerald-950/10 space-y-1">
+            <div className="flex items-center justify-between text-emerald-400">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Production</span>
+              <Server className="w-4 h-4 text-emerald-400" />
+            </div>
+            <p className="text-2xl font-bold text-emerald-400 font-mono">{scopeDecomp.productionCount}</p>
+            <p className="text-[10px] text-emerald-400/80">Production-Scope Caps</p>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
             <div className="flex items-center justify-between text-slate-400">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Supporting / Test</span>
+              <FolderGit2 className="w-4 h-4 text-slate-400" />
+            </div>
+            <p className="text-2xl font-bold text-slate-300 font-mono">{scopeDecomp.nonProductionCount}</p>
+            <p className="text-[10px] text-slate-400">Tests, Benchmarks & Demos</p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-900/80 border border-rose-500/20 bg-rose-950/10 space-y-1">
+            <div className="flex items-center justify-between text-rose-400">
               <span className="text-[11px] font-semibold uppercase tracking-wider">Unverified Auth</span>
               <Lock className="w-4 h-4 text-rose-400" />
             </div>
@@ -175,20 +203,41 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
 
           <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
             <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[11px] font-semibold uppercase tracking-wider">High Risks</span>
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
-            </div>
-            <p className="text-2xl font-bold text-amber-400 font-mono">{highRiskFindings.length}</p>
-            <p className="text-[10px] text-slate-400">High-Priority Findings</p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
-            <div className="flex items-center justify-between text-slate-400">
               <span className="text-[11px] font-semibold uppercase tracking-wider">Compliance</span>
               <Scale className="w-4 h-4 text-emerald-400" />
             </div>
             <p className="text-2xl font-bold text-emerald-400 font-mono">{averageScore}%</p>
             <p className="text-[10px] text-slate-400">EU AI Act & LGPD</p>
+          </div>
+        </div>
+
+        {/* Scope Breakdown Bar & Findings Audit Pill */}
+        <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-mono">
+          <div className="flex flex-wrap items-center gap-4 text-slate-300">
+            <span className="text-slate-400 font-bold uppercase tracking-wider">Scope Decomposition:</span>
+            <span className="flex items-center gap-1.5 text-emerald-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <strong>{scopeDecomp.productionCount}</strong> Production Exposure
+            </span>
+            <span className="flex items-center gap-1.5 text-amber-400">
+              <span className="w-2 h-2 rounded-full bg-amber-400" />
+              <strong>{scopeDecomp.nonProductionCount}</strong> Test / Example / Benchmark
+            </span>
+            <span className="flex items-center gap-1.5 text-sky-400">
+              <span className="w-2 h-2 rounded-full bg-sky-400" />
+              <strong>{scopeDecomp.infrastructureCount}</strong> Infrastructure
+            </span>
+            {scopeDecomp.unknownCount > 0 && (
+              <span className="flex items-center gap-1.5 text-slate-400">
+                <span className="w-2 h-2 rounded-full bg-slate-400" />
+                <strong>{scopeDecomp.unknownCount}</strong> Unknown Scope
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 text-[11px] text-slate-400 border-t md:border-t-0 md:border-l border-slate-800 pt-2 md:pt-0 md:pl-4">
+            <span><strong>{findingsDecomp.totalTechnicalFindings}</strong> Technical Code Findings</span>
+            <span>•</span>
+            <span className="text-amber-400"><strong>{findingsDecomp.highPriorityGovernanceFindings}</strong> High-Priority Governance</span>
           </div>
         </div>
       </section>
@@ -211,10 +260,13 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
               What does this AI actually do to your business?
             </h3>
           </div>
-          {xray.industryContext && (
+          {xray.domainContext && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-mono">
               <Building2 className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Inferred Sector: {xray.industryContext.sector}</span>
+              <span>Inferred Domain: <strong>{xray.domainContext.domain}</strong></span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-200">
+                Confidence: {xray.domainContext.confidence}
+              </span>
             </div>
           )}
         </div>
@@ -313,10 +365,10 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
           <div className="p-5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
             <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold uppercase tracking-wider">
               <Shield className="w-4 h-4 text-rose-400" />
-              <span>Governance Status</span>
+              <span>Production Exposure</span>
             </div>
-            <p className="text-sm font-bold text-rose-400">{xray.impact.governanceStatus}</p>
-            <p className="text-[11px] text-slate-400">Requires formal IAM/SQL policies or CG-AG Governance OS registration.</p>
+            <p className="text-sm font-bold text-slate-200">{xray.impact.productionExposureSummary || 'Based on capabilities in production code'}</p>
+            <p className="text-[11px] text-rose-400/90 font-mono">Status: {xray.impact.governanceStatus}</p>
           </div>
         </div>
       </section>
@@ -337,13 +389,13 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
             OBSERVED_CAPABILITY ≠ AUTHORIZED_CAPABILITY
           </h3>
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-4xl">
-            Your code reveals declared and coded capabilities (e.g. tool definitions, database operations, cloud storage actions, shell executions). A code import or function call <strong>NEVER</strong> constitutes legal or technical authorization. Unless supported by explicit IAM policies, database grants, or OAuth scopes, capabilities remain in state <code className="text-rose-400 font-mono font-semibold">UNKNOWN_AUTHORIZATION</code>.
+            Your code reveals declared and coded capabilities (e.g. tool definitions, database operations, cloud storage actions, shell executions). A code import or function call <strong className="text-white">NEVER</strong> constitutes legal or technical authorization. Unless supported by explicit IAM policies, database grants, or OAuth scopes, capabilities remain in state <code className="text-rose-300 font-mono">UNKNOWN_AUTHORIZATION</code>.
           </p>
         </div>
 
-        {/* Discovered Agent Capabilities Matrix */}
-        <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        {/* Capabilities Discovery Matrix */}
+        <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4 shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
             <div>
               <h4 className="text-base font-bold text-white">
                 Discovered Agent Capabilities & Permission Boundaries
@@ -352,9 +404,9 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
                 The canonical chain: Agent → Identity → Role → System → Resource → Action → Authorization Evidence
               </p>
             </div>
-            <span className="text-xs font-mono text-sky-400 bg-sky-500/10 px-3 py-1 rounded-full border border-sky-500/20">
+            <div className="text-xs font-mono text-cyan-400 font-bold">
               {capabilities.length} Capabilities Discovered
-            </span>
+            </div>
           </div>
 
           {capabilities.length > 0 ? (
@@ -370,34 +422,24 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
                     <th className="py-2.5 px-3">Anomalies</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60 font-sans">
+                <tbody className="divide-y divide-slate-800/60 font-mono">
                   {capabilities.slice(0, 8).map((cap, idx) => (
                     <tr key={idx} className="hover:bg-slate-800/30 transition">
-                      <td className="py-3 px-3 font-mono font-semibold text-white">
-                        <div className="truncate max-w-[140px]" title={cap.agentName}>
-                          {cap.agentName}
-                        </div>
-                        {cap.scope && (
-                          <span className="text-[9px] font-mono text-slate-500 block uppercase">
-                            Scope: {cap.scope}
-                          </span>
-                        )}
+                      <td className="py-3 px-3">
+                        <span className="font-semibold text-sky-300 block">{cap.agentName}</span>
+                        <span className="text-[10px] text-slate-500 font-mono">Scope: {cap.scope || 'unknown'}</span>
                       </td>
                       <td className="py-3 px-3">
-                        <div className="text-slate-200 font-medium truncate max-w-[160px]" title={cap.resourceTarget}>
+                        <span className="text-slate-200 block truncate max-w-[200px]" title={cap.resourceTarget}>
                           {cap.resourceTarget}
-                        </div>
-                        <div className="text-[10px] text-slate-500 font-mono">
-                          {cap.systemType}
-                        </div>
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-mono uppercase">{cap.systemType}</span>
                       </td>
                       <td className="py-3 px-3">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          cap.isDestructive 
-                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' 
-                            : 'bg-slate-800 text-slate-300'
+                          cap.isDestructive ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-slate-800 text-slate-300'
                         }`}>
-                          {cap.action} {cap.isDestructive ? '⚠️ (DESTRUCTIVE)' : ''}
+                          {cap.action}
                         </span>
                       </td>
                       <td className="py-3 px-3">
@@ -509,6 +551,11 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
             <div>
               <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">AI Asset Name</span>
               <p className="text-base font-bold text-white font-mono">{xray.passportPreview.aiAsset}</p>
+              {!xray.passportPreview.isProductionAsset && (
+                <span className="text-[10px] font-mono text-amber-400/90 block pt-0.5">
+                  ⚠️ No production-scoped AI persona identified; reflecting supporting / repository scope
+                </span>
+              )}
             </div>
             <div>
               <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Business Process</span>
@@ -523,51 +570,63 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
             </div>
             <div>
               <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Identity & Role Binding</span>
-              <p className="text-xs font-mono text-amber-300">{xray.passportPreview.identityBinding}</p>
+              <p className="text-xs font-mono text-rose-300 bg-rose-950/30 border border-rose-800/40 px-2 py-1 rounded inline-block">
+                {xray.passportPreview.identityBinding}
+              </p>
             </div>
           </div>
 
-          <div className="space-y-4 border-t md:border-t-0 md:border-l border-slate-800 md:pl-6 pt-4 md:pt-0">
+          <div className="space-y-4 border-t md:border-t-0 md:border-l border-slate-800/80 md:pl-6">
             <div>
               <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Autonomy Level</span>
-              <p className="text-xs font-mono text-slate-300">{xray.passportPreview.autonomyLevel}</p>
+              <p className="text-xs font-mono text-amber-300 font-bold">
+                {xray.passportPreview.autonomyLevel}
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Capabilities</span>
-                <p className="text-lg font-bold text-white font-mono">{xray.passportPreview.capabilitiesCount}</p>
+              <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block">Capabilities</span>
+                <span className="text-base font-bold text-cyan-300 font-mono">{xray.passportPreview.capabilitiesCount}</span>
               </div>
-              <div>
-                <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Unverified Auth</span>
-                <p className="text-lg font-bold text-rose-400 font-mono">{xray.passportPreview.unverifiedAuthCount}</p>
+              <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block">Unverified Auth</span>
+                <span className="text-base font-bold text-rose-400 font-mono">{xray.passportPreview.unverifiedAuthCount}</span>
               </div>
             </div>
             <div>
               <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">Verified Human Oversight (HITL)</span>
-              <p className="text-xs font-mono text-slate-400">{xray.passportPreview.verifiedHitl}</p>
-            </div>
-            <div className="pt-2">
-              <button
-                onClick={onGovernFindings}
-                className="w-full py-2.5 px-4 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span>Issue & Sign Official Passport in Governance OS</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+              <p className="text-xs font-mono text-amber-400 font-semibold">
+                {xray.passportPreview.verifiedHitl}
+              </p>
             </div>
           </div>
+        </div>
+
+        {/* Passport CTA Trigger */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-indigo-950/30 border border-indigo-500/30">
+          <div className="space-y-0.5 text-center sm:text-left">
+            <h4 className="text-sm font-bold text-white">Issue & Sign Official Passport in Governance OS</h4>
+            <p className="text-xs text-slate-300">Assign legal business owners, bind IAM roles, enforce approval gates, and issue signed verifiable credentials.</p>
+          </div>
+          <button
+            onClick={onGovernFindings}
+            className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition shadow-lg flex items-center gap-1.5 flex-shrink-0 cursor-pointer"
+          >
+            <span>Issue Official Passport</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
         </div>
       </section>
 
       {/* ========================================================================= */}
-      {/* 06. TECHNICAL EVIDENCE ("Every business conclusion is traceable")         */}
+      {/* 06. TECHNICAL EVIDENCE & CRYPTOGRAPHIC PROOF                               */}
       {/* ========================================================================= */}
-      <section className="space-y-6">
-        <div className="space-y-1">
+      <section className="p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-4">
+        <div className="space-y-1 border-b border-slate-800 pb-3">
           <span className="text-xs font-mono font-bold text-sky-400 uppercase tracking-wider">
             06 · Technical Evidence & Cryptographic Proof
           </span>
-          <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+          <h3 className="text-base sm:text-lg font-bold text-white">
             Every business conclusion above is traceable to technical evidence.
           </h3>
           <p className="text-xs text-slate-400">
@@ -575,58 +634,41 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                <UserCheck className="w-4 h-4 text-indigo-400" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
+              <span className="flex items-center gap-1.5">
+                <KeyRound className="w-4 h-4 text-sky-400" />
                 <span>Execution Identities & Service Accounts</span>
-              </h4>
-              <span className="text-xs text-slate-400 font-mono">
-                {identities.length} Bindings
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                {identities.filter(i => i.identityType !== 'unassigned').length} Bindings
               </span>
             </div>
-            <div className="space-y-2">
-              {identities.length > 0 ? (
-                identities.map((idBinding, idx) => (
-                  <div key={idx} className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between text-xs font-mono">
-                    <div className="space-y-0.5">
-                      <div className="text-white font-bold">{idBinding.agentName}</div>
-                      <div className="text-[10px] text-slate-400">Type: {idBinding.identityType}</div>
-                    </div>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      idBinding.identityType === 'unassigned'
-                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                        : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                    }`}>
-                      {idBinding.roleMapped || 'ROLE: UNKNOWN'}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <div className="p-4 rounded-xl bg-slate-950/40 text-center text-xs text-slate-400">
-                  Identity: UNKNOWN (Unassigned service account in scanned scope)
-                </div>
-              )}
-            </div>
+            <p className="text-xs text-slate-400 leading-relaxed font-mono">
+              {identities.length > 0 
+                ? identities.map(i => `${i.agentName}: ${i.identityType} (${i.roleMapped || 'unmapped'})`).join(', ')
+                : 'Identity: UNKNOWN (Unassigned service account in scanned scope)'}
+            </p>
           </div>
 
-          {/* Security & Sanitization Guarantee */}
-          <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-bold text-white flex items-center gap-2">
+          <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
+              <span className="flex items-center gap-1.5">
                 <EyeOff className="w-4 h-4 text-emerald-400" />
                 <span>Zero Secrets & Air-Gapped Privacy</span>
-              </h4>
-              <span className="text-xs font-mono text-emerald-400">VERIFIED</span>
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                VERIFIED
+              </span>
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Designed for privacy-preserving analysis: source code is analyzed in-memory in the browser and sensitive credential patterns are redacted before processing. All API keys, JWT bearer tokens, connection strings, and database passwords are <strong>redacted in memory</strong>.
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Designed for privacy-preserving analysis: source code is analyzed in-memory in the browser and sensitive credential patterns are redacted before processing. All API keys, JWT bearer tokens, connection strings, and database passwords are redacted in memory.
             </p>
-            <div className="pt-2 flex flex-wrap gap-2 text-[10px] font-mono text-slate-400">
-              <span className="px-2 py-1 rounded bg-slate-800 border border-slate-700">✓ In-Memory AST Analysis</span>
-              <span className="px-2 py-1 rounded bg-slate-800 border border-slate-700">✓ RFC 8785 Compatible</span>
-              <span className="px-2 py-1 rounded bg-slate-800 border border-slate-700">✓ SHA-256 Tamper Proof</span>
+            <div className="flex items-center gap-3 pt-1 text-[11px] font-mono text-slate-500">
+              <span>✓ In-Memory AST Analysis</span>
+              <span>✓ RFC 8785 Compatible</span>
+              <span>✓ SHA-256 Tamper Proof</span>
             </div>
           </div>
         </div>
@@ -635,34 +677,34 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
       {/* ========================================================================= */}
       {/* 07. COMMERCIAL CONVERSION CALL TO ACTION                                   */}
       {/* ========================================================================= */}
-      <section className="p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-sky-950 via-indigo-950 to-slate-950 border-2 border-sky-500/50 text-white shadow-2xl text-center space-y-6 relative overflow-hidden">
-        <div className="max-w-3xl mx-auto space-y-3">
-          <span className="text-xs font-mono font-bold tracking-widest text-sky-400 uppercase">
-            CG-AG GOVERNANCE OS
-          </span>
-          <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+      <section className="p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-sky-950/60 via-slate-900 to-indigo-950/60 border border-sky-500/40 text-center space-y-6 shadow-2xl relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none" />
+        <div className="max-w-2xl mx-auto space-y-3 relative z-10">
+          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-sky-500/20 border border-sky-500/30 text-sky-300 text-xs font-mono">
+            <Shield className="w-3.5 h-3.5 text-sky-400" />
+            <span>Turn Discovery into Governed Assets</span>
+          </div>
+          <h3 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             You now know what your AI may be doing.
-            <br />
-            <span className="text-sky-300">The next question is whether your organization can govern and prove it.</span>
           </h3>
-          <p className="text-sm text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            Create your enterprise workspace now to ingest these discovered findings into your immutable Cryptographic Ledger, issue official AI Passports, enforce verified HITL approval gates, and generate audit-ready conformity dossiers.
+          <p className="text-sm text-slate-300 leading-relaxed">
+            The next question is whether your organization can <strong className="text-white">govern and prove it</strong> to auditors, regulators, and customers.
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-md mx-auto pt-2">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10 pt-2">
           <button
             onClick={onGovernFindings}
-            className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-sm shadow-xl shadow-sky-500/20 flex items-center justify-center gap-2 transition transform hover:-translate-y-0.5 cursor-pointer"
+            className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-sm transition shadow-xl hover:shadow-sky-500/20 flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>Turn this discovered AI into a governed asset →</span>
+            <span>Turn this discovered AI into a governed asset</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
-          
           <button
             onClick={onExploreGovernanceOs}
-            className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-200 border border-slate-700 font-semibold text-sm transition cursor-pointer"
+            className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white font-semibold text-sm border border-slate-700 transition cursor-pointer"
           >
-            Explore Governance OS
+            Explore CG-AG Governance OS
           </button>
         </div>
       </section>

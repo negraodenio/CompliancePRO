@@ -5,8 +5,13 @@ import type {
   SystemBusinessXRay, 
   BusinessXRayFlowStage, 
   BusinessImpactSummary, 
-  AgentPassportPreviewData 
+  AgentPassportPreviewData,
+  InferredDomainContext,
+  ScopeDecomposition,
+  FindingsAuditDecomposition,
+  CapabilityScope
 } from '../../core/types';
+import { classifyScopeFromPath } from '../../core/capability-detector';
 
 /**
  * Maps an agent name, framework, tools, and context to a clear business role
@@ -19,6 +24,7 @@ export function getAgentBusinessAndSipoc(agent: DetectedAgent): {
   const name = (agent.name || '').toLowerCase();
   const tools = agent.tools || [];
   const toolsStr = tools.join(' ').toLowerCase();
+  const filePath = (agent.filePath || '').toLowerCase();
 
   // 1. Reviewer / Evaluator / Quality Gate
   if (name.includes('review') || name.includes('evaluat') || name.includes('critique') || name.includes('judge') || name.includes('validator')) {
@@ -149,7 +155,25 @@ export function getAgentBusinessAndSipoc(agent: DetectedAgent): {
     };
   }
 
-  // 8. ReAct / Conversational Agent
+  // 8. Software Development / Code Patching / DevOps
+  if (name.includes('patch') || name.includes('flowix') || name.includes('code') || name.includes('devops') || name.includes('terminal') || filePath.includes('patch') || filePath.includes('terminal')) {
+    return {
+      businessPurpose: 'AI-assisted code analysis, automated patch generation, and development workflow orchestration.',
+      sipoc: {
+        businessRole: 'AI-Assisted Software Development & Workflow Automation',
+        supplier: 'Source Code Repositories & CI/CD Pipelines',
+        input: 'Code files, defect descriptions, and test logs',
+        process: 'AST inspection, automated patch synthesis, and regression verification',
+        output: 'Verified code modifications and automated patch proposals',
+        customer: 'Software Engineering Teams & Release Gateways',
+        processOwner: 'VP of Engineering & Software Architecture Committee',
+        technicalCustodian: 'DevOps & Developer Productivity Engineering',
+        governanceStatus: 'PENDENTE_COMITE',
+      },
+    };
+  }
+
+  // 9. ReAct / Conversational Agent
   if (name.includes('react') || name.includes('chat') || name.includes('convers') || name.includes('assistant')) {
     return {
       businessPurpose: 'Interactive customer dialog, query resolution, and multi-step ReAct autonomous problem solving.',
@@ -167,7 +191,7 @@ export function getAgentBusinessAndSipoc(agent: DetectedAgent): {
     };
   }
 
-  // 9. Intelligent Contextual Inference from Tools (if name is generic like 'agents', 'trip_agents', etc.)
+  // 10. Intelligent Contextual Inference from Tools (if name is generic like 'agents', 'trip_agents', etc.)
   let inferredRole = 'Autonomous Workflow Orchestration';
   let inferredPurpose = 'Automated multi-step reasoning and system execution across enterprise services.';
   let inferredCustomer = 'Enterprise Application Pipeline & Business Stakeholders';
@@ -277,8 +301,8 @@ function clusterCapabilities(capabilities: Array<{ resourceTarget: string; actio
       categories.add('Communication & Messaging Gateways');
     } else if (target.includes('file') || target.includes('write') || target.includes('read') || target.includes('template') || target.includes('markdown') || target.includes('dir')) {
       categories.add('File System & Document Generation');
-    } else if (sys === 'database' || target.includes('profile') || target.includes('patch') || target.includes('user') || target.includes('order') || target.includes('repo')) {
-      categories.add('Transactional Database Records');
+    } else if (sys === 'database' || target.includes('profile') || target.includes('patch') || target.includes('user') || target.includes('order') || target.includes('repo') || target.includes('table') || target.includes('alias') || target.includes('thread')) {
+      categories.add('Database Records & Schema Entities');
     } else if (sys === 'cloud_storage' || target.includes('s3') || target.includes('bucket')) {
       categories.add('Cloud Object Storage Buckets');
     } else if (target.includes('calc') || target.includes('math') || target.includes('tool_')) {
@@ -296,27 +320,137 @@ function clusterCapabilities(capabilities: Array<{ resourceTarget: string; actio
 }
 
 /**
+ * Evaluates scope ranking for selecting representative AI Asset in Passport.
+ * Priority: production -> infrastructure -> example -> benchmark -> test -> fixture -> unknown
+ */
+function getScopeRank(scope: CapabilityScope): number {
+  switch (scope) {
+    case 'production': return 1;
+    case 'infrastructure': return 2;
+    case 'example': return 3;
+    case 'benchmark': return 4;
+    case 'test': return 5;
+    case 'fixture': return 6;
+    case 'unknown':
+    default: return 7;
+  }
+}
+
+/**
  * Extracts a structured, executive-grade Business & Governance X-Ray from a ScannerResult.
- * Translates low-level AST/database/capability discoveries into a 4-stage business process chain,
- * a business impact summary, and an Agent Passport Preview.
+ * Implements strict scope decomposition, findings audit, and asset selection hierarchy.
  */
 export function extractSystemBusinessXRay(result: ScannerResult): SystemBusinessXRay {
   const agents: DetectedAgent[] = result.source?.agents || [];
   const capabilities = result.agentCapabilities || [];
   const identities = result.agentIdentities || [];
+  const violations = result.violations || [];
   const repoName = result.repo?.name || 'Scanned AI System';
 
-  const primaryAgent = agents[0];
-  const { sipoc } = primaryAgent 
-    ? getAgentBusinessAndSipoc(primaryAgent) 
+  // 1. SCOPE DECOMPOSITION
+  let prodCapCount = 0;
+  let nonProdCapCount = 0;
+  let infraCapCount = 0;
+  let unknownCapCount = 0;
+
+  for (const cap of capabilities) {
+    const s = cap.scope || (cap.filePath ? classifyScopeFromPath(cap.filePath) : 'unknown');
+    if (s === 'production') {
+      prodCapCount++;
+    } else if (s === 'test' || s === 'example' || s === 'benchmark' || s === 'fixture') {
+      nonProdCapCount++;
+    } else if (s === 'infrastructure') {
+      infraCapCount++;
+    } else {
+      unknownCapCount++;
+    }
+  }
+
+  const scopeDecomposition: ScopeDecomposition = {
+    productionCount: prodCapCount,
+    nonProductionCount: nonProdCapCount,
+    infrastructureCount: infraCapCount,
+    unknownCount: unknownCapCount
+  };
+
+  // 2. FINDINGS AUDIT DECOMPOSITION
+  const totalTechnicalFindings = violations.length;
+  const highPriorityGovernanceFindings = violations.filter(v => v.severity === 'critical' || v.severity === 'high').length;
+  const productionScopeHighRiskFindings = violations.filter(v => {
+    const isHigh = v.severity === 'critical' || v.severity === 'high';
+    const s = classifyScopeFromPath(v.file);
+    return isHigh && s === 'production';
+  }).length;
+
+  const findingsDecomposition: FindingsAuditDecomposition = {
+    totalTechnicalFindings,
+    highPriorityGovernanceFindings,
+    productionScopeHighRiskFindings
+  };
+
+  // 3. REPRESENTATIVE AI ASSET SELECTION FOR PASSPORT PREVIEW
+  // Priority: production -> infrastructure -> example -> benchmark -> test -> fixture -> unknown
+  let selectedAgent: DetectedAgent | undefined;
+  let selectedAgentScope: CapabilityScope = 'unknown';
+
+  if (agents.length > 0) {
+    const scoredAgents = agents.map(agent => {
+      const scope = agent.filePath ? classifyScopeFromPath(agent.filePath) : classifyScopeFromPath(agent.name);
+      return { agent, scope, rank: getScopeRank(scope) };
+    });
+
+    scoredAgents.sort((a, b) => a.rank - b.rank);
+    selectedAgent = scoredAgents[0].agent;
+    selectedAgentScope = scoredAgents[0].scope;
+  }
+
+  const hasProductionAgent = selectedAgentScope === 'production';
+  const { sipoc } = selectedAgent 
+    ? getAgentBusinessAndSipoc(selectedAgent) 
     : { sipoc: { businessRole: 'Autonomous AI Workflow', customer: 'Enterprise Consumers' } as any };
 
-  // 1. STAGE 1: Customer / Source Data (SUPPLIERS & INPUTS)
+  // 4. INFERRED DOMAIN & BUSINESS PROCESS CONTEXT
+  const fullText = (repoName + ' ' + capabilities.map(c => c.resourceTarget).join(' ') + ' ' + agents.map(a => a.name).join(' ')).toLowerCase();
+  
+  let domain = 'General Enterprise Automation';
+  let domainEvidence = 'Detected multi-step autonomous workflows and task orchestration.';
+  let domainConfidence: 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
+  let primaryProcessName = sipoc.businessRole || 'Autonomous Workflow Orchestration';
+
+  if (/flowix|patch|repo|code|git|devops|build|ci|cd|terminal/i.test(fullText)) {
+    domain = 'Software Engineering & Autonomous DevOps';
+    domainEvidence = 'Keywords and capabilities related to repository files, code patches, terminals, and development workflows.';
+    domainConfidence = 'MEDIUM';
+    primaryProcessName = 'AI-Assisted Software Development & Workflow Automation';
+  } else if (/credit|loan|bank|fraud|fintech|payment|underwriting|invest/i.test(fullText)) {
+    domain = 'FinTech & Financial Services';
+    domainEvidence = 'Keywords and resource targets related to credit, transactions, or financial ledger.';
+    domainConfidence = 'MEDIUM';
+    primaryProcessName = 'Autonomous Credit Underwriting & Risk Modeling';
+  } else if (/patient|health|clinical|doctor|hipaa|medical|hospital/i.test(fullText)) {
+    domain = 'Healthcare & Life Sciences';
+    domainEvidence = 'Keywords and resource targets related to clinical, medical, or patient data.';
+    domainConfidence = 'MEDIUM';
+    primaryProcessName = 'Clinical Data Ingestion & Decision Support';
+  } else if (/scrape|search|instagram|trip|travel|content/i.test(fullText)) {
+    domain = 'Digital Media & Web Intelligence';
+    domainEvidence = 'Keywords and tool schemas related to web scraping, social search, and content synthesis.';
+    domainConfidence = 'MEDIUM';
+    primaryProcessName = 'Web Intelligence & Automated Research';
+  }
+
+  const domainContext: InferredDomainContext = {
+    domain,
+    evidence: domainEvidence,
+    confidence: domainConfidence
+  };
+
+  // 5. STAGE 1: Customer / Source Data (SUPPLIERS & INPUTS)
   const readCaps = capabilities.filter(c => c.action === 'READ');
   const readResources = Array.from(new Set(readCaps.map(c => c.resourceTarget))).filter(Boolean);
   
   let stage1Items: string[];
-  let stage1Confidence: 'DIRECTLY_DERIVED' | 'INFERRED';
+  let stage1Confidence: 'DIRECTLY_DERIVED' | 'INFERRED' | 'NOT_VERIFIED';
   
   if (readResources.length > 0) {
     stage1Confidence = 'DIRECTLY_DERIVED';
@@ -332,10 +466,10 @@ export function extractSystemBusinessXRay(result: ScannerResult): SystemBusiness
     ];
   }
 
-  // 2. STAGE 2: AI Assessment & Reasoning (PROCESS & DECISION)
+  // 6. STAGE 2: AI Assessment & Reasoning (PROCESS & DECISION)
   const agentNames = Array.from(new Set(agents.map(a => a.name))).slice(0, 3);
   let stage2Items: string[];
-  let stage2Confidence: 'DIRECTLY_DERIVED' | 'INFERRED';
+  let stage2Confidence: 'DIRECTLY_DERIVED' | 'INFERRED' | 'NOT_VERIFIED';
 
   if (agentNames.length > 0) {
     stage2Confidence = 'DIRECTLY_DERIVED';
@@ -348,10 +482,10 @@ export function extractSystemBusinessXRay(result: ScannerResult): SystemBusiness
     stage2Items = ['Algorithmic Reasoning Engine'];
   }
 
-  // 3. STAGE 3: Decision & Execution (OUTPUTS & ACTIONS)
+  // 7. STAGE 3: Decision & Execution (OUTPUTS & ACTIONS)
   const cluster = clusterCapabilities(capabilities);
   let stage3Items: string[];
-  let stage3Confidence: 'DIRECTLY_DERIVED' | 'INFERRED';
+  let stage3Confidence: 'DIRECTLY_DERIVED' | 'INFERRED' | 'NOT_VERIFIED';
 
   if (cluster.categories.length > 0) {
     stage3Confidence = 'DIRECTLY_DERIVED';
@@ -364,7 +498,7 @@ export function extractSystemBusinessXRay(result: ScannerResult): SystemBusiness
     stage3Items = ['LLM Model Inference & Text Generation'];
   }
 
-  // 4. STAGE 4: Business Outcome & Stakeholders (CUSTOMERS & OUTCOMES)
+  // 8. STAGE 4: Business Outcome & Stakeholders (CUSTOMERS & OUTCOMES)
   const stage4Items = [
     `Impacted Domain: ${sipoc.customer || 'Enterprise Business Pipeline'}`,
     'Governance Target: Production Asset Registry'
@@ -410,15 +544,11 @@ export function extractSystemBusinessXRay(result: ScannerResult): SystemBusiness
     }
   ];
 
-  // 5. BUSINESS IMPACT SUMMARY (CLEAN & EXECUTIVE)
-  const primaryProcessName = sipoc.businessRole || 'Autonomous Workflow Orchestration';
-
-  // Format resources affected cleanly (max 3 categories)
+  // 9. BUSINESS IMPACT SUMMARY (CLEAN & EXECUTIVE)
   const resourcesAffected = cluster.categories.length > 0 
     ? cluster.categories.slice(0, 3) 
     : ['In-Memory Prompt Context & LLM Service'];
 
-  // Format potential business actions cleanly (max 3)
   const distinctActions: string[] = [];
   if (capabilities.some(c => c.action === 'WRITE')) distinctActions.push('State Mutation & Record Insertion');
   if (capabilities.some(c => c.action === 'EXECUTE')) distinctActions.push('External Tool & API Invocations');
@@ -429,23 +559,30 @@ export function extractSystemBusinessXRay(result: ScannerResult): SystemBusiness
     primaryProcess: primaryProcessName,
     resourcesAffected: resourcesAffected,
     potentialBusinessActions: distinctActions.length > 0 ? distinctActions : ['Natural Language Generation'],
-    governanceStatus: 'Evidence Not Verified in Scanned Scope'
+    governanceStatus: 'Evidence Not Verified in Scanned Scope',
+    productionExposureSummary: prodCapCount > 0 
+      ? `${prodCapCount} capabilities identified in production-scoped code`
+      : 'No production-scoped operational capabilities identified in current scan'
   };
 
-  // 6. AGENT PASSPORT PREVIEW DATA
+  // 10. AGENT PASSPORT PREVIEW DATA
   const unverifiedCount = result.capabilitiesSummary?.unknownAuthorizationCount 
     ?? capabilities.filter(c => !c.authorizationEvidence || c.state === 'UNKNOWN_AUTHORIZATION').length;
 
   const assignedIdentity = identities.find(id => id.identityType !== 'unassigned');
 
-  // Format clean asset name
-  const cleanAssetName = primaryAgent?.name 
-    ? primaryAgent.name.replace(/_/g, ' ') 
-    : (repoName.split('/').pop() || repoName);
+  let passportAssetName: string;
+  if (hasProductionAgent && selectedAgent) {
+    passportAssetName = selectedAgent.name.replace(/_/g, ' ');
+  } else if (prodCapCount > 0) {
+    passportAssetName = repoName.split('/').pop() || repoName;
+  } else {
+    passportAssetName = 'NO PRODUCTION AI ASSET IDENTIFIED IN SCANNED SCOPE';
+  }
 
   const passportPreview: AgentPassportPreviewData = {
-    aiAsset: cleanAssetName,
-    businessProcess: primaryProcessName,
+    aiAsset: passportAssetName,
+    businessProcess: hasProductionAgent ? primaryProcessName : 'Non-Production / Supporting Test Pipeline',
     owner: 'UNKNOWN (Unassigned Business Owner)',
     identityBinding: assignedIdentity 
       ? `${assignedIdentity.agentName} -> ${assignedIdentity.roleMapped || assignedIdentity.identityType}`
@@ -453,36 +590,21 @@ export function extractSystemBusinessXRay(result: ScannerResult): SystemBusiness
     autonomyLevel: 'NOT VERIFIED IN SCANNED SCOPE',
     capabilitiesCount: capabilities.length,
     unverifiedAuthCount: unverifiedCount,
-    verifiedHitl: 'NOT VERIFIED IN SCANNED SCOPE'
+    verifiedHitl: 'NOT VERIFIED IN SCANNED SCOPE',
+    isProductionAsset: hasProductionAgent || prodCapCount > 0
   };
-
-  // 7. INDUSTRY CONTEXT (INFERRED)
-  const fullText = (repoName + ' ' + capabilities.map(c => c.resourceTarget).join(' ') + ' ' + agents.map(a => a.name).join(' ')).toLowerCase();
-  let industrySector: string | undefined;
-  let industryEvidence: string | undefined;
-
-  if (/credit|loan|bank|fraud|fintech|payment|underwriting|invest/i.test(fullText)) {
-    industrySector = 'FinTech & Financial Services';
-    industryEvidence = 'Keywords and resource targets related to credit, transactions, or financial ledger';
-  } else if (/patient|health|clinical|doctor|hipaa|medical|hospital/i.test(fullText)) {
-    industrySector = 'Healthcare & Life Sciences';
-    industryEvidence = 'Keywords and resource targets related to clinical, medical, or patient data';
-  } else if (/patch|code|repo|git|deploy|ci|cd|build|test/i.test(fullText)) {
-    industrySector = 'Software Engineering & Autonomous DevOps';
-    industryEvidence = 'Keywords and capabilities related to repository files, code patches, and execution';
-  } else if (/scrape|search|instagram|trip|travel|content/i.test(fullText)) {
-    industrySector = 'Digital Media & Web Intelligence';
-    industryEvidence = 'Keywords and tool schemas related to web scraping, social media search, and content synthesis';
-  }
 
   return {
     stages,
     impact,
     passportPreview,
-    industryContext: industrySector ? {
-      sector: industrySector,
-      evidence: industryEvidence!,
+    domainContext,
+    industryContext: {
+      sector: domain,
+      evidence: domainEvidence,
       confidence: 'INFERRED_FROM_EVIDENCE'
-    } : undefined
+    },
+    scopeDecomposition,
+    findingsDecomposition
   };
 }

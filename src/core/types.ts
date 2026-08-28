@@ -494,7 +494,7 @@ export interface CapabilitiesSummary {
 // CG-AG FREE SCAN BUSINESS & GOVERNANCE X-RAY TYPES
 // ============================================================================
 
-export type DerivationConfidence = 'DIRECTLY_DERIVED' | 'INFERRED' | 'UNKNOWN';
+export type DerivationConfidence = 'DIRECTLY_DERIVED' | 'INFERRED' | 'NOT_VERIFIED' | 'UNKNOWN';
 
 export interface BusinessXRayFlowStage {
   stageNumber: number;
@@ -511,6 +511,7 @@ export interface BusinessImpactSummary {
   resourcesAffected: string[];
   potentialBusinessActions: string[];
   governanceStatus: string;
+  productionExposureSummary?: string;
 }
 
 export interface AgentPassportPreviewData {
@@ -522,15 +523,38 @@ export interface AgentPassportPreviewData {
   capabilitiesCount: number;
   unverifiedAuthCount: number;
   verifiedHitl: string;
+  isProductionAsset?: boolean;
+}
+
+export interface InferredDomainContext {
+  domain: string;
+  evidence: string;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+}
+
+export interface ScopeDecomposition {
+  productionCount: number;
+  nonProductionCount: number; // test, example, benchmark, fixture
+  infrastructureCount: number;
+  unknownCount: number;
+}
+
+export interface FindingsAuditDecomposition {
+  totalTechnicalFindings: number;
+  highPriorityGovernanceFindings: number;
+  productionScopeHighRiskFindings: number;
 }
 
 export interface SystemBusinessXRay {
   stages: BusinessXRayFlowStage[];
   impact: BusinessImpactSummary;
   passportPreview: AgentPassportPreviewData;
+  domainContext?: InferredDomainContext;
   industryContext?: {
     sector: string;
     evidence: string;
     confidence: 'INFERRED_FROM_EVIDENCE';
   };
+  scopeDecomposition?: ScopeDecomposition;
+  findingsDecomposition?: FindingsAuditDecomposition;
 }

@@ -75,11 +75,13 @@ export function classifyScopeFromPath(filePath: string): CapabilityScope {
     return 'fixture';
   }
 
-  // 5. Infrastructure & Cloud Configs
+  // 5. Infrastructure, Migrations, CI/CD & Cloud Configs
   if (
-    segments.some(s => s === 'infra' || s === 'infrastructure' || s === 'terraform' || s === 'pulumi' || s === 'k8s' || s === 'kubernetes' || s === 'helm' || s === 'cloudformation') ||
+    segments.some(s => s === 'infra' || s === 'infrastructure' || s === 'terraform' || s === 'pulumi' || s === 'k8s' || s === 'kubernetes' || s === 'helm' || s === 'cloudformation' || s === 'migrations' || s === 'migration' || s === 'migrate' || s === 'docker' || s === 'ci' || s === 'cd' || s === 'workflows' || s === '.github') ||
     filename.endsWith('.tf') ||
-    filename.endsWith('.tfvars')
+    filename.endsWith('.tfvars') ||
+    filename.endsWith('dockerfile') ||
+    filename.startsWith('migration')
   ) {
     return 'infrastructure';
   }
