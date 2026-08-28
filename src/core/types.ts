@@ -488,3 +488,49 @@ export interface CapabilitiesSummary {
   wildcardCount: number;
   anomaliesCount: number;
 }
+
+
+// ============================================================================
+// CG-AG FREE SCAN BUSINESS & GOVERNANCE X-RAY TYPES
+// ============================================================================
+
+export type DerivationConfidence = 'DIRECTLY_DERIVED' | 'INFERRED' | 'UNKNOWN';
+
+export interface BusinessXRayFlowStage {
+  stageNumber: number;
+  stageName: string;
+  technicalSipocRole: string;
+  description: string;
+  items: string[];
+  confidence: DerivationConfidence;
+  sourceEvidence?: string;
+}
+
+export interface BusinessImpactSummary {
+  primaryProcess: string;
+  resourcesAffected: string[];
+  potentialBusinessActions: string[];
+  governanceStatus: string;
+}
+
+export interface AgentPassportPreviewData {
+  aiAsset: string;
+  businessProcess: string;
+  owner: string;
+  identityBinding: string;
+  autonomyLevel: string;
+  capabilitiesCount: number;
+  unverifiedAuthCount: number;
+  verifiedHitl: string;
+}
+
+export interface SystemBusinessXRay {
+  stages: BusinessXRayFlowStage[];
+  impact: BusinessImpactSummary;
+  passportPreview: AgentPassportPreviewData;
+  industryContext?: {
+    sector: string;
+    evidence: string;
+    confidence: 'INFERRED_FROM_EVIDENCE';
+  };
+}
