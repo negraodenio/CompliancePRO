@@ -180,3 +180,30 @@
   - *Selo Oficial:* Certified AI Governance & Agentic Auditor (AIGOV™)
   - *Validação:* QR Code e Hash Criptográfico na Blockchain/Registro Digital ComplyPRO
   - *Call to Action:* Submeter projeto prático e solicitar emissão da credencial.
+
+
+---
+
+## 🎯 SLIDE DECK: MÓDULO 3 — AI AGENT CAPABILITY & PERMISSION DISCOVERY
+
+### Slide 1: A Nova Fronteira da Auditoria de IA
+- **Título:** Do "Quem é o Agente?" para o "O Que Ele Efetivamente Pode Fazer?"
+- **Cadeia Canônica:** Agente → Identidade → Role → Sistema → Recurso → Ação → Permissão
+- **Alerta de Governança:** Conhecer apenas o prompt ou o nome do agente é insuficiente para compliance.
+
+### Slide 2: A Matriz dos 5 Estados de Capability
+- 🟢 **AUTHORIZED_CAPABILITY:** Concessão explícita comprovada por IAM Policy, DB Grant ou Escopo OAuth.
+- 🟡 **DECLARED_CAPABILITY:** Ferramenta declarada em construtor ou manifesto de framework.
+- 🔵 **OBSERVED_CAPABILITY:** Chamada ou query observada fisicamente na análise de AST.
+- 🟣 **USED_CAPABILITY:** Evidência de execução ativa em runtime/logs.
+- 🔴 **UNKNOWN_AUTHORIZATION:** Capability observada SEM evidência de autorização formal (Risco P0).
+
+### Slide 3: Invariante Fundamental de Segurança
+- **Regra de Ouro:** `OBSERVED ≠ AUTHORIZED`
+- O fato de um agente possuir o código `cursor.execute("SELECT * FROM invoices")` NÃO significa que ele está autorizado.
+- A participação de um agente em um processo SIPOC de negócio NUNCA confere privilégios técnicos.
+
+### Slide 4: Anomalias de Segurança Detectadas
+- ⚠️ **Excessive Wildcard Permissions:** Políticas IAM com `Action: "*"` ou `Resource: "*"`.
+- 🚨 **Destructive Actions without HITL:** Execuções de `DROP TABLE`, `TRUNCATE` ou `s3.delete_objects()`.
+- 🔍 **Identity Mismatch & Cross-System Access:** Agente acessando ERP e Office 365 sem vínculo de Service Account.

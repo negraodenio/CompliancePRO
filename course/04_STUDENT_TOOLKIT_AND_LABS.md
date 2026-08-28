@@ -157,3 +157,20 @@ jobs:
         run: |
           echo "✅ Quality Gate Aprovado: Repositório em conformidade com ISO 42001 e EU AI Act."
 ```
+
+
+---
+
+## 🧪 LABORATÓRIO 3: Descoberta de Capabilities, Identidades & Mitigação de Wildcards
+
+### 🎯 Objetivo do Laboratório
+Executar uma auditoria profunda em um repositório contendo agentes autônomos (CrewAI / MCP / LangChain), identificar permissões excessivas, classificar os 5 estados de capability e auditar a fronteira técnica no SIPOC.
+
+### 📋 Passo a Passo Hands-On:
+1. **Passo 1:** No ComplyPRO, abra o menu **Codebase Scanner** e selecione o repositório de teste `enterprise-credit-agent`.
+2. **Passo 2:** Clique em **Run AST & Capability Scan** e aguarde a extração das capabilities.
+3. **Passo 3:** Acesse **Discover → Agents & Teams** e clique no botão **SIPOC** do agente `CreditUnderwriterAgent`.
+4. **Passo 4:** Role até a seção **Fronteira de Capacidades & Autorizações (Capability Boundaries)**.
+5. **Passo 5:** Identifique por que a tabela `customer_invoices` está classificada como `OBSERVED_CAPABILITY` e `UNKNOWN_AUTHORIZATION`.
+6. **Passo 6:** Inspecione a anomalia `EXCESSIVE_WILDCARD_PERMISSION` gerada a partir da política IAM do Terraform.
+7. **Passo 7:** Acesse **Operate → Decisions & HITL** e crie uma decisão de governança bloqueando a ação destrutiva sem aprovação humana.

@@ -105,3 +105,16 @@ Para receber o título e o selo digital de **Certified AI Governance & Agentic A
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
+
+
+---
+
+### ❓ Questão 11: Invariante de Autorização em Agentes de IA
+**Pergunta:** Durante um scan estático, o auditor identifica que um agente possui a ferramenta `@tool` `delete_customer_records` e executa comandos SQL `DELETE FROM customers`. No entanto, nenhum arquivo de IAM Policy ou SQL Grant foi encontrado no repositório. Qual deve ser a classificação formal dessa capacidade no AI Passport?
+
+- A) `AUTHORIZED_CAPABILITY`, pois a ferramenta foi explicitamente declarada pelo desenvolvedor com o decorador `@tool`.
+- B) `AUTHORIZED_CAPABILITY`, pois o agente pertence ao processo SIPOC de Gestão de Clientes.
+- C) `OBSERVED_CAPABILITY` com estado de autorização `UNKNOWN_AUTHORIZATION`, gerando anomalia de `OBSERVED_BUT_UNAUTHORIZED` e exigindo portão HITL. *(CORRETA)*
+- D) A capacidade deve ser ignorada pelo scanner, pois não possui grant oficial.
+
+**Justificativa:** A regra canônica de governança estabelece que `OBSERVED_CAPABILITY ≠ AUTHORIZED_CAPABILITY`. Nem a declaração do código nem a participação em um processo de negócio SIPOC constituem autorização formal. Somente evidências explícitas (DB Grant, IAM, OAuth) podem conceder o status de autorizada.

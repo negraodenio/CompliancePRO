@@ -100,3 +100,8 @@ Ao se inscrever, você recebe imediatamente **6 meses de licença integral da pl
 ## 🎯 3. GUIA RÁPIDO DE CADASTRO NO INSTRUTOR UDEMY
 Consulte o arquivo dedicado: [07_UDEMY_PLATFORM_AND_FUNNEL_STRATEGY.md](file:///c:/Users/denio/Documents/Denio/PluginVIbeCOde/standalone-compliance-scanner/course/07_UDEMY_PLATFORM_AND_FUNNEL_STRATEGY.md) para visualizar títulos, subtítulos de 60/120 caracteres, roteiro de vídeo de 2 minutos e mensagens de conclusão.
 
+
+
+### 🚀 NOVO RECURSO EXCLUSIVO NA VERSÃO 2026:
+**AI Agent Capability & Permission Discovery Engine:**
+Você não vai apenas aprender a teoria. Você vai usar a plataforma ComplyPRO para dissecar exatamente o que qualquer agente de IA consegue acessar no seu banco de dados, S3, APIs e ERPs — mapeando `Agente → Identidade → Role → Sistema → Recurso → Ação → Permissão` com detecção automática de permissões excessivas (*), ações destrutivas (DROP/DELETE) e fronteiras SIPOC auditáveis!

@@ -49,7 +49,7 @@
 
 ---
 
-### **MÓDULO 4: Governança em Tempo de Execução, Circuit Breakers & FinOps (6 Horas)**
+### **MÓDULO 7: Governança em Tempo de Execução, Circuit Breakers & FinOps (6 Horas)**
 **Competência Desenvolvida:** Capacidade de implementar defesas ativas, supervisão humana obrigatória (*Human-in-the-Loop*) e controle orçamentário de tokens.
 
 - **Aula 4.1:** **Human-in-the-Loop (HITL) Obrigatório:** Quando a lei proíbe decisões 100% autônomas (Crédito, Recrutamento, Diagnóstico Médico) e como implementar a trava L2.
@@ -59,7 +59,7 @@
 
 ---
 
-### **MÓDULO 5: Métricas Executivas, Simulação Monte Carlo & Lentes C-Level (8 Horas)**
+### **MÓDULO 7: Métricas Executivas, Simulação Monte Carlo & Lentes C-Level (8 Horas)**
 **Competência Desenvolvida:** Traduzir achados técnicos de código em impacto financeiro e relatórios estratégicos para o Conselho de Administração, CISO, CIO, DPO e CFO.
 
 - **Aula 5.1:** Falando a Língua dos C-Levels: As 5 Lentes Executivas de Governança.
@@ -69,7 +69,7 @@
 
 ---
 
-### **MÓDULO 6: Dossiês Regulatórios, RIPD Automatizado & Projeto de Certificação (6 Horas)**
+### **MÓDULO 7: Dossiês Regulatórios, RIPD Automatizado & Projeto de Certificação (6 Horas)**
 **Competência Desenvolvida:** Emitir a documentação legal exigida pelas autoridades fiscalizadoras (ANPD e União Europeia) e obter a certificação profissional.
 
 - **Aula 6.1:** **Geração do RIPD Oficial (Art. 38 LGPD):** Exportação do relatório visual e textual homologado para submissão à ANPD.
