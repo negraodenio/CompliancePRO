@@ -1,3 +1,4 @@
+import { FunnelAnalytics } from './services/funnel-analytics';
 import { AcademyView } from './views/AcademyView';
 import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
@@ -77,6 +78,7 @@ export const App: React.FC = () => {
 
   const handleScanGitHub = async (url: string) => {
     setIsScanning(true);
+    FunnelAnalytics.track('SCAN_STARTED', { inputType: 'github' });
     setScanProgress({ message: 'Connecting to GitHub repository...', percent: 10 });
     try {
       const gitToken = localStorage.getItem('github_token') || undefined;
@@ -93,6 +95,11 @@ export const App: React.FC = () => {
 
       setScanResult(result);
       ScanGovernanceBridge.ingestScan(result);
+      FunnelAnalytics.track('SCAN_COMPLETED', { 
+        inputType: 'github', 
+        fileCount: repoDetails.files.size, 
+        agentCount: result.source?.agents?.length || 0 
+      });
       setScanProgress({ message: 'Scan Complete!', percent: 100 });
       triggerConfetti();
       if (pageMode === 'app') {
@@ -210,6 +217,10 @@ export const App: React.FC = () => {
                   <AuthModal 
                     isOpen={Boolean(authModalMode)}
                     onClose={() => setAuthModalMode(null)}
+                    onSuccess={() => {
+                      setPageMode('app');
+                      setActiveView('overview-center');
+                    }}
                     initialTab={authModalMode}
                   />
                 )}

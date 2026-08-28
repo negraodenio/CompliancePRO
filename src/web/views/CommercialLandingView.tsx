@@ -1,3 +1,4 @@
+import { FunnelAnalytics } from '../services/funnel-analytics';
 import React, { useState, useRef } from 'react';
 import { 
   Shield, 
@@ -65,11 +66,16 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
   const [gitUrl, setGitUrl] = useState('https://github.com/negraodenio/CompliancePRO');
   const [isDragOver, setIsDragOver] = useState(false);
 
+  React.useEffect(() => {
+    FunnelAnalytics.track('VISIT');
+  }, []);
+
   const zipInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const scannerSectionRef = useRef<HTMLDivElement>(null);
 
   const scrollToScanner = () => {
+    FunnelAnalytics.track('FREE_SCAN_CLICK');
     scannerSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
@@ -421,8 +427,15 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
           {scanResult && (
             <FreeScanSnapshotView 
               result={scanResult}
-              onGovernFindings={() => onOpenAuth('signup')}
-              onExploreGovernanceOs={onEnterApp}
+              onGovernFindings={() => {
+                FunnelAnalytics.track('PRESERVE_CLICKED');
+                FunnelAnalytics.track('SIGNUP_STARTED');
+                onOpenAuth('signup');
+              }}
+              onExploreGovernanceOs={() => {
+                FunnelAnalytics.track('GOVERNANCE_ENTERED');
+                onEnterApp();
+              }}
               onResetScan={onResetScan}
             />
           )}

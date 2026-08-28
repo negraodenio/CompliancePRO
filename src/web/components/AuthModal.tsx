@@ -1,3 +1,4 @@
+import { FunnelAnalytics } from '../services/funnel-analytics';
 import React, { useState } from 'react';
 import { 
   Lock, 
@@ -20,6 +21,7 @@ import { EnterpriseRole } from '../../server/security/identity-types';
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
   initialTab?: 'login' | 'signup' | 'invite';
   inviteToken?: string;
 }
@@ -27,6 +29,7 @@ interface AuthModalProps {
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
+  onSuccess,
   initialTab = 'login',
   inviteToken = ''
 }) => {
@@ -55,9 +58,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     const res = await login(email, password);
     setLoading(false);
     if (res.success) {
+      FunnelAnalytics.track('GOVERNANCE_ENTERED', { authMode: 'login' });
       setSuccessMsg('Login realizado com sucesso!');
       setTimeout(() => {
         onClose();
+        onSuccess?.();
       }, 600);
     } else {
       setErrorMsg(res.error || 'Falha ao autenticar.');
@@ -80,9 +85,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     setLoading(false);
     if (res.success) {
+      FunnelAnalytics.track('WORKSPACE_CREATED', { desiredRole });
+      FunnelAnalytics.track('GOVERNANCE_ENTERED', { authMode: 'signup' });
       setSuccessMsg('Empresa e conta criadas com sucesso!');
       setTimeout(() => {
         onClose();
+        onSuccess?.();
       }, 800);
     } else {
       setErrorMsg(res.error || 'Falha ao criar conta.');

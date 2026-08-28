@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { FunnelAnalytics } from '../services/funnel-analytics';
 import React from 'react';
 import { 
   Shield, 
@@ -45,6 +47,16 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
   const highRiskFindings = (result.violations || []).filter(v => v.severity === 'critical' || v.severity === 'high');
   const destructiveActions = capabilities.filter(c => c.isDestructive);
   const averageScore = Math.round(result.compliance?.overallScore ?? 0);
+
+  useEffect(() => {
+    FunnelAnalytics.track('SNAPSHOT_VIEWED', {
+      agentsCount: agents.length,
+      modelsCount: models.length,
+      capabilitiesCount: capabilities.length,
+      unknownAuthCount: totalUnknownAuth,
+      complianceScore: averageScore
+    });
+  }, [result]);
 
   const getStatusBadge = (state: string) => {
     switch (state) {
