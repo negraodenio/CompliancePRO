@@ -181,7 +181,11 @@ assert(flowixXray.domainContext?.domain === 'Software Engineering & Autonomous D
 assert(flowixXray.domainContext?.confidence === 'MEDIUM', 'Domain confidence must be MEDIUM');
 assert(flowixXray.impact.primaryProcess === 'AI-Assisted Software Development & Workflow Automation', 'Primary process must be AI-Assisted Software Development');
 
-// --- Migration Scope Classification Check ---
+// --- Scope Precedence & tests.rs Checks ---
+assert(classifyScopeFromPath('app/flowix-desktop/src/agent_session/tests.rs') === 'test', 'tests.rs must strictly classify as test, even inside src/');
+assert(classifyScopeFromPath('src/agent/test.rs') === 'test', 'test.rs must classify as test');
+assert(classifyScopeFromPath('src/agent/tests.py') === 'test', 'tests.py must classify as test');
+assert(classifyScopeFromPath('src/agent/tests.ts') === 'test', 'tests.ts must classify as test');
 assert(classifyScopeFromPath('src/migrations/001_create_tables.sql') === 'infrastructure', 'Migrations must classify as infrastructure');
 assert(classifyScopeFromPath('src/infrastructure/docker.ts') === 'infrastructure', 'Infrastructure files must classify as infrastructure');
 

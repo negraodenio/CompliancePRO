@@ -30,18 +30,35 @@ export function classifyScopeFromPath(filePath: string): CapabilityScope {
   const segments = normalized.split('/');
   const filename = segments[segments.length - 1] || '';
 
-  // 1. Tests & Specifications
+  // 1. Tests & Specifications (File-level test markers take strict precedence over directory markers)
   if (
     segments.some(s => s === 'tests' || s === 'test' || s === '__tests__' || s === 'spec' || s === 'specs') ||
     filename.startsWith('test_') ||
+    filename.startsWith('tests_') ||
+    filename.startsWith('test.') ||
+    filename.startsWith('tests.') ||
+    filename === 'tests.rs' ||
+    filename === 'test.rs' ||
+    filename === 'tests.py' ||
+    filename === 'test.py' ||
+    filename === 'tests.ts' ||
+    filename === 'test.ts' ||
+    filename === 'tests.js' ||
+    filename === 'test.js' ||
     filename.endsWith('.test.ts') ||
     filename.endsWith('.test.tsx') ||
     filename.endsWith('.test.js') ||
     filename.endsWith('.test.py') ||
+    filename.endsWith('.test.rs') ||
     filename.endsWith('.spec.ts') ||
     filename.endsWith('.spec.js') ||
     filename.endsWith('_test.py') ||
-    filename.endsWith('_spec.rb')
+    filename.endsWith('_test.rs') ||
+    filename.endsWith('_tests.rs') ||
+    filename.endsWith('_test.go') ||
+    filename.endsWith('_spec.rb') ||
+    filename.includes('.test.') ||
+    filename.includes('.spec.')
   ) {
     return 'test';
   }
