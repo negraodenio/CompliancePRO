@@ -86,7 +86,7 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
               AI Governance & Capability Snapshot
             </h2>
             <p className="text-sm text-slate-300">
-              Technical ground truth extracted from <span className="text-sky-300 font-semibold font-mono">{result.repo?.name || 'Scanned AI Project'}</span>. Below are the discovered autonomous agents, technical capabilities, authorization boundaries, and regulatory risks.
+              Technical ground truth extracted from <span className="text-sky-300 font-semibold font-mono">{result.repo?.name || 'Scanned AI Project'}</span>. Discovered autonomous agents, execution capabilities, authorization boundaries, and governance/compliance exposure.
             </p>
           </div>
         </div>
@@ -129,7 +129,7 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
           <p className="text-2xl font-bold text-rose-400 font-mono">
             {totalUnknownAuth}
           </p>
-          <p className="text-[10px] text-rose-400/80">Missing explicit grants</p>
+          <p className="text-[10px] text-rose-400/80">No verified auth evidence</p>
         </div>
 
         <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
@@ -241,7 +241,7 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
                         </span>
                       ) : (
                         <span className="text-rose-400/80 italic text-[10px]">
-                          No explicit grant found
+                          No verified authorization evidence
                         </span>
                       )}
                     </td>
@@ -323,7 +323,7 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
             <span className="text-xs font-mono text-emerald-400">VERIFIED</span>
           </div>
           <p className="text-xs text-slate-300 leading-relaxed">
-            All API keys, JWT bearer tokens, connection strings, and database passwords were <strong>redacted in memory</strong>. Source code is analyzed in-memory and is not persisted by CG-AG. All AST inspection executes client-side directly in your browser.
+            Designed for privacy-preserving analysis: source code is analyzed in-memory in the browser and sensitive credential patterns are redacted before processing. All API keys, JWT bearer tokens, connection strings, and database passwords are <strong>redacted in memory</strong>.
           </p>
           <div className="pt-2 flex flex-wrap gap-2 text-[10px] font-mono text-slate-400">
             <span className="px-2 py-1 rounded bg-slate-800 border border-slate-700">✓ In-Memory AST Analysis</span>
@@ -340,10 +340,10 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
             COMMERCIAL AI GOVERNANCE
           </span>
           <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Preserve, Govern & Prove These AI Systems
+            Turn Discovered Capabilities Into Governed AI Assets
           </h3>
           <p className="text-sm text-slate-300">
-            Create your enterprise organization now to ingest these discovered findings into your immutable Cryptographic Ledger, issue AI Passports, enforce HITL approval gates, and export audited RIPD dossiers.
+            Create your enterprise organization now to ingest these discovered findings into your immutable Cryptographic Ledger, issue AI Passports, enforce HITL approval gates, and generate cryptographically verifiable conformity dossiers.
           </p>
         </div>
 

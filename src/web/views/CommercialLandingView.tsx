@@ -168,36 +168,58 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
           </div>
 
           {/* Main Headline */}
-          <div className="max-w-4xl mx-auto space-y-3">
+          <div className="max-w-4xl mx-auto space-y-4">
             <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.1]">
               Discover What Your AI <br />
               <span className="bg-gradient-to-r from-sky-400 via-indigo-300 to-cyan-400 bg-clip-text text-transparent">
                 Can Actually Do.
               </span>
             </h1>
-            <p className="text-base sm:text-lg text-slate-300 max-w-3xl mx-auto font-normal leading-relaxed">
-              Real static & capability code inspection extracting autonomous agents, LLM models, database queries, S3 buckets, tool permissions, and regulatory compliance exposure.
+            
+            <p className="text-lg sm:text-xl font-semibold text-sky-300 max-w-2xl mx-auto tracking-wide">
+              Static AI capability discovery for agents, LLM applications and AI-enabled systems.
             </p>
+
+            <p className="text-sm sm:text-base text-slate-300 max-w-3xl mx-auto font-normal leading-relaxed">
+              Analyze your repository and discover agents, models, data access, tools, APIs, cloud resources and execution capabilities — extracting technical AI capabilities, authorization boundaries, security risks and governance/compliance exposure.
+            </p>
+
+            {/* Central Thesis Box */}
+            <div className="pt-2 max-w-2xl mx-auto">
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-sky-950/60 via-indigo-950/40 to-slate-950/80 border border-sky-500/30 text-center space-y-1 backdrop-blur-sm">
+                <p className="text-xs sm:text-sm text-slate-200 font-medium italic">
+                  "Your code tells us what the AI can do. Your governance must prove what it is allowed to do."
+                </p>
+                <div className="font-mono text-xs font-bold text-sky-400 tracking-wider pt-0.5">
+                  CODED CAPABILITY ≠ AUTHORIZED CAPABILITY
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Dual CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <button
-              onClick={scrollToScanner}
-              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-sky-500 via-indigo-600 to-cyan-500 hover:from-sky-400 hover:to-cyan-400 text-white font-extrabold text-sm shadow-xl shadow-sky-500/25 flex items-center justify-center gap-2 transition transform hover:-translate-y-0.5 cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4 text-sky-200" />
-              <span>TEST YOUR OWN REPO / CODE</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+          {/* Dual CTAs & Funnel Preview */}
+          <div className="space-y-3 pt-2">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button
+                onClick={scrollToScanner}
+                className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-sky-500 via-indigo-600 to-cyan-500 hover:from-sky-400 hover:to-cyan-400 text-white font-extrabold text-sm shadow-xl shadow-sky-500/25 flex items-center justify-center gap-2 transition transform hover:-translate-y-0.5 cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4 text-sky-200" />
+                <span>Run Free AI Capability Scan</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
 
-            <button
-              onClick={onEnterApp}
-              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold text-sm shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span>ENTER GOVERNANCE OS</span>
-              <ChevronRight className="w-4 h-4 text-slate-400" />
-            </button>
+              <button
+                onClick={onEnterApp}
+                className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold text-sm shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Enter Governance OS</span>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Discover what your AI code exposes before you deploy, govern or audit it.
+            </p>
           </div>
         </section>
 
@@ -408,6 +430,89 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
         </section>
 
         {/* ========================================================================= */}
+        {/* 2.5 THE 5-STEP GOVERNANCE PROGRESSION FUNNEL */}
+        {/* ========================================================================= */}
+        <section className="py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+          <div className="p-8 rounded-3xl bg-slate-900/40 border border-slate-800/80 space-y-6">
+            <div className="text-center space-y-1">
+              <span className="text-xs font-mono font-bold tracking-widest text-sky-400 uppercase">
+                THE GOVERNANCE PROGRESSION
+              </span>
+              <h3 className="text-xl sm:text-2xl font-bold text-white">
+                From Technical Ground Truth to Auditable AI Assets
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-2">
+              <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                    STEP 1
+                  </span>
+                  <Radio className="w-3.5 h-3.5 text-sky-400" />
+                </div>
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">DISCOVER</h4>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Discover what the AI code actually exposes: agents, models, tools, and databases.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    STEP 2
+                  </span>
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                </div>
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">ASSESS</h4>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Identify security risks, governance gaps, and unverified authorization evidence.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    STEP 3
+                  </span>
+                  <Shield className="w-3.5 h-3.5 text-indigo-400" />
+                </div>
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">GOVERN</h4>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Apply ownership, tool permissions, guardrails, human approval (HITL), and autonomy controls.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                    STEP 4
+                  </span>
+                  <Lock className="w-3.5 h-3.5 text-cyan-400" />
+                </div>
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">PRESERVE</h4>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Capture canonical technical evidence in tamper-evident storage with legal retention rules.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    STEP 5
+                  </span>
+                  <FileBadge className="w-3.5 h-3.5 text-emerald-400" />
+                </div>
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">PROVE</h4>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Generate auditable evidence packages, governance records and cryptographically verifiable proofs.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
         {/* 3. THE AUTONOMOUS AI REALITY CRISIS (THE CORE MESSAGE) */}
         {/* ========================================================================= */}
         <section id="discovery" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-10">
@@ -594,7 +699,7 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
                 Built for Regulators, Auditors & Boardrooms
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Generate auditable regulatory dossiers, automated RIPD (DPIA) compliance reports, and cryptographically verified evidence packages ready for external inspection.
+                Generate cryptographically verifiable technical conformity dossiers, automated RIPD (DPIA) assessments, and auditable evidence packages for governance, risk, privacy and regulatory workflows.
               </p>
             </div>
 
@@ -625,10 +730,10 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
             
             <div className="max-w-3xl mx-auto space-y-2 relative z-10">
               <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
-                Ready to Govern Your Enterprise AI Fleet?
+                Turn Discovered Capabilities Into Governed AI Assets
               </h2>
-              <p className="text-sm text-slate-300">
-                Run a free scan now or create an organization to unlock immutable ledger auditability, role-based lenses, and automatic RIPD dossiers.
+              <p className="text-sm text-slate-300 max-w-2xl mx-auto">
+                Run a free scan now or create an organization to unlock immutable ledger auditability, role-based lenses, and cryptographically verified conformity evidence.
               </p>
             </div>
 
