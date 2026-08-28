@@ -35,7 +35,7 @@ export function extractDeclaredToolsFromContent(content: string): string[] {
   const discovered: string[] = [];
   const functionAliases = new Map<string, string>(); // funcName -> customToolName
 
-  // 1. JSON / Dict schema functions (OpenAI Assistants API, Chat Completions Tools, Anthropic Tool Use, Bedrock, Gemini)
+  // 1. JSON / Dict schema functions (OpenAI, Anthropic, Bedrock, Gemini function calling tools)
   const toolsBlocks = content.matchAll(/(?:tools|functions)\s*(?:=|:|\()\s*\[([\s\S]*?)\](?:\s*\)|\s*,|\s*;|\s*\n)/gi);
   for (const tb of toolsBlocks) {
     const blockContent = tb[1];
@@ -57,22 +57,41 @@ export function extractDeclaredToolsFromContent(content: string): string[] {
     }
   }
 
-  // 2. @tool decorator in LangChain / CrewAI / Smolagents / AutoGen with alias mapping
-  const decoratorMatches = content.matchAll(/@tool(?:\((?:name\s*=\s*)?["']?([^"')\s]+)?["']?\))?\s*(?:\r?\n|\s)+def\s+([a-zA-Z0-9_]+)/g);
-  for (const m of decoratorMatches) {
-    const named = m[1];
-    const funcName = m[2];
-    let target = funcName.trim();
-    if (named && !named.includes('=') && named !== 'True' && named !== 'False') {
-      target = named.trim();
-      functionAliases.set(funcName.trim(), target);
-    }
-    if (target && !SCHEMA_EXCLUDE_KEYWORDS.has(target.toLowerCase())) {
-      discovered.push(target);
+  // 2. Line-by-line Decorator parsing (LangChain @tool, CrewAI, AutoGen @register_for_llm, Smolagents)
+  const lines = content.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.startsWith('@') && (line.includes('tool') || line.includes('register_for_llm') || line.includes('register_for_execution'))) {
+      const namedArg = line.match(/(?:name\s*=\s*)?["']([a-zA-Z0-9_\-\.]+)["']/);
+      for (let j = i + 1; j <= Math.min(lines.length - 1, i + 3); j++) {
+        const nextLine = lines[j].trim();
+        const defMatch = nextLine.match(/^(?:async\s+)?def\s+([a-zA-Z0-9_]+)/);
+        if (defMatch) {
+          const funcName = defMatch[1];
+          const target = namedArg ? namedArg[1].trim() : funcName;
+          if (namedArg) {
+            functionAliases.set(funcName, namedArg[1].trim());
+          }
+          if (target && !SCHEMA_EXCLUDE_KEYWORDS.has(target.toLowerCase())) {
+            discovered.push(target);
+          }
+          break;
+        }
+      }
     }
   }
 
-  // 3. Tool class instantiations: Tool(name="..."), StructuredTool(name="..."), FunctionTool.from_function(func)
+  // 3. AutoGen register_function(func, name="...")
+  const autogenMatches = content.matchAll(/register_function\s*\(\s*(?:[\s\S]*?)(?:name\s*=\s*["']([a-zA-Z0-9_\-\.]+)["']|func\s*=\s*([a-zA-Z0-9_]+)|([a-zA-Z0-9_]+)\s*,)/g);
+  for (const am of autogenMatches) {
+    const target = am[1] || am[2] || am[3];
+    if (target && !SCHEMA_EXCLUDE_KEYWORDS.has(target.toLowerCase())) {
+      const resolved = functionAliases.get(target.trim()) || target.trim();
+      discovered.push(resolved);
+    }
+  }
+
+  // 4. Tool class instantiations: Tool(name="..."), StructuredTool(name="..."), FunctionTool.from_function(func)
   const wrapperMatches = content.matchAll(/(?:StructuredTool|FunctionTool|QueryEngineTool|Tool)(?:\.from_defaults|\.from_function)?\s*\(\s*(?:(?:name\s*=\s*)?["']([a-zA-Z0-9_\-\.]+)["']|([a-zA-Z0-9_]+))/g);
   for (const m of wrapperMatches) {
     const toolName = m[1] || m[2];
@@ -82,7 +101,7 @@ export function extractDeclaredToolsFromContent(content: string): string[] {
     }
   }
 
-  // 4. tools = [...] or from_tools([...]) or bind_tools([...])
+  // 5. tools = [...] or from_tools([...]) or bind_tools([...])
   const toolArrayMatches = content.matchAll(/(?:tools|functions|from_tools|bind_tools)\s*(?:=|:|\()\s*\[([^\]]*)\]/gi);
   for (const tm of toolArrayMatches) {
     const rawList = tm[1];

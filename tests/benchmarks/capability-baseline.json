@@ -1,0 +1,147 @@
+{
+  "version": "1.0.0",
+  "generated_at": "2026-08-28T15:24:00Z",
+  "engine": "CG-AG Capability Discovery Engine (Calibrated AST)",
+  "invariants": [
+    "REAL OPERATIONAL CAPABILITY != AST / JSON SCHEMA NODE",
+    "OBSERVED_CAPABILITY != AUTHORIZED_CAPABILITY",
+    "DECLARED_CAPABILITY != AUTHORIZED_CAPABILITY",
+    "Absence of Authorization Evidence != Authorized",
+    "Deduplication preserves evidence without losing provenance"
+  ],
+  "cases": {
+    "case_01_openai_function_schema": {
+      "framework": "OpenAI Assistants API",
+      "expected_capabilities_count": 1,
+      "expected_tools": [
+        "check_calendar_availability"
+      ],
+      "expected_action": "EXECUTE",
+      "expected_state": "DECLARED_CAPABILITY"
+    },
+    "case_02_anthropic_tool_schema": {
+      "framework": "Anthropic / Bedrock Tool Use",
+      "expected_capabilities_count": 1,
+      "expected_tools": [
+        "get_market_ticker"
+      ],
+      "expected_action": "EXECUTE",
+      "expected_state": "DECLARED_CAPABILITY"
+    },
+    "case_03_langchain_decorator": {
+      "framework": "LangChain",
+      "expected_capabilities_count": 1,
+      "expected_tools": [
+        "calculate_vat_tax"
+      ],
+      "expected_action": "EXECUTE",
+      "expected_state": "DECLARED_CAPABILITY"
+    },
+    "case_04_crewai_tool": {
+      "framework": "CrewAI",
+      "expected_capabilities_count": 1,
+      "expected_tools": [
+        "web_intelligence_search"
+      ],
+      "expected_action": "EXECUTE",
+      "expected_state": "DECLARED_CAPABILITY"
+    },
+    "case_05_autogen_tool": {
+      "framework": "AutoGen",
+      "expected_capabilities_count": 1,
+      "expected_tools": [
+        "sql_query_tool"
+      ],
+      "expected_action": "EXECUTE",
+      "expected_state": "DECLARED_CAPABILITY"
+    },
+    "case_06_mcp_tool": {
+      "framework": "Model Context Protocol (MCP)",
+      "expected_capabilities_count": 1,
+      "expected_tools": [
+        "mcp_postgres_query"
+      ],
+      "expected_system_type": "mcp_server",
+      "expected_state": "OBSERVED_CAPABILITY"
+    },
+    "case_07_postgresql_capability": {
+      "system_type": "database",
+      "expected_capabilities_count": 1,
+      "resource_target": "customer_ledger",
+      "action": "WRITE",
+      "is_destructive": false
+    },
+    "case_08_s3_storage_capability": {
+      "system_type": "cloud_storage",
+      "expected_action": "DELETE",
+      "is_destructive": true
+    },
+    "case_09_shell_exec_capability": {
+      "system_type": "system_exec",
+      "expected_action": "EXECUTE",
+      "is_destructive": true
+    },
+    "case_10_oauth_scope_matching": {
+      "system_type": "office_365",
+      "expected_state": "AUTHORIZED_CAPABILITY",
+      "evidence_type": "oauth_scope"
+    },
+    "case_11_iam_policy_wildcard": {
+      "system_type": "cloud_storage",
+      "expected_state": "AUTHORIZED_CAPABILITY",
+      "anomaly": "EXCESSIVE_WILDCARD_PERMISSION"
+    },
+    "case_12_db_grant_matching": {
+      "system_type": "database",
+      "resource_target": "orders",
+      "expected_state": "AUTHORIZED_CAPABILITY",
+      "evidence_type": "db_grant"
+    }
+  },
+  "audited_repositories_baseline": {
+    "thomascherickal_ai_agents_examples": {
+      "total_agents": 8,
+      "total_models": 1,
+      "total_capabilities": 9,
+      "unverified_auth_kpi": 9,
+      "high_priority_findings": 0,
+      "identities_detected": 0,
+      "capabilities_list": [
+        "check_calendar_availability",
+        "SearchTool",
+        "FileTool",
+        "AnalysisTool",
+        "hr_knowledge_base",
+        "hr_tool",
+        "get_stock_info",
+        "compare_stocks",
+        "generate_analysis_report"
+      ]
+    },
+    "fintech_credit_crewai_demo": {
+      "total_agents": 3,
+      "total_models": 1,
+      "total_capabilities": 1,
+      "unverified_auth_kpi": 1,
+      "high_priority_findings": 3,
+      "identities_detected": 0
+    },
+    "langchain_ai_langgraph": {
+      "total_agents": 2,
+      "total_models": 0,
+      "total_capabilities": 2,
+      "unverified_auth_kpi": 2,
+      "high_priority_findings": 0,
+      "identities_detected": 0
+    },
+    "compliance_pro_core": {
+      "total_agents": 235,
+      "total_models": 39,
+      "total_capabilities": 86,
+      "unverified_auth_kpi": 86,
+      "high_priority_findings": 226,
+      "identities_detected": 2,
+      "anomalies_detected": 38
+    }
+  }
+}
