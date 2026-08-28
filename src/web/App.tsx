@@ -60,12 +60,6 @@ export const App: React.FC = () => {
   const [showExport, setShowExport] = useState(false);
   const [showAcademy, setShowAcademy] = useState(false);
 
-  useEffect(() => {
-    if (DEMO_PROJECTS && DEMO_PROJECTS.length > 0) {
-      handleSelectDemo(DEMO_PROJECTS[0]);
-    }
-  }, []);
-
   const triggerConfetti = () => {
     confetti({
       particleCount: 50,
@@ -169,6 +163,10 @@ export const App: React.FC = () => {
       setScanResult(result);
       ScanGovernanceBridge.ingestScan(result);
       setScanProgress({ message: 'Loaded!', percent: 100 });
+      triggerConfetti();
+      if (pageMode === 'app') {
+        setActiveView('overview-center');
+      }
     } catch (err: any) {
       console.error('Demo load error:', err);
     } finally {
@@ -183,281 +181,243 @@ export const App: React.FC = () => {
     <ThemeProvider>
       <AuthProvider>
         <IndustryProvider>
-        <RoleLensProvider onNavigate={(view) => setActiveView(view)}>
-        <AppShell 
-          activeView={activeView} 
-          setActiveView={setActiveView}
-          totalAgentsCount={totalAgentsCount}
-          criticalGapsCount={criticalGapsCount}
-        >
-          {activeView === 'overview-center' && (
-            <GovernanceCenter 
-              onNavigateToScanner={() => setActiveView('tools-scanner')}
-              onNavigateToPassports={() => setActiveView('discover-agents')}
-              onNavigateToControls={() => setActiveView('govern-controls')}
-              onNavigateToInventory={() => setActiveView('discover-inventory')}
-              onNavigateToAgents={() => setActiveView('discover-agents')}
-            />
-          )}
+          <RoleLensProvider onNavigate={(view) => setActiveView(view)}>
+            {pageMode === 'landing' ? (
+              <>
+                <CommercialLandingView 
+                  onScanGitHub={handleScanGitHub}
+                  onScanZip={handleScanZip}
+                  onScanFolder={handleScanFolder}
+                  onSelectDemo={handleSelectDemo}
+                  isScanning={isScanning}
+                  scanProgress={scanProgress}
+                  scanResult={scanResult}
+                  onResetScan={() => setScanResult(null)}
+                  onOpenAuth={(mode = 'signup') => setAuthModalMode(mode)}
+                  onEnterApp={() => {
+                    setPageMode('app');
+                    setActiveView('overview-center');
+                  }}
+                />
 
-          {activeView === 'discover-inventory' && (
-            <AiInventoryView 
-              result={scanResult}
-              onOpenScanner={() => setActiveView('tools-scanner')}
-            />
-          )}
+                {authModalMode && (
+                  <AuthModal 
+                    isOpen={Boolean(authModalMode)}
+                    onClose={() => setAuthModalMode(null)}
+                    initialTab={authModalMode}
+                  />
+                )}
+              </>
+            ) : (
+              <AppShell 
+                activeView={activeView} 
+                setActiveView={setActiveView}
+                totalAgentsCount={totalAgentsCount}
+                criticalGapsCount={criticalGapsCount}
+                onNavigateToLanding={() => setPageMode('landing')}
+              >
+                {activeView === 'overview-center' && (
+                  <GovernanceCenter 
+                    onNavigateToScanner={() => setActiveView('tools-scanner')}
+                    onNavigateToPassports={() => setActiveView('discover-agents')}
+                    onNavigateToControls={() => setActiveView('govern-controls')}
+                    onNavigateToInventory={() => setActiveView('discover-inventory')}
+                    onNavigateToAgents={() => setActiveView('discover-agents')}
+                  />
+                )}
 
-          {activeView === 'discover-agents' && (
-            <AgentsTeamsView 
-              result={scanResult}
-            />
-          )}
+                {activeView === 'discover-inventory' && (
+                  <AiInventoryView 
+                    result={scanResult}
+                    onOpenScanner={() => setActiveView('tools-scanner')}
+                  />
+                )}
 
-          {activeView === 'discover-assessments' && (
-            <AssessmentsView 
-              result={scanResult}
-            />
-          )}
+                {activeView === 'discover-agents' && (
+                  <AgentsTeamsView 
+                    result={scanResult}
+                  />
+                )}
 
-          {activeView === 'discover-passports' && (
-            <AgentsTeamsView 
-              result={scanResult}
-            />
-          )}
+                {activeView === 'discover-assessments' && (
+                  <AssessmentsView 
+                    result={scanResult}
+                  />
+                )}
 
-                    {activeView === 'learn-academy' && <AcademyView onNavigate={(view) => setActiveView(view)} />}
-          {activeView === 'tools-operations' && <OperationsCenterView />}
-                    {activeView === 'tools-deployment' && <ProductionDeploymentView />}
-          {activeView === 'tools-scanner' && (
-            <div className="space-y-6">
-              {/* Header Banner */}
-              <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-sky-950/40 to-slate-900 border border-slate-800 text-white shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
-                <div className="relative z-10 space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <span className="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-wider uppercase bg-sky-500/20 text-sky-300 border border-sky-500/30">
-                      SENSOR & INGESTION SUITE
-                    </span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800/80 text-slate-300 border border-slate-700">
-                      AST v1.4.0
-                    </span>
-                  </div>
-                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center space-x-2.5">
-                    <Terminal className="w-6 h-6 text-sky-400" />
-                    <span>Codebase & Repository AST Scanner</span>
-                  </h1>
-                  <p className="text-xs sm:text-sm text-slate-400 max-w-3xl leading-relaxed">
-                    Ingestão e análise estática profunda de repositórios para detecção contínua de agentes de IA, fluxos SIPOC, ferramentas MCP, Shadow AI e violações regulatórias.
-                  </p>
-                </div>
-              </div>
+                {activeView === 'discover-passports' && (
+                  <AgentsTeamsView 
+                    result={scanResult}
+                  />
+                )}
 
-              {/* Ingestion Console & Workstation */}
-              <HeroScanner 
-                onScanGitHub={handleScanGitHub}
-                onScanZip={handleScanZip}
-                onScanFolder={handleScanFolder}
-                onSelectDemo={handleSelectDemo}
-                isScanning={isScanning}
-                scanProgress={scanProgress}
-              />
-
-              {scanResult && (
-                <div className="space-y-6 animate-fadeIn">
-                  {/* Ingestion Telemetry Card */}
-                  <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white border border-indigo-500/30 shadow-xl space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-800/50 pb-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-                          <CheckCircle2 className="w-5 h-5" />
+                {activeView === 'learn-academy' && <AcademyView onNavigate={(view) => setActiveView(view)} />}
+                {activeView === 'tools-operations' && <OperationsCenterView />}
+                {activeView === 'tools-deployment' && <ProductionDeploymentView />}
+                {activeView === 'tools-scanner' && (
+                  <div className="space-y-6">
+                    {/* Header Banner */}
+                    <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-sky-950/40 to-slate-900 border border-slate-800 text-white shadow-xl relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+                      <div className="relative z-10 space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-wider uppercase bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                            SENSOR & INGESTION SUITE
+                          </span>
                         </div>
-                        <div>
+                        <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                          <Terminal className="w-6 h-6 text-sky-400" />
+                          <span>Codebase AST Scanner & Capability Detector</span>
+                        </h1>
+                        <p className="text-xs text-slate-300 max-w-2xl">
+                          Execute deep static analysis on TypeScript, Python, notebooks, and configuration files to extract AI agents, models, credentials, shadow AI, and compliance violations.
+                        </p>
+                      </div>
+                    </div>
+
+                    <HeroScanner 
+                      onScanGitHub={handleScanGitHub}
+                      onScanZip={handleScanZip}
+                      onScanFolder={handleScanFolder}
+                      onSelectDemo={handleSelectDemo}
+                      isScanning={isScanning}
+                      scanProgress={scanProgress}
+                    />
+
+                    {scanResult && (
+                      <div className="space-y-6 animate-fadeIn">
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs">
                           <div className="flex items-center space-x-2">
-                            <h2 className="text-sm font-bold tracking-tight text-white">
-                              Ingestão AST Concluída & Sincronizada com o Governance OS
-                            </h2>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                              LIVE INGESTION
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            <span className="font-semibold">
+                              Scan of <strong>{scanResult.repo?.name || 'Local Repository'}</strong> successfully mapped into Governance Domain Stores.
                             </span>
                           </div>
-                          <p className="text-xs text-slate-300 mt-0.5">
-                            Repositório: <span className="font-mono text-indigo-300 font-semibold">{scanResult.repo?.fullName || scanResult.repo?.name || 'Local Scan'}</span> ({scanResult.repo?.fileCount || 0} arquivos analisados)
-                          </p>
+                          <button
+                            onClick={() => setActiveView('overview-center')}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition shadow-xs"
+                          >
+                            Open Governance Center →
+                          </button>
                         </div>
+                        <ExecutiveSummary result={scanResult} />
+                        <ViolationsList result={scanResult} />
                       </div>
-
-                      {/* Quick Navigation Action Buttons */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <button
-                          onClick={() => setActiveView('discover-agents')}
-                          className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm cursor-pointer"
-                        >
-                          <Bot className="w-3.5 h-3.5" />
-                          <span>Ver Agentes & SIPOC ({scanResult.source?.agents?.length || 0}) ➔</span>
-                        </button>
-                        <button
-                          onClick={() => setActiveView('operate-decisions')}
-                          className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition border border-slate-700 flex items-center space-x-1.5 cursor-pointer"
-                        >
-                          <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                          <span>Decisões & Riscos ➔</span>
-                        </button>
-                        <button
-                          onClick={() => setActiveView('assure-evidence')}
-                          className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition border border-slate-700 flex items-center space-x-1.5 cursor-pointer"
-                        >
-                          <Lock className="w-3.5 h-3.5 text-cyan-400" />
-                          <span>Evidência RFC 8785 ➔</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Sensor Ingestion Metric Badges */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                      <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
-                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Agentes & Passports</span>
-                        <span className="text-base font-bold text-indigo-300">{scanResult.source?.agents?.length || 0} detectados</span>
-                        <span className="text-[10px] text-slate-400 block mt-0.5">Roteados para Agents & Teams</span>
-                      </div>
-
-                      <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
-                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Achados & Riscos</span>
-                        <span className="text-base font-bold text-amber-300">{(scanResult.risks?.length || 0) + (scanResult.violations?.length || 0)} achados</span>
-                        <span className="text-[10px] text-slate-400 block mt-0.5">Roteados para Decisions Store</span>
-                      </div>
-
-                      <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
-                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Modelos & Shadow AI</span>
-                        <span className="text-base font-bold text-sky-300">{(scanResult.source?.aiModels?.length || 0)} modelos</span>
-                        <span className="text-[10px] text-slate-400 block mt-0.5">{scanResult.shadowAI?.length || 0} Shadow LLM</span>
-                      </div>
-
-                      <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
-                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Conformidade Global</span>
-                        <span className="text-base font-bold text-emerald-300">{scanResult.compliance?.overallScore || 0}% score</span>
-                        <span className="text-[10px] text-slate-400 block mt-0.5">13 regulações avaliadas</span>
-                      </div>
-                    </div>
+                    )}
                   </div>
+                )}
 
-                  {/* Clean Code Violations & AST Findings Sensor Output */}
-                  <div className="space-y-3">
-                    <ViolationsList result={scanResult} />
+                {activeView === 'govern-controls' && (
+                  <ControlsMatrixView 
+                    result={scanResult} 
+                  />
+                )}
+
+                {activeView === 'govern-risk' && (
+                  <RiskEngineView 
+                    result={scanResult}
+                  />
+                )}
+
+                {activeView === 'govern-policies' && (
+                  <PolicyEngineView 
+                    result={scanResult}
+                  />
+                )}
+
+                {activeView === 'govern-compliance' && (
+                  <ComplianceFrameworksView 
+                    result={scanResult}
+                  />
+                )}
+
+                {activeView === 'operate-decisions' && (
+                  <DecisionsPipelineView 
+                    result={scanResult}
+                  />
+                )}
+
+                {activeView === 'operate-approvals' && (
+                  <HitlApprovalsView 
+                    result={scanResult}
+                  />
+                )}
+
+                {activeView === 'operate-actions' && (
+                  <RemediationActionsView 
+                    result={scanResult}
+                  />
+                )}
+
+                {activeView === 'operate-incidents' && (
+                  <IncidentsFailsafeView 
+                    result={scanResult}
+                  />
+                )}
+
+                {activeView === 'operate-runtime' && (
+                  <RuntimeFinOpsView 
+                    result={scanResult}
+                  />
+                )}
+
+                {activeView === 'assure-evidence' && (
+                  <ProtectedEvidenceView 
+                    result={scanResult}
+                  />
+                )}
+
+                {activeView === 'assure-audit' && (
+                  <AuditLedgerView 
+                    result={scanResult}
+                  />
+                )}
+
+                {activeView === 'assure-reports' && (
+                  <RegulatoryDossiersView 
+                    result={scanResult}
+                  />
+                )}
+
+                {activeView === 'assure-simulator' && (
+                  <GovernanceSimulatorView />
+                )}
+
+                {activeView === 'assure-readiness' && (
+                  <SystemReadinessView />
+                )}
+
+                {activeView === 'manage-team' && (
+                  <TeamManagementView />
+                )}
+
+                {!['overview-center', 'discover-inventory', 'discover-agents', 'discover-passports', 'discover-assessments', 'govern-risk', 'govern-policies', 'govern-compliance', 'operate-decisions', 'operate-approvals', 'operate-actions', 'tools-scanner', 'govern-controls', 'assure-simulator', 'assure-reports', 'assure-audit', 'assure-evidence', 'operate-runtime', 'operate-incidents', 'manage-team', 'learn-academy', 'tools-operations', 'tools-deployment', 'assure-readiness'].includes(activeView) && (
+                  <div className="p-12 text-center bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-slate-800 elevation-card space-y-4">
+                    <div className="w-12 h-12 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center mx-auto">
+                      <Lock className="w-6 h-6" />
+                    </div>
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white capitalize">
+                      {activeView.replace('-', ' → ')}
+                    </h2>
+                    <p className="text-xs text-slate-500 max-w-md mx-auto">
+                      This Control Plane operational workspace is part of the CG-AG Enterprise SaaS roadmap. 
+                    </p>
+                    <button 
+                      onClick={() => setActiveView('overview-center')}
+                      className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-md text-xs font-medium transition"
+                    >
+                      Back to Governance Center
+                    </button>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
 
-          {activeView === 'assure-reports' && (
-            <RegulatoryDossiersView 
-              result={scanResult}
-            />
-          )}
-
-          {activeView === 'assure-simulator' && (
-            <GovernanceSimulatorView />
-          )}
-
-          {activeView === 'assure-readiness' && (
-            <SystemReadinessView />
-          )}
-
-          {activeView === 'assure-audit' && (
-            <AuditLedgerView 
-              result={scanResult}
-            />
-          )}
-
-          {activeView === 'assure-evidence' && (
-            <ProtectedEvidenceView 
-              result={scanResult}
-            />
-          )}
-
-          {activeView === 'operate-runtime' && (
-            <RuntimeFinOpsView 
-              result={scanResult}
-            />
-          )}
-
-          {activeView === 'operate-incidents' && (
-            <IncidentsFailsafeView 
-              result={scanResult}
-            />
-          )}
-
-          {activeView === 'operate-actions' && (
-            <RemediationActionsView 
-              result={scanResult}
-            />
-          )}
-
-          {activeView === 'operate-approvals' && (
-            <HitlApprovalsView 
-              result={scanResult}
-            />
-          )}
-
-          {activeView === 'operate-decisions' && (
-            <DecisionsPipelineView 
-              result={scanResult}
-            />
-          )}
-
-          {activeView === 'govern-compliance' && (
-            <ComplianceFrameworksView 
-              result={scanResult}
-            />
-          )}
-
-          {activeView === 'govern-policies' && (
-            <PolicyEngineView 
-              result={scanResult}
-            />
-          )}
-
-          {activeView === 'govern-risk' && (
-            <RiskEngineView 
-              result={scanResult}
-            />
-          )}
-
-                    {activeView === 'manage-team' && (
-            <TeamManagementView />
-          )}
-
-          {activeView === 'govern-controls' && (
-            <ControlsMatrixView result={scanResult} />
-          )}
-
-          {!['overview-center', 'discover-inventory', 'discover-agents', 'discover-passports', 'discover-assessments', 'govern-risk', 'govern-policies', 'govern-compliance', 'operate-decisions', 'operate-approvals', 'operate-actions', 'tools-scanner', 'govern-controls', 'assure-simulator', 'assure-reports', 'assure-audit', 'assure-evidence', 'operate-runtime', 'operate-incidents', 'manage-team'].includes(activeView) && (
-            <div className="p-12 text-center bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-slate-800 elevation-card space-y-4">
-              <div className="w-12 h-12 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center mx-auto">
-                <Lock className="w-6 h-6" />
-              </div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white capitalize">
-                {activeView.replace('-', ' · ')}
-              </h2>
-              <p className="text-xs text-slate-500 max-w-md mx-auto">
-                This Control Plane operational workspace is part of the CG-AG Enterprise SaaS roadmap. 
-                Use the <strong>Governance Center</strong>, <strong>AI Inventory</strong>, or <strong>Agents & Teams</strong> to manage current active policies.
-              </p>
-              <button 
-                onClick={() => setActiveView('overview-center')}
-                className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-md text-xs font-medium transition"
-              >
-                Back to Governance Center
-              </button>
-            </div>
-          )}
-
-          {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
-          {showExport && scanResult && <ReportExportModal result={scanResult} onClose={() => setShowExport(false)} />}
-          {showAcademy && <AcademyModal onClose={() => setShowAcademy(false)} />}
-        </AppShell>
-              </RoleLensProvider>
-      </IndustryProvider>
+                {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+                {showExport && scanResult && <ReportExportModal result={scanResult} onClose={() => setShowExport(false)} />}
+                {showAcademy && <AcademyModal onClose={() => setShowAcademy(false)} />}
+              </AppShell>
+            )}
+          </RoleLensProvider>
+        </IndustryProvider>
       </AuthProvider>
     </ThemeProvider>
   );
