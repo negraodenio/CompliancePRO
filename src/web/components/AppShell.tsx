@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import { GraduationCap, 
   Shield, 
   LayoutDashboard, 
   Layers, 
@@ -55,6 +55,7 @@ export type ActiveNavView =
   | 'tools-operations'
   | 'tools-deployment'
   | 'tools-integrations'
+  | 'learn-academy'
   | 'settings';
 
 interface AppShellProps {
@@ -149,6 +150,12 @@ export const AppShell: React.FC<AppShellProps> = ({
         { id: 'assure-evidence', label: 'Protected Evidence', icon: FolderCheck, badge: 'Secured' },
         { id: 'assure-audit', label: 'Audit Ledger', icon: BookOpen, badge: null },
         { id: 'assure-reports', label: 'Regulatory Dossiers', icon: FileDown, Crosshair, Award, badge: 'RIPD' }
+      ]
+    },
+    {
+      group: 'LEARNING & CERTIFICATION',
+      items: [
+        { id: 'learn-academy', label: 'CG-AG Academy', icon: GraduationCap, badge: '18 Modules' }
       ]
     },
     {

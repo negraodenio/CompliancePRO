@@ -1,3 +1,4 @@
+import { AcademyView } from './views/AcademyView';
 import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { ThemeProvider } from './context/ThemeContext';
@@ -209,7 +210,8 @@ export const App: React.FC = () => {
             />
           )}
 
-                    {activeView === 'tools-operations' && <OperationsCenterView />}
+                    {activeView === 'learn-academy' && <AcademyView onNavigate={(view) => setActiveView(view)} />}
+          {activeView === 'tools-operations' && <OperationsCenterView />}
                     {activeView === 'tools-deployment' && <ProductionDeploymentView />}
           {activeView === 'tools-scanner' && (
             <div className="space-y-6">

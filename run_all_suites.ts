@@ -6,7 +6,7 @@ const testDir = path.resolve(process.cwd(), 'tests');
 const files = fs.readdirSync(testDir).filter(f => f.endsWith('.test.ts'));
 
 console.log('================================================================');
-console.log('CG-AG GOVERNANCE OS - FULL SUITE VALIDATION (36 SUITES)');
+console.log('🏛️ CG-AG GOVERNANCE OS - FULL SUITE VALIDATION (' + files.length + ' SUITES)');
 console.log('================================================================\n');
 
 let passed = 0;
@@ -14,9 +14,9 @@ let failed = 0;
 const failures: string[] = [];
 
 for (const file of files) {
-  process.stdout.write('Executing ' + file.padEnd(42) + ' ... ');
+  process.stdout.write('Executing ' + file.padEnd(44) + ' ... ');
   try {
-    if (file === 'scan-governance-bridge.test.ts') {
+    if (file === 'scan-governance-bridge.test.ts' || file === 'academy-module.test.ts') {
       execSync('npx vitest run tests/' + file, { stdio: 'pipe' });
     } else {
       execSync('npx tsx tests/' + file, { stdio: 'pipe' });
@@ -40,5 +40,5 @@ if (failed > 0) {
   console.error('\nFailures:', failures);
   process.exit(1);
 } else {
-  console.log('\nALL 36 TEST SUITES PASSED PERFECTLY!');
+  console.log('\n🟢 ALL ' + files.length + ' TEST SUITES PASSED PERFECTLY!');
 }
