@@ -426,8 +426,8 @@ export function detectCapabilities(
             isWildcard: matchingGrant.isWildcard
           } : undefined,
           anomalies: matchingGrant 
-            ? ['DESTRUCTIVE_ACTION_WITHOUT_HITL'] 
-            : ['OBSERVED_WITHOUT_VERIFIED_AUTH', 'DESTRUCTIVE_ACTION_WITHOUT_HITL']
+            ? ['DESTRUCTIVE_ACTION_WITHOUT_VERIFIED_HITL'] 
+            : ['OBSERVED_WITHOUT_VERIFIED_AUTH', 'DESTRUCTIVE_ACTION_WITHOUT_VERIFIED_HITL']
         });
       }
       else if (/\.from\(['"](\w+)['"]\)\.(select|insert|update)/i.test(line) || /SELECT\s+.*FROM\s+(\w+)/i.test(line)) {
@@ -527,7 +527,7 @@ export function detectCapabilities(
             scopes: [execScope],
             filePaths: [filePath]
           },
-          anomalies: ['OBSERVED_WITHOUT_VERIFIED_AUTH', 'DESTRUCTIVE_ACTION_WITHOUT_HITL', 'PRIVILEGE_ESCALATION_RISK']
+          anomalies: ['OBSERVED_WITHOUT_VERIFIED_AUTH', 'DESTRUCTIVE_ACTION_WITHOUT_VERIFIED_HITL', 'PRIVILEGE_ESCALATION_RISK']
         });
       }
 

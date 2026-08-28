@@ -158,7 +158,7 @@ resource "aws_iam_policy" "s3_policy" {
   const dropCap = capabilities.find(c => c.action === 'DELETE' && c.isDestructive);
   assert(dropCap !== undefined, "Destructive DROP TABLE capability identified");
   assert(dropCap?.isDestructive === true, "isDestructive flag set to true");
-  assert(dropCap?.anomalies.includes('DESTRUCTIVE_ACTION_WITHOUT_HITL'), "Flagged DESTRUCTIVE_ACTION_WITHOUT_HITL");
+  assert(dropCap?.anomalies.includes('DESTRUCTIVE_ACTION_WITHOUT_VERIFIED_HITL'), "Flagged DESTRUCTIVE_ACTION_WITHOUT_VERIFIED_HITL");
 
   const s3Cap = capabilities.find(c => c.systemType === 'cloud_storage');
   assert(s3Cap !== undefined, "S3 Cloud Storage capability identified");
