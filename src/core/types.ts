@@ -412,7 +412,7 @@ export type CapabilityActionType =
   | 'WILDCARD';
 
 export type CapabilityAnomaly = 
-  | 'OBSERVED_BUT_UNAUTHORIZED'
+  | 'OBSERVED_WITHOUT_VERIFIED_AUTH'
   | 'DECLARED_BUT_UNUSED'
   | 'AUTHORIZED_BUT_UNUSED'
   | 'EXCESSIVE_WILDCARD_PERMISSION'

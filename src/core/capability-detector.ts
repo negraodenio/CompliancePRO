@@ -390,7 +390,7 @@ export function detectCapabilities(
           filePath,
           isDestructive: /delete|exec|shell|drop|rm/i.test(mTool),
           accessesSensitiveData: /user|contact|invoice|lead/i.test(mTool),
-          anomalies: ['OBSERVED_BUT_UNAUTHORIZED']
+          anomalies: ['OBSERVED_WITHOUT_VERIFIED_AUTH']
         });
       }
     }
@@ -427,7 +427,7 @@ export function detectCapabilities(
           } : undefined,
           anomalies: matchingGrant 
             ? ['DESTRUCTIVE_ACTION_WITHOUT_HITL'] 
-            : ['OBSERVED_BUT_UNAUTHORIZED', 'DESTRUCTIVE_ACTION_WITHOUT_HITL']
+            : ['OBSERVED_WITHOUT_VERIFIED_AUTH', 'DESTRUCTIVE_ACTION_WITHOUT_HITL']
         });
       }
       else if (/\.from\(['"](\w+)['"]\)\.(select|insert|update)/i.test(line) || /SELECT\s+.*FROM\s+(\w+)/i.test(line)) {
@@ -464,7 +464,7 @@ export function detectCapabilities(
             grantSnippet: matchingGrant.snippet,
             isWildcard: matchingGrant.isWildcard
           } : undefined,
-          anomalies: matchingGrant ? [] : ['OBSERVED_BUT_UNAUTHORIZED']
+          anomalies: matchingGrant ? [] : ['OBSERVED_WITHOUT_VERIFIED_AUTH']
         });
       }
 
@@ -502,7 +502,7 @@ export function detectCapabilities(
             ? ['EXCESSIVE_WILDCARD_PERMISSION'] 
             : matchingIam 
               ? [] 
-              : ['OBSERVED_BUT_UNAUTHORIZED']
+              : ['OBSERVED_WITHOUT_VERIFIED_AUTH']
         });
       }
 
@@ -527,7 +527,7 @@ export function detectCapabilities(
             scopes: [execScope],
             filePaths: [filePath]
           },
-          anomalies: ['OBSERVED_BUT_UNAUTHORIZED', 'DESTRUCTIVE_ACTION_WITHOUT_HITL', 'PRIVILEGE_ESCALATION_RISK']
+          anomalies: ['OBSERVED_WITHOUT_VERIFIED_AUTH', 'DESTRUCTIVE_ACTION_WITHOUT_HITL', 'PRIVILEGE_ESCALATION_RISK']
         });
       }
 
@@ -561,7 +561,7 @@ export function detectCapabilities(
             grantSnippet: matchingOauth.snippet,
             isWildcard: matchingOauth.isWildcard
           } : undefined,
-          anomalies: matchingOauth ? ['CROSS_SYSTEM_ACCESS'] : ['OBSERVED_BUT_UNAUTHORIZED', 'CROSS_SYSTEM_ACCESS']
+          anomalies: matchingOauth ? ['CROSS_SYSTEM_ACCESS'] : ['OBSERVED_WITHOUT_VERIFIED_AUTH', 'CROSS_SYSTEM_ACCESS']
         });
       }
     }

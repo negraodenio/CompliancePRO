@@ -94,7 +94,7 @@ class CreditUnderwriterAgent:
   assert(sqlCap !== undefined, "SQL Database capability detected from AST");
   assert(sqlCap?.action === 'READ', "Action classified as READ");
   assert(sqlCap?.state === 'OBSERVED_CAPABILITY', "State is OBSERVED_CAPABILITY (Not automatically authorized)");
-  assert(sqlCap?.anomalies.includes('OBSERVED_BUT_UNAUTHORIZED'), "Flagged as OBSERVED_BUT_UNAUTHORIZED");
+  assert(sqlCap?.anomalies.includes('OBSERVED_WITHOUT_VERIFIED_AUTH'), "Flagged as OBSERVED_WITHOUT_VERIFIED_AUTH");
   assert(sqlCap?.accessesSensitiveData === true, "Identified access to sensitive customer data");
 });
 
@@ -119,7 +119,7 @@ GRANT SELECT ON customer_invoices TO credit_underwriter_role;
   assert(sqlCap !== undefined, "SQL Database capability found");
   assert(sqlCap?.state === 'AUTHORIZED_CAPABILITY', "State is AUTHORIZED_CAPABILITY due to explicit grant");
   assert(sqlCap?.authorizationEvidence?.type === 'db_grant', "Authorization evidence points to db_grant");
-  assert(!sqlCap?.anomalies.includes('OBSERVED_BUT_UNAUTHORIZED'), "No unauthorization anomaly present");
+  assert(!sqlCap?.anomalies.includes('OBSERVED_WITHOUT_VERIFIED_AUTH'), "No unauthorization anomaly present");
 });
 
 // 3. DESTRUCTIVE ACTIONS & EXCESSIVE WILDCARDS
@@ -273,7 +273,7 @@ def run_agent():
   const cap = agent.capabilities![0];
   assert(cap.systemType === 'database', "Capability system is database");
   assert(cap.state === 'OBSERVED_CAPABILITY', "Preserves OBSERVED_CAPABILITY state in Agent Passport");
-  assert(cap.anomalies.includes('OBSERVED_BUT_UNAUTHORIZED'), "Preserves OBSERVED_BUT_UNAUTHORIZED anomaly in Agent Passport");
+  assert(cap.anomalies.includes('OBSERVED_WITHOUT_VERIFIED_AUTH'), "Preserves OBSERVED_WITHOUT_VERIFIED_AUTH anomaly in Agent Passport");
 });
 
 // 7. EMPTY CAPABILITY SCAN PRESERVES EMPTY STATE (ZERO MOCK DATA)
