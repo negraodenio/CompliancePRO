@@ -44,7 +44,7 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
   const totalUnknownAuth = capSummary?.unknownAuthorizationCount ?? capabilities.filter(c => c.state === 'UNKNOWN_AUTHORIZATION').length;
   const highRiskFindings = (result.violations || []).filter(v => v.severity === 'critical' || v.severity === 'high');
   const destructiveActions = capabilities.filter(c => c.isDestructive);
-  const averageScore = Math.round(result.compliance?.overallScore || 78);
+  const averageScore = Math.round(result.compliance?.overallScore ?? 0);
 
   const getStatusBadge = (state: string) => {
     switch (state) {
@@ -108,7 +108,7 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
             <span className="text-[11px] font-semibold uppercase tracking-wider">AI Models</span>
             <Cpu className="w-4 h-4 text-indigo-400" />
           </div>
-          <p className="text-2xl font-bold text-white font-mono">{models.length || 1}</p>
+          <p className="text-2xl font-bold text-white font-mono">{models.length}</p>
           <p className="text-[10px] text-slate-400">Endpoints & LLMs</p>
         </div>
 
@@ -138,7 +138,7 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
             <AlertTriangle className="w-4 h-4 text-amber-400" />
           </div>
           <p className="text-2xl font-bold text-amber-400 font-mono">{highRiskFindings.length}</p>
-          <p className="text-[10px] text-slate-400">P0/P1 Violations</p>
+          <p className="text-[10px] text-slate-400">High-Priority Findings</p>
         </div>
 
         <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
@@ -323,7 +323,7 @@ export const FreeScanSnapshotView: React.FC<FreeScanSnapshotViewProps> = ({
             <span className="text-xs font-mono text-emerald-400">VERIFIED</span>
           </div>
           <p className="text-xs text-slate-300 leading-relaxed">
-            All API keys, JWT bearer tokens, connection strings, and database passwords were <strong>redacted in memory</strong>. Your source code is never transmitted or stored on public cloud servers.
+            All API keys, JWT bearer tokens, connection strings, and database passwords were <strong>redacted in memory</strong>. Source code is analyzed in-memory and is not persisted by CG-AG. All AST inspection executes client-side directly in your browser.
           </p>
           <div className="pt-2 flex flex-wrap gap-2 text-[10px] font-mono text-slate-400">
             <span className="px-2 py-1 rounded bg-slate-800 border border-slate-700">✓ In-Memory AST Analysis</span>

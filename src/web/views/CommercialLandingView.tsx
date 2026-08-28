@@ -437,7 +437,7 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
                 <p>Status: "Declared safe by product manager"</p>
               </div>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Relies on self-declarations and static documentation. Completely blind to what the code actually does at runtime.
+                Relies on self-declarations and static documentation. Completely blind to what the code actually exposes and enables.
               </p>
             </div>
 
