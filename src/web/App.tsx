@@ -3,7 +3,7 @@ import { AcademyView } from './views/AcademyView';
 import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { ThemeProvider } from './context/ThemeContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { IndustryProvider } from './context/IndustryContext';
 import { RoleLensProvider } from './context/RoleLensContext';
 import { AppShell, ActiveNavView } from './components/AppShell';
@@ -48,6 +48,29 @@ import { ScanGovernanceBridge } from './services/scan-governance-bridge';
 import { DEMO_PROJECTS, DemoProject } from './services/demo-projects';
 import type { ScannerResult } from '../core/types';
 import { Lock, Sparkles, Terminal, FileBadge, CheckSquare, Layers, CheckCircle2, Bot, ShieldCheck } from 'lucide-react';
+
+interface AuthSessionGuardProps {
+  pageMode: 'landing' | 'app';
+  onForceLanding: () => void;
+  children: React.ReactNode;
+}
+
+const AuthSessionGuard: React.FC<AuthSessionGuardProps> = ({
+  pageMode,
+  onForceLanding,
+  children
+}) => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    // If user is in app mode and authentication is lost (e.g. logout or token expired), immediately return to landing
+    if (pageMode === 'app' && !isAuthenticated && !isLoading) {
+      onForceLanding();
+    }
+  }, [pageMode, isAuthenticated, isLoading, onForceLanding]);
+
+  return <>{children}</>;
+};
 
 export const App: React.FC = () => {
   const [pageMode, setPageMode] = useState<'landing' | 'app'>('landing');
@@ -195,7 +218,14 @@ export const App: React.FC = () => {
       <AuthProvider>
         <IndustryProvider>
           <RoleLensProvider onNavigate={(view) => setActiveView(view)}>
-            {pageMode === 'landing' ? (
+            <AuthSessionGuard
+              pageMode={pageMode}
+              onForceLanding={() => {
+                setPageMode('landing');
+                setActiveView('overview-center');
+              }}
+            >
+              {pageMode === 'landing' ? (
               <>
                 <CommercialLandingView 
                   onScanGitHub={handleScanGitHub}
@@ -231,7 +261,10 @@ export const App: React.FC = () => {
                 setActiveView={setActiveView}
                 totalAgentsCount={totalAgentsCount}
                 criticalGapsCount={criticalGapsCount}
-                onNavigateToLanding={() => setPageMode('landing')}
+                onNavigateToLanding={() => {
+                  setPageMode('landing');
+                  setActiveView('overview-center');
+                }}
               >
                 {activeView === 'overview-center' && (
                   <GovernanceCenter 
@@ -433,6 +466,7 @@ export const App: React.FC = () => {
                 {showAcademy && <AcademyModal onClose={() => setShowAcademy(false)} />}
               </AppShell>
             )}
+            </AuthSessionGuard>
           </RoleLensProvider>
         </IndustryProvider>
       </AuthProvider>

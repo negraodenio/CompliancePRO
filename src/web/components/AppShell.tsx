@@ -479,6 +479,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                     onClick={() => {
                       logout();
                       setIsUserMenuOpen(false);
+                      onNavigateToLanding?.();
                     }}
                     className="w-full text-left px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl flex items-center space-x-2 transition cursor-pointer"
                   >

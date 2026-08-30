@@ -318,15 +318,19 @@ export function detectCapabilities(
       }
     }
 
-    if (/scopes?\s*:\s*\[([^\]]+)\]/i.test(content) || /scope\s*=\s*['"]([^'"]+)['"]/i.test(content)) {
-      const scopeMatch = content.match(/scopes?\s*:\s*\[([^\]]+)\]/i) || content.match(/scope\s*=\s*['"]([^'"]+)['"]/i);
+    if (/(?:["']scopes?["']|scopes?)\s*:\s*\[([^\]]+)\]/i.test(content) || /(?:["']scope["']|scope)\s*=\s*['"]([^'"]+)['"]/i.test(content)) {
+      const scopeMatch = content.match(/(?:["']scopes?["']|scopes?)\s*:\s*\[([^\]]+)\]/i) || content.match(/(?:["']scope["']|scope)\s*=\s*['"]([^'"]+)['"]/i);
       if (scopeMatch && scopeMatch[1]) {
         const rawScopes = scopeMatch[1].replace(/['"]/g, '').split(/[,\s]+/);
         for (const s of rawScopes) {
           if (s.trim().length > 2) {
             knownGrants.push({
               type: 'oauth_scope',
-              systemName: s.includes('mail') || s.includes('graph') ? 'Microsoft Office 365' : s.includes('slack') ? 'Slack MCP' : 'OAuth API',
+              systemName: s.includes('mail') || s.includes('graph') ? 'Microsoft Office 365'
+                : s.includes('slack') ? 'Slack API'
+                : s.includes('github') || s.includes('repo') ? 'GitHub API'
+                : s.includes('googleapis') || s.includes('google') ? 'Google API'
+                : 'OAuth API',
               resourceTarget: s.trim(),
               actions: s.includes('write') || s.includes('send') ? ['WRITE'] : ['READ'],
               file: filePath,
@@ -346,6 +350,23 @@ export function detectCapabilities(
         identityName: filePath.split('/').pop() || 'service_account.json',
         sourceFile: filePath
       });
+    }
+
+    // 1.2 API KEY IDENTITY DETECTION (no secret leakage - only env variable names)
+    const apiKeyEnvPatterns = content.matchAll(/(?:process\.env\.([A-Z_]*(?:API_KEY|SECRET|TOKEN)[A-Z_]*)|os\.environ\[?['"]([ A-Z_]*(?:API_KEY|SECRET|TOKEN)[A-Z_]*)['"]\]?)/gi);
+    for (const km of apiKeyEnvPatterns) {
+      const varName = km[1] || km[2];
+      if (varName && varName.length > 3) {
+        const alreadyExists = identities.some(id => id.identityType === 'api_key' && id.identityName === `env:${varName}`);
+        if (!alreadyExists) {
+          identities.push({
+            agentName: 'SystemAgent',
+            identityType: 'api_key',
+            identityName: `env:${varName}`,
+            sourceFile: filePath
+          });
+        }
+      }
     }
   }
 
@@ -390,24 +411,63 @@ export function detectCapabilities(
       });
     }
 
-    // 2.2 MCP TOOLS
-    if (/@modelcontextprotocol\/sdk|mcp\.server|StdioServerTransport/i.test(content) || /ListToolsRequestSchema/i.test(content)) {
+    // 2.2 MCP DETECTION (F: server identity, G: registration vs invocation, I: resources, J: prompts, K: schema, L: Python, M: SSE, H: client)
+    const isTsMcp = /@modelcontextprotocol\/sdk|mcp\.server|StdioServerTransport|SSEServerTransport/i.test(content) || /ListToolsRequestSchema/i.test(content);
+    const isPyMcp = /from\s+mcp\b|import\s+mcp|FastMCP|@mcp\.tool|@app\.tool|@mcp\.resource|@mcp\.prompt/i.test(content);
+
+    if (isTsMcp || isPyMcp) {
+      // F: MCP server identity extraction
+      const serverNameMatch = content.match(/new\s+(?:McpServer|Server)\s*\(\s*\{[^}]*name\s*:\s*['"]([^'"]+)['"]/i)
+        || content.match(/FastMCP\s*\(\s*['"]([^'"]+)['"]/i);
+      const mcpServerName = serverNameMatch ? serverNameMatch[1] : 'Model Context Protocol (MCP)';
+
+      // G: MCP tool registration (DECLARED_CAPABILITY - registration != invocation)
       const mcpToolMatches = content.match(/server\.tool\s*\(\s*['"]([^'"]+)['"]/g);
-      const mcpToolNames = mcpToolMatches 
-        ? mcpToolMatches.map(m => m.replace(/server\.tool\s*\(\s*['"]/, '').replace(/['"]$/, ''))
-        : ['mcp_stdio_tool'];
+      const pyToolDecMatches = content.match(/@(?:mcp|app)\.tool(?:\(\s*['"]([^'"]+)['"])?/g);
+      const mcpToolNames: string[] = [];
+      if (mcpToolMatches) {
+        for (const m of mcpToolMatches) {
+          mcpToolNames.push(m.replace(/server\.tool\s*\(\s*['"]/, '').replace(/['"]$/, ''));
+        }
+      }
+      if (pyToolDecMatches) {
+        for (const m of pyToolDecMatches) {
+          const nameInDec = m.match(/['"]([^'"]+)['"]/);
+          if (nameInDec) {
+            mcpToolNames.push(nameInDec[1]);
+          } else {
+            const decIdx = content.indexOf(m);
+            const afterDec = content.substring(decIdx + m.length, decIdx + m.length + 200);
+            const funcMatch = afterDec.match(/(?:async\s+)?def\s+([a-zA-Z0-9_]+)/);
+            if (funcMatch) mcpToolNames.push(funcMatch[1]);
+          }
+        }
+      }
+      if (mcpToolNames.length === 0) mcpToolNames.push('mcp_tool');
 
       for (const mTool of mcpToolNames) {
         const mcpScope = classifyScopeFromPath(filePath);
+
+        // K: MCP tool schema extraction
+        let schemaSnippet: string | undefined;
+        const escapedTool = mTool.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const schemaRe = new RegExp(`server\\.tool\\s*\\(\\s*['"]${escapedTool}['"]\\s*,\\s*\\{([^}]{1,300})\\}`, 'i');
+        const schemaMatch = content.match(schemaRe);
+        if (schemaMatch) {
+          const keys = schemaMatch[1].match(/([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g);
+          schemaSnippet = keys ? `schema_keys: [${keys.map(k => k.replace(':', '').trim()).join(', ')}]` : 'NOT_VERIFIED';
+        }
+
         capabilities.push({
           id: `CAP-MCP-${++capSeq}`,
           agentName,
           systemType: 'mcp_server',
-          systemName: 'Model Context Protocol (MCP)',
+          systemName: mcpServerName,
           resourceTarget: mTool.trim(),
           action: 'EXECUTE',
-          state: 'OBSERVED_CAPABILITY',
+          state: 'DECLARED_CAPABILITY',
           filePath,
+          codeSnippet: schemaSnippet,
           isDestructive: /delete|exec|shell|drop|rm/i.test(mTool),
           accessesSensitiveData: /user|contact|invoice|lead/i.test(mTool),
           scope: mcpScope,
@@ -419,6 +479,104 @@ export function detectCapabilities(
           anomalies: ['OBSERVED_WITHOUT_VERIFIED_AUTH']
         });
       }
+
+      // I: MCP resources detection
+      const resMatches = content.matchAll(/(?:server\.resource|@mcp\.resource)\s*\(\s*['"]([^'"]+)['"]/gi);
+      for (const rm of resMatches) {
+        const resScope = classifyScopeFromPath(filePath);
+        capabilities.push({
+          id: `CAP-MCP-${++capSeq}`,
+          agentName,
+          systemType: 'mcp_server',
+          systemName: mcpServerName,
+          resourceTarget: `resource:${rm[1]}`,
+          action: 'READ',
+          state: 'DECLARED_CAPABILITY',
+          filePath,
+          isDestructive: false,
+          accessesSensitiveData: /user|contact|customer|pii/i.test(rm[1]),
+          scope: resScope,
+          provenance: {
+            primaryScope: resScope,
+            scopes: [resScope],
+            filePaths: [filePath]
+          },
+          anomalies: ['OBSERVED_WITHOUT_VERIFIED_AUTH']
+        });
+      }
+
+      // J: MCP prompts detection
+      const promptMatches = content.matchAll(/(?:server\.prompt|@mcp\.prompt)\s*\(\s*['"]([^'"]+)['"]/gi);
+      for (const pm of promptMatches) {
+        const promptScope = classifyScopeFromPath(filePath);
+        capabilities.push({
+          id: `CAP-MCP-${++capSeq}`,
+          agentName,
+          systemType: 'mcp_server',
+          systemName: mcpServerName,
+          resourceTarget: `prompt:${pm[1]}`,
+          action: 'EXECUTE',
+          state: 'DECLARED_CAPABILITY',
+          filePath,
+          isDestructive: false,
+          accessesSensitiveData: false,
+          scope: promptScope,
+          provenance: {
+            primaryScope: promptScope,
+            scopes: [promptScope],
+            filePaths: [filePath]
+          },
+          anomalies: ['OBSERVED_WITHOUT_VERIFIED_AUTH']
+        });
+      }
+
+      // M: SSE transport detection
+      if (/SSEServerTransport|SSEClientTransport/i.test(content)) {
+        const alreadyHasTransport = identities.some(id => id.identityName.startsWith('mcp_transport:') && id.sourceFile === filePath);
+        if (!alreadyHasTransport) {
+          identities.push({
+            agentName: agentName,
+            identityType: 'unassigned',
+            identityName: `mcp_transport:sse:${filename}`,
+            sourceFile: filePath
+          });
+        }
+      }
+
+      // H: MCP client detection
+      if (/McpClient|StdioClientTransport|SSEClientTransport|client\.connect\s*\(/i.test(content)) {
+        identities.push({
+          agentName: agentName,
+          identityType: 'unassigned',
+          identityName: `mcp_client:${filename}`,
+          sourceFile: filePath
+        });
+      }
+    }
+
+    // G (continued): MCP tool invocation detection (OBSERVED_CAPABILITY - distinct from registration)
+    const mcpInvokeMatches = content.matchAll(/client\.(?:callTool|call_tool)\s*\(\s*(?:\{[^}]*name\s*:\s*)?['"]([^'"]+)['"]/gi);
+    for (const im of mcpInvokeMatches) {
+      const invokeScope = classifyScopeFromPath(filePath);
+      capabilities.push({
+        id: `CAP-MCP-${++capSeq}`,
+        agentName,
+        systemType: 'mcp_server',
+        systemName: 'MCP Client Invocation',
+        resourceTarget: im[1],
+        action: 'EXECUTE',
+        state: 'OBSERVED_CAPABILITY',
+        filePath,
+        isDestructive: /delete|exec|shell|drop|rm/i.test(im[1]),
+        accessesSensitiveData: /user|contact|invoice|lead/i.test(im[1]),
+        scope: invokeScope,
+        provenance: {
+          primaryScope: invokeScope,
+          scopes: [invokeScope],
+          filePaths: [filePath]
+        },
+        anomalies: ['OBSERVED_WITHOUT_VERIFIED_AUTH']
+      });
     }
 
     // 2.3 AST ACTIONS PER LINE
@@ -598,6 +756,131 @@ export function detectCapabilities(
             isWildcard: matchingOauth.isWildcard
           } : undefined,
           anomalies: matchingOauth ? ['CROSS_SYSTEM_ACCESS'] : ['OBSERVED_WITHOUT_VERIFIED_AUTH', 'CROSS_SYSTEM_ACCESS']
+        });
+      }
+    }
+  }
+
+  // 2.4 REST API INBOUND ROUTES -> AgentCapability (A: REST inbound routes)
+  if (source.apiRoutes && source.apiRoutes.length > 0) {
+    for (const route of source.apiRoutes) {
+      const methodMap: Record<string, CapabilityActionType> = {
+        'GET': 'READ', 'POST': 'WRITE', 'PUT': 'WRITE', 'PATCH': 'WRITE', 'DELETE': 'DELETE'
+      };
+      const action: CapabilityActionType = methodMap[route.method?.toUpperCase()] || 'EXECUTE';
+      const routeScope: CapabilityScope = 'production';
+      capabilities.push({
+        id: `CAP-API-${++capSeq}`,
+        agentName: 'SystemAgent',
+        systemType: 'rest_api',
+        systemName: 'Inbound REST API',
+        resourceTarget: `${route.method?.toUpperCase() || 'GET'} ${route.path}`,
+        action,
+        state: 'OBSERVED_CAPABILITY',
+        filePath: route.path,
+        isDestructive: action === 'DELETE',
+        accessesSensitiveData: /user|customer|account|patient|pii|cpf|credit/i.test(route.path),
+        scope: routeScope,
+        provenance: {
+          primaryScope: routeScope,
+          scopes: [routeScope],
+          filePaths: [route.path]
+        },
+        anomalies: route.authRequired ? [] : ['OBSERVED_WITHOUT_VERIFIED_AUTH']
+      });
+    }
+  }
+
+  // 2.5 REST API OUTBOUND CALLS -> AgentCapability (B: REST outbound calls)
+  // 2.6 LLM API CALLS -> AgentCapability (C: LLM API calls)
+  for (const [filePath, content] of Array.from(files)) {
+    if (!content || content.length > 500000) continue;
+    const fLines = content.split('\n');
+    const fName = filePath.split('/').pop() || filePath;
+    const fAgent = (source.agents || []).find(a => 
+      (a.filePath && a.filePath === filePath) || content.includes(a.name)
+    );
+    const fAgentName = fAgent ? fAgent.name : `Agent_${fName.replace(/\.[^.]+$/, '')}`;
+
+    for (let li = 0; li < fLines.length; li++) {
+      const ln = fLines[li];
+
+      // B: REST outbound calls (fetch, axios, http.request, requests.*)
+      const restOutMatch = ln.match(/(?:fetch|axios|http\.request|requests)\s*[\.\(]\s*(?:get|post|put|patch|delete)?\s*\(?\s*['"`]([^'"`\s]+)['"`]/i)
+        || ln.match(/(?:axios|requests)\.(get|post|put|patch|delete)\s*\(\s*['"`]([^'"`\s]+)['"`]/i);
+      if (restOutMatch) {
+        const urlOrPath = restOutMatch[2] || restOutMatch[1] || '';
+        // Skip if already covered by ERP/Office 365 detection
+        if (!/graph\.microsoft\.com|salesforce\.com|hubspot\.com|zendesk\.com/i.test(urlOrPath)) {
+          const httpVerb = ln.match(/\.(get|post|put|patch|delete)\s*\(/i);
+          const methodStr = httpVerb ? httpVerb[1].toUpperCase() : (ln.match(/method\s*:\s*['"]([^'"]+)['"]/i)?.[1]?.toUpperCase() || 'GET');
+          const actionMap: Record<string, CapabilityActionType> = {
+            'GET': 'READ', 'POST': 'WRITE', 'PUT': 'WRITE', 'PATCH': 'WRITE', 'DELETE': 'DELETE'
+          };
+          const restScope = classifyScopeFromPath(filePath);
+          const matchingOauth = knownGrants.find(g => g.type === 'oauth_scope' && (
+            (urlOrPath.includes('github') && g.systemName.includes('GitHub')) ||
+            (urlOrPath.includes('googleapis') && g.systemName.includes('Google')) ||
+            (urlOrPath.includes('slack') && g.systemName.includes('Slack'))
+          ));
+          capabilities.push({
+            id: `CAP-API-${++capSeq}`,
+            agentName: fAgentName,
+            systemType: 'rest_api',
+            systemName: 'Outbound REST API',
+            resourceTarget: urlOrPath.slice(0, 120),
+            action: actionMap[methodStr] || 'EXECUTE',
+            state: matchingOauth ? 'AUTHORIZED_CAPABILITY' : 'OBSERVED_CAPABILITY',
+            filePath,
+            lineNumber: li + 1,
+            codeSnippet: ln.trim().slice(0, 120),
+            isDestructive: methodStr === 'DELETE',
+            accessesSensitiveData: /user|customer|account|patient|pii/i.test(urlOrPath),
+            scope: restScope,
+            provenance: {
+              primaryScope: restScope,
+              scopes: [restScope],
+              filePaths: [filePath]
+            },
+            authorizationEvidence: matchingOauth ? {
+              type: 'oauth_scope',
+              grantFile: matchingOauth.file,
+              grantSnippet: matchingOauth.snippet,
+              isWildcard: matchingOauth.isWildcard
+            } : undefined,
+            anomalies: matchingOauth ? ['CROSS_SYSTEM_ACCESS'] : ['OBSERVED_WITHOUT_VERIFIED_AUTH']
+          });
+        }
+      }
+
+      // C: LLM API calls (real SDK invocations, not imports)
+      const llmCallMatch = ln.match(/(?:openai|client|anthropic|genai)\.(?:chat\.completions\.create|messages\.create|generate_content|complete|create)\s*\(/i)
+        || ln.match(/(?:ChatOpenAI|ChatAnthropic|ChatGoogleGenerativeAI|GenerativeModel)\s*\(/i);
+      if (llmCallMatch) {
+        const isInstantiation = /(?:ChatOpenAI|ChatAnthropic|ChatGoogleGenerativeAI|GenerativeModel)\s*\(/.test(ln);
+        const llmScope = classifyScopeFromPath(filePath);
+        const providerMatch = ln.match(/openai|anthropic|google|gemini|mistral/i);
+        const provider = providerMatch ? providerMatch[0] : 'LLM';
+        capabilities.push({
+          id: `CAP-LLM-${++capSeq}`,
+          agentName: fAgentName,
+          systemType: 'llm_service',
+          systemName: `${provider.charAt(0).toUpperCase() + provider.slice(1).toLowerCase()} LLM API`,
+          resourceTarget: `${provider.toLowerCase()}_api_call`,
+          action: 'EXECUTE',
+          state: isInstantiation ? 'DECLARED_CAPABILITY' : 'OBSERVED_CAPABILITY',
+          filePath,
+          lineNumber: li + 1,
+          codeSnippet: ln.trim().slice(0, 120),
+          isDestructive: false,
+          accessesSensitiveData: false,
+          scope: llmScope,
+          provenance: {
+            primaryScope: llmScope,
+            scopes: [llmScope],
+            filePaths: [filePath]
+          },
+          anomalies: ['OBSERVED_WITHOUT_VERIFIED_AUTH']
         });
       }
     }
