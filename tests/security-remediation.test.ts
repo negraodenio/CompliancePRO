@@ -5,7 +5,7 @@
 
 import { createSseApp, sseSessions } from '../src/mcp/server';
 import { IdentityProvider } from '../src/server/security/identity-provider';
-import { resolveMcpSession } from '../src/mcp/tools';
+import { resolveMcpSession, resolveMcpResource, executeMcpTool } from '../src/mcp/tools';
 import { EvidenceStore } from '../src/web/services/evidence-store';
 import { AuditLedgerStore } from '../src/web/services/audit-ledger-store';
 import { requireApiKey } from '../src/server/auth';
@@ -168,6 +168,63 @@ assert(nextCalled === true, 'Allows open development mode when in development en
 
 process.env.NODE_ENV = 'test';
 if (savedKeys) process.env.CODEGUARD_API_KEYS = savedKeys;
+
+// 9. SEC-MCP-01: MCP Resource RBAC Parity for Audit Ledger
+section('SEC-MCP-01: MCP Resource RBAC Parity for Audit Ledger');
+const secLeadCtx = { isDevModeAllowed: true }; // role: SECURITY_LEAD (no VERIFY_LEDGER)
+const cisoCtx = { authToken: 'sk-ciso-enterprise-key' }; // role: CISO (has VERIFY_LEDGER)
+
+// 9.1 Unauthorized session (SECURITY_LEAD)
+const unauthLedgerTool = await executeMcpTool('get_audit_ledger', {}, secLeadCtx);
+assert(!unauthLedgerTool.ok && unauthLedgerTool.error?.code === 'FORBIDDEN', 'Tool get_audit_ledger rejected with FORBIDDEN for SECURITY_LEAD');
+
+const unauthVerifyTool = await executeMcpTool('verify_audit_ledger', {}, secLeadCtx);
+assert(!unauthVerifyTool.ok && unauthVerifyTool.error?.code === 'FORBIDDEN', 'Tool verify_audit_ledger rejected with FORBIDDEN for SECURITY_LEAD');
+
+let resLedgerDenied = false;
+try {
+  await resolveMcpResource('cgag://ledger', secLeadCtx);
+} catch (err: any) {
+  resLedgerDenied = true;
+  assert(err.code === 'AUTH_FORBIDDEN' || err.message.includes('permissão'), 'Resource cgag://ledger rejected with AUTH_FORBIDDEN for SECURITY_LEAD');
+}
+assert(resLedgerDenied, 'Resource cgag://ledger blocked unauthorized access');
+
+let resBlockDenied = false;
+try {
+  await resolveMcpResource('cgag://ledger/0', secLeadCtx);
+} catch (err: any) {
+  resBlockDenied = true;
+  assert(err.code === 'AUTH_FORBIDDEN' || err.message.includes('permissão'), 'Resource cgag://ledger/0 rejected with AUTH_FORBIDDEN for SECURITY_LEAD');
+}
+assert(resBlockDenied, 'Resource cgag://ledger/0 blocked unauthorized access');
+
+// 9.2 Authorized session (CISO)
+const authLedgerTool = await executeMcpTool('get_audit_ledger', {}, cisoCtx);
+assert(authLedgerTool.ok === true && authLedgerTool.data?.blocks?.length > 0, 'Tool get_audit_ledger allowed for CISO');
+
+const authVerifyTool = await executeMcpTool('verify_audit_ledger', {}, cisoCtx);
+assert(authVerifyTool.ok === true && authVerifyTool.data?.isChainValid === true, 'Tool verify_audit_ledger allowed for CISO');
+
+let authLedgerResPassed = false;
+try {
+  const r = await resolveMcpResource('cgag://ledger', cisoCtx);
+  const data = JSON.parse(r.text);
+  authLedgerResPassed = data.totalBlocks > 0;
+} catch (err) {
+  authLedgerResPassed = false;
+}
+assert(authLedgerResPassed, 'Resource cgag://ledger allowed for authorized CISO');
+
+let authBlockResPassed = false;
+try {
+  const r = await resolveMcpResource('cgag://ledger/0', cisoCtx);
+  const data = JSON.parse(r.text);
+  authBlockResPassed = data.blockHeight === 0;
+} catch (err) {
+  authBlockResPassed = false;
+}
+assert(authBlockResPassed, 'Resource cgag://ledger/0 allowed for authorized CISO');
 
 console.log("\n==================================================================");
 console.log(`PASSED: ${passed}`);

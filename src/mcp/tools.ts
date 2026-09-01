@@ -716,6 +716,13 @@ export async function resolveMcpResource(
 
   // cgag://ledger
   if (uri === 'cgag://ledger') {
+    const auth = checkAuthorization(session, 'VERIFY_LEDGER', 'LOW');
+    if (!auth.allowed) {
+      throw CGAGErrorFactory.create('AUTH_FORBIDDEN', {
+        technicalDetails: ErrorSanitizer.sanitizeString(auth.reason)
+      });
+    }
+
     const blocks = AuditLedgerStore.getBlocks(session.tenantId);
     return {
       text: JSON.stringify({ totalBlocks: blocks.length, blocks: blocks.slice(-50) }, null, 2),
@@ -726,6 +733,13 @@ export async function resolveMcpResource(
   // cgag://ledger/{blockHeight}
   const ledgerMatch = uri.match(/^cgag:\/\/ledger\/(\d+)$/);
   if (ledgerMatch) {
+    const auth = checkAuthorization(session, 'VERIFY_LEDGER', 'LOW');
+    if (!auth.allowed) {
+      throw CGAGErrorFactory.create('AUTH_FORBIDDEN', {
+        technicalDetails: ErrorSanitizer.sanitizeString(auth.reason)
+      });
+    }
+
     const height = parseInt(ledgerMatch[1], 10);
     const block = AuditLedgerStore.getBlockByHeight(height, session.tenantId);
     if (!block) throw new Error(`NOT_FOUND: Ledger block with height ${height} not found for tenant [${session.tenantId}].`);
