@@ -471,8 +471,8 @@ export async function executeMcpTool(
         if (!auth.allowed) return { ok: false, error: { code: 'FORBIDDEN', message: auth.reason }, metadata: { ...baseMetadata, riskClassification: 'READ' } };
 
         const policies = PolicyStore.getPolicies();
-        const blocks = AuditLedgerStore.getBlocks();
-        const evidence = EvidenceStore.getEvidenceRecords();
+        const blocks = AuditLedgerStore.getBlocks(session.tenantId);
+        const evidence = EvidenceStore.getEvidenceRecords(session.tenantId);
 
         return {
           ok: true,
@@ -751,6 +751,13 @@ export async function resolveMcpResource(
 
   // cgag://evidence
   if (uri === 'cgag://evidence') {
+    const auth = checkAuthorization(session, 'VERIFY_EVIDENCE', 'LOW');
+    if (!auth.allowed) {
+      throw CGAGErrorFactory.create('AUTH_FORBIDDEN', {
+        technicalDetails: ErrorSanitizer.sanitizeString(auth.reason)
+      });
+    }
+
     const records = EvidenceStore.getEvidenceRecords(session.tenantId);
     return {
       text: JSON.stringify({ totalRecords: records.length, records: records.slice(-50) }, null, 2),
@@ -761,6 +768,13 @@ export async function resolveMcpResource(
   // cgag://evidence/{id}
   const evidenceMatch = uri.match(/^cgag:\/\/evidence\/([a-zA-Z0-9_\-]+)$/);
   if (evidenceMatch) {
+    const auth = checkAuthorization(session, 'VERIFY_EVIDENCE', 'LOW');
+    if (!auth.allowed) {
+      throw CGAGErrorFactory.create('AUTH_FORBIDDEN', {
+        technicalDetails: ErrorSanitizer.sanitizeString(auth.reason)
+      });
+    }
+
     const id = evidenceMatch[1];
     const record = EvidenceStore.getRecordById(id, session.tenantId);
     if (!record) throw new Error(`NOT_FOUND: Evidence record with id '${id}' not found for tenant [${session.tenantId}].`);

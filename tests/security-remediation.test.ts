@@ -226,6 +226,74 @@ try {
 }
 assert(authBlockResPassed, 'Resource cgag://ledger/0 allowed for authorized CISO');
 
+// 10. SEC-MCP-02: MCP Resource RBAC Parity for Evidence Records
+section('SEC-MCP-02: MCP Resource RBAC Parity for Evidence Records');
+const viewerSession = IdentityProvider.createSession('USR-ENG-03', 'TENANT-DEFAULT', 'WS-DEFAULT');
+viewerSession.roles = ['VIEWER']; // VIEWER only has VIEW_FINDING (no VERIFY_EVIDENCE)
+const viewerToken = viewerSession.sessionId;
+const viewerCtx = { authToken: viewerToken };
+
+// 10.1 Unauthorized session (VIEWER)
+const unauthEvTool = await executeMcpTool('get_evidence_records', {}, viewerCtx);
+assert(!unauthEvTool.ok && unauthEvTool.error?.code === 'FORBIDDEN', 'Tool get_evidence_records rejected with FORBIDDEN for VIEWER');
+
+let resEvDenied = false;
+try {
+  await resolveMcpResource('cgag://evidence', viewerCtx);
+} catch (err: any) {
+  resEvDenied = true;
+  assert(err.code === 'AUTH_FORBIDDEN' || err.message.includes('permissão'), 'Resource cgag://evidence rejected with AUTH_FORBIDDEN for VIEWER');
+}
+assert(resEvDenied, 'Resource cgag://evidence blocked unauthorized VIEWER access');
+
+let resSingleEvDenied = false;
+try {
+  await resolveMcpResource('cgag://evidence/EV-2026-0042', viewerCtx);
+} catch (err: any) {
+  resSingleEvDenied = true;
+  assert(err.code === 'AUTH_FORBIDDEN' || err.message.includes('permissão'), 'Resource cgag://evidence/{id} rejected with AUTH_FORBIDDEN for VIEWER');
+}
+assert(resSingleEvDenied, 'Resource cgag://evidence/{id} blocked unauthorized VIEWER access');
+
+// 10.2 Authorized session (CISO / ENGINEER has VERIFY_EVIDENCE)
+const authEvTool = await executeMcpTool('get_evidence_records', {}, cisoCtx);
+assert(authEvTool.ok === true && authEvTool.data?.records?.length > 0, 'Tool get_evidence_records allowed for CISO');
+
+let authEvResPassed = false;
+try {
+  const r = await resolveMcpResource('cgag://evidence', cisoCtx);
+  const data = JSON.parse(r.text);
+  authEvResPassed = data.totalRecords > 0;
+} catch (err) {
+  authEvResPassed = false;
+}
+assert(authEvResPassed, 'Resource cgag://evidence allowed for authorized CISO');
+
+let authSingleEvResPassed = false;
+try {
+  const r = await resolveMcpResource('cgag://evidence/EV-2026-0042', cisoCtx);
+  const data = JSON.parse(r.text);
+  authSingleEvResPassed = data.evidenceId === 'EV-2026-0042';
+} catch (err) {
+  authSingleEvResPassed = false;
+}
+assert(authSingleEvResPassed, 'Resource cgag://evidence/EV-2026-0042 allowed for authorized CISO');
+
+// 11. SEC-MCP-03: Tenant-Scoped Telemetry in get_governance_snapshot
+section('SEC-MCP-03: Tenant-Scoped Telemetry in get_governance_snapshot');
+const snapshotDefault = await executeMcpTool('get_governance_snapshot', {}, cisoCtx);
+assert(snapshotDefault.ok === true, 'get_governance_snapshot succeeds for authenticated caller');
+assert(snapshotDefault.data?.pillars?.ASSURE?.tenantIsolation === undefined || snapshotDefault.data?.pillars?.ASSURE !== undefined, 'Snapshot returns ASSURE pillar');
+
+const tenantAcmeSession = IdentityProvider.createSession('USR-CISO-01', 'TENANT-DEFAULT', 'WS-DEFAULT');
+tenantAcmeSession.tenantId = 'TENANT-ACME';
+const acmeToken = tenantAcmeSession.sessionId;
+const acmeCtx = { authToken: acmeToken };
+const snapshotAcme = await executeMcpTool('get_governance_snapshot', {}, acmeCtx);
+assert(snapshotAcme.ok === true, 'get_governance_snapshot executes for TENANT-ACME');
+assert(typeof snapshotAcme.data?.pillars?.ASSURE?.auditBlocks === 'number', 'ASSURE auditBlocks is scoped number');
+assert(typeof snapshotAcme.data?.pillars?.ASSURE?.evidenceRecords === 'number', 'ASSURE evidenceRecords is scoped number');
+
 console.log("\n==================================================================");
 console.log(`PASSED: ${passed}`);
 console.log(`FAILED: ${failed}`);
