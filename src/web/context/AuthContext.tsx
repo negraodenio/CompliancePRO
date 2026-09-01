@@ -243,6 +243,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    const currentToken = token;
+    if (currentToken) {
+      fetch(`${API_BASE}/api/v1/auth/logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentToken}`
+        }
+      }).catch((err) => {
+        console.warn('Servidor offline durante logout, mantendo limpeza local de sessão:', err);
+      });
+    }
+
     setToken(null);
     setUser(null);
     setActiveOrganization(null);

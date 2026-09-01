@@ -51,6 +51,7 @@ export interface ComprehensiveEvidenceRecord {
   auditLedgerRef: string;
   payloadSummary: string;
   payloadData: Record<string, any>;
+  tenantId?: string;
 }
 
 const STORAGE_KEY_EVIDENCE = 'cg_ag_evidence_catalog_v1';
@@ -253,21 +254,30 @@ export class EvidenceStore {
     this.listeners.forEach(fn => fn());
   }
 
-  static getEvidenceRecords(): ComprehensiveEvidenceRecord[] {
+  static getEvidenceRecords(tenantId?: string): ComprehensiveEvidenceRecord[] {
+    let list: ComprehensiveEvidenceRecord[] = BASELINE_EVIDENCE;
     if (this.scanEvidenceOverride) {
-      return JSON.parse(JSON.stringify(this.scanEvidenceOverride));
-    }
-    if (typeof localStorage !== 'undefined') {
+      list = JSON.parse(JSON.stringify(this.scanEvidenceOverride));
+    } else if (typeof localStorage !== 'undefined') {
       const saved = localStorage.getItem(STORAGE_KEY_EVIDENCE);
       if (saved) {
         try {
-          return JSON.parse(saved);
+          list = JSON.parse(saved);
         } catch (e) {
           // fallback
         }
       }
     }
-    return BASELINE_EVIDENCE;
+
+    if (tenantId) {
+      return list.filter(r => !r.tenantId || r.tenantId === tenantId || r.tenantId === 'TENANT-DEFAULT');
+    }
+    return list;
+  }
+
+  static getRecordById(evidenceId: string, tenantId?: string): ComprehensiveEvidenceRecord | undefined {
+    const list = this.getEvidenceRecords(tenantId);
+    return list.find(r => r.evidenceId === evidenceId || (r as any).id === evidenceId);
   }
 
     private static scanEvidenceOverride: ComprehensiveEvidenceRecord[] | null = null;

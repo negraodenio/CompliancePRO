@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * CG-AG UNIVERSAL MCP SERVER
  * Professional, SaaS-wide Model Context Protocol Interface for AI Agents
@@ -348,28 +348,67 @@ export async function runStdio() {
   console.error(`[ComplyPRO Universal MCP] Stdio Transport active and listening (Mode: ${isDev ? 'DEV_FALLBACK' : 'PRODUCTION_AUTHENTICATED'}).`);
 }
 
-export async function runSse(port = 3001) {
+export interface SseSessionEntry {
+  sessionId: string;
+  transport: SSEServerTransport;
+  server: McpServer;
+  createdAt: number;
+}
+
+export const sseSessions = new Map<string, SseSessionEntry>();
+
+export function createSseApp() {
   const app = express();
-  let sseTransport: SSEServerTransport | null = null;
 
   app.get('/sse', async (req, res) => {
     const authHeader = req.headers.authorization || (req.query.token as string);
     const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
     const isDev = process.env.CGAG_MCP_DEV_MODE === 'true';
 
+    const sessionId = (req.query.sessionId as string) || (req.headers['x-session-id'] as string) || `sse-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const server = createUniversalMcpServer({ authToken: token, isDevModeAllowed: isDev });
-    sseTransport = new SSEServerTransport('/message', res);
-    await server.connect(sseTransport);
+    const transport = new SSEServerTransport(`/message?sessionId=${encodeURIComponent(sessionId)}`, res);
+
+    const sessionEntry: SseSessionEntry = {
+      sessionId,
+      transport,
+      server,
+      createdAt: Date.now()
+    };
+    sseSessions.set(sessionId, sessionEntry);
+
+    res.on('close', () => {
+      sseSessions.delete(sessionId);
+    });
+
+    await server.connect(transport);
   });
 
   app.post('/message', express.json(), async (req, res) => {
-    if (sseTransport) {
-      await sseTransport.handlePostMessage(req, res);
-    } else {
-      res.status(400).send('No active SSE connection');
+    const sessionId = (req.query.sessionId as string) || (req.headers['x-session-id'] as string);
+    if (!sessionId) {
+      return res.status(400).json({
+        ok: false,
+        error: { code: 'INVALID_REQUEST', message: 'Parâmetro sessionId é obrigatório para envio de mensagens SSE.' }
+      });
     }
+
+    const sessionEntry = sseSessions.get(sessionId);
+    if (!sessionEntry) {
+      return res.status(404).json({
+        ok: false,
+        error: { code: 'RESOURCE_NOT_FOUND', message: `Sessão SSE '${sessionId}' não encontrada ou já encerrada.` }
+      });
+    }
+
+    await sessionEntry.transport.handlePostMessage(req, res);
   });
 
+  return app;
+}
+
+export async function runSse(port = 3001) {
+  const app = createSseApp();
   app.listen(port, () => {
     console.error(`[ComplyPRO Universal MCP] Streamable HTTP/SSE listening on port ${port}`);
   });

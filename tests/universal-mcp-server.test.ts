@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CG-AG UNIVERSAL MCP SERVER TEST SUITE
  * Validates all 27 required architectural and security dimensions:
  * 1. Server initialization & MCP metadata
@@ -33,6 +33,7 @@
 import { createUniversalMcpServer } from '../src/mcp/server';
 import { executeMcpTool, resolveMcpResource, resolveMcpPrompt, resolveMcpSession } from '../src/mcp/tools';
 import { CG_AG_CONTROLS, CONTROL_LIST } from '../src/core/cg-ag-controls';
+import { IdentityProvider } from '../src/server/security/identity-provider';
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -57,6 +58,10 @@ function testGroup(name: string, fn: () => void | Promise<void>) {
 }
 
 async function runAllTests() {
+  process.env.NODE_ENV = 'test';
+  process.env.CGAG_ALLOW_TEST_TOKENS = 'true';
+  IdentityProvider.initializeBaselineUsers();
+
   const cisoCtx = { authToken: 'sk-ciso-enterprise-key' };
   const dpoCtx = { authToken: 'sk-dpo-enterprise-key' };
   const engCtx = { authToken: 'sk-viewer-key' }; // maps to USR-ENG-03

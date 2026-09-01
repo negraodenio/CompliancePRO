@@ -1,4 +1,5 @@
 import { AgenticLightAssessment } from '../core/agentic-light';
+import { CGAGErrorFactory, ErrorSanitizer } from '../core/errors';
 ﻿/**
  * CG-AG UNIVERSAL MCP - SEMANTIC ADAPTER & SERVICE DISPATCHER
  * Pillar: Universal Agent Interface over the CG-AG SaaS & Governance OS
@@ -40,6 +41,7 @@ export interface McpExecutionEnvelope<T = any> {
   error?: {
     code: string;
     message: string;
+    retryable?: boolean;
   };
   metadata: {
     tenantId: string;
@@ -67,18 +69,21 @@ export function resolveMcpSession(context?: McpRequestContext): { session: UserS
     if (valid.valid && valid.session) {
       return { session: valid.session };
     }
-    // Check if token matches baseline user API key
-    if (token === 'sk-ciso-enterprise-key' || token.includes('CISO')) {
-      const cisoSession = IdentityProvider.createSession('USR-CISO-01', 'TENANT-DEFAULT', 'WS-DEFAULT');
-      return { session: cisoSession };
-    }
-    if (token === 'sk-dpo-enterprise-key' || token.includes('DPO')) {
-      const dpoSession = IdentityProvider.createSession('USR-DPO-02', 'TENANT-DEFAULT', 'WS-DEFAULT');
-      return { session: dpoSession };
-    }
-    if (token === 'sk-viewer-key' || token.includes('VIEWER') || token.includes('ENGINEER')) {
-      const engSession = IdentityProvider.createSession('USR-ENG-03', 'TENANT-DEFAULT', 'WS-DEFAULT');
-      return { session: engSession };
+    // SEC-P1-03: Strict test token check (ONLY allowed if NODE_ENV === 'test' and CGAG_ALLOW_TEST_TOKENS === 'true')
+    const allowTestTokens = process.env.NODE_ENV === 'test' && process.env.CGAG_ALLOW_TEST_TOKENS === 'true';
+    if (allowTestTokens) {
+      if (token === 'sk-ciso-enterprise-key') {
+        const cisoSession = IdentityProvider.createSession('USR-CISO-01', 'TENANT-DEFAULT', 'WS-DEFAULT');
+        return { session: cisoSession };
+      }
+      if (token === 'sk-dpo-enterprise-key') {
+        const dpoSession = IdentityProvider.createSession('USR-DPO-02', 'TENANT-DEFAULT', 'WS-DEFAULT');
+        return { session: dpoSession };
+      }
+      if (token === 'sk-viewer-key') {
+        const engSession = IdentityProvider.createSession('USR-ENG-03', 'TENANT-DEFAULT', 'WS-DEFAULT');
+        return { session: engSession };
+      }
     }
     return { session: null, error: 'UNAUTHENTICATED: Invalid or expired authentication token.' };
   }
@@ -133,6 +138,8 @@ function loadFilesFromDir(dirPath: string): Map<string, string> {
   function walk(current: string) {
     const entries = fs.readdirSync(current, { withFileTypes: true });
     for (const e of entries) {
+      // SEC-P3-02: Reject and ignore symbolic links to prevent traversal attacks outside workspace
+      if (e.isSymbolicLink()) continue;
       if (e.name.startsWith('.') || e.name === 'node_modules' || e.name === '__pycache__' || e.name === 'dist') continue;
       const full = path.join(current, e.name);
       const rel = path.relative(safeDir, full).replace(/\\/g, '/');
@@ -491,7 +498,7 @@ export async function executeMcpTool(
         const auth = checkAuthorization(session, 'VERIFY_LEDGER', 'LOW');
         if (!auth.allowed) return { ok: false, error: { code: 'FORBIDDEN', message: auth.reason }, metadata: { ...baseMetadata, riskClassification: 'READ' } };
 
-        const blocks = AuditLedgerStore.getBlocks();
+        const blocks = AuditLedgerStore.getBlocks(session.tenantId);
         const limit = typeof args.limit === 'number' ? Math.min(args.limit, 100) : 50;
 
         return {
@@ -533,7 +540,7 @@ export async function executeMcpTool(
         const auth = checkAuthorization(session, 'VERIFY_EVIDENCE', 'LOW');
         if (!auth.allowed) return { ok: false, error: { code: 'FORBIDDEN', message: auth.reason }, metadata: { ...baseMetadata, riskClassification: 'READ' } };
 
-        const records = EvidenceStore.getEvidenceRecords();
+        const records = EvidenceStore.getEvidenceRecords(session.tenantId);
         const limit = typeof args.limit === 'number' ? Math.min(args.limit, 100) : 50;
 
         return {
@@ -635,7 +642,12 @@ export async function executeMcpTool(
         const analyzer = new CodebaseAnalyzer();
         const scanResult = await analyzer.analyze(filesObj, path.basename(targetDir));
         const assessed = AgenticLightAssessment.assess(scanResult);
-        return Object.assign(assessed, { ok: true, data: assessed, metadata: { ...baseMetadata, riskClassification: 'READ' } });
+        const envelopeMetadata: McpExecutionEnvelope['metadata'] = {
+          ...baseMetadata,
+          riskClassification: 'READ',
+          epistemicState: 'DIRECTLY_DERIVED'
+        };
+        return Object.assign(assessed, { ok: true, data: assessed, metadata: envelopeMetadata });
       }
 
       case 'get_agent_passports': {
@@ -657,10 +669,14 @@ export async function executeMcpTool(
           metadata: { ...baseMetadata, riskClassification: 'READ' }
         };
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
+    // Translate any internal error into a canonical, sanitised MCP envelope.
+    // NEVER propagate stack traces, secrets, or internal details to the caller.
+    const cgagErr = CGAGErrorFactory.fromUnknown(err);
+    const safe = cgagErr.toUserError();
     return {
       ok: false,
-      error: { code: 'INTERNAL_ERROR', message: err.message || 'An internal error occurred' },
+      error: { code: safe.code, message: safe.message, retryable: safe.retryable },
       metadata: { ...baseMetadata, riskClassification: 'READ' }
     };
   }
@@ -675,7 +691,10 @@ export async function resolveMcpResource(
 ): Promise<{ text: string; mimeType: string }> {
   const { session, error: authError } = resolveMcpSession(context);
   if (!session) {
-    throw new Error(authError || 'UNAUTHENTICATED: Resource access requires valid authorization.');
+    // Use canonical error — never expose raw auth error details to resource caller
+    throw CGAGErrorFactory.create('MCP_UNAUTHORIZED', {
+      technicalDetails: ErrorSanitizer.sanitizeString(authError || 'Missing authorization')
+    });
   }
 
   // cgag://controls
@@ -697,7 +716,7 @@ export async function resolveMcpResource(
 
   // cgag://ledger
   if (uri === 'cgag://ledger') {
-    const blocks = AuditLedgerStore.getBlocks();
+    const blocks = AuditLedgerStore.getBlocks(session.tenantId);
     return {
       text: JSON.stringify({ totalBlocks: blocks.length, blocks: blocks.slice(-50) }, null, 2),
       mimeType: 'application/json'
@@ -708,9 +727,8 @@ export async function resolveMcpResource(
   const ledgerMatch = uri.match(/^cgag:\/\/ledger\/(\d+)$/);
   if (ledgerMatch) {
     const height = parseInt(ledgerMatch[1], 10);
-    const blocks = AuditLedgerStore.getBlocks();
-    const block = blocks.find(b => b.blockHeight === height);
-    if (!block) throw new Error(`NOT_FOUND: Ledger block with height ${height} not found.`);
+    const block = AuditLedgerStore.getBlockByHeight(height, session.tenantId);
+    if (!block) throw new Error(`NOT_FOUND: Ledger block with height ${height} not found for tenant [${session.tenantId}].`);
     return {
       text: JSON.stringify(block, null, 2),
       mimeType: 'application/json'
@@ -719,7 +737,7 @@ export async function resolveMcpResource(
 
   // cgag://evidence
   if (uri === 'cgag://evidence') {
-    const records = EvidenceStore.getEvidenceRecords();
+    const records = EvidenceStore.getEvidenceRecords(session.tenantId);
     return {
       text: JSON.stringify({ totalRecords: records.length, records: records.slice(-50) }, null, 2),
       mimeType: 'application/json'
@@ -730,8 +748,8 @@ export async function resolveMcpResource(
   const evidenceMatch = uri.match(/^cgag:\/\/evidence\/([a-zA-Z0-9_\-]+)$/);
   if (evidenceMatch) {
     const id = evidenceMatch[1];
-    const record = EvidenceStore.getEvidenceRecords().find(r => r.evidenceId === id || (r as any).id === id);
-    if (!record) throw new Error(`NOT_FOUND: Evidence record with id '${id}' not found.`);
+    const record = EvidenceStore.getRecordById(id, session.tenantId);
+    if (!record) throw new Error(`NOT_FOUND: Evidence record with id '${id}' not found for tenant [${session.tenantId}].`);
     return {
       text: JSON.stringify(record, null, 2),
       mimeType: 'application/json'
@@ -803,6 +821,9 @@ export async function resolveMcpPrompt(
     }
 
     default:
-      throw new Error(`Unknown MCP prompt: ${promptName}`);
+      throw CGAGErrorFactory.create('INVALID_REQUEST', {
+        message: 'O prompt solicitado não foi encontrado.',
+        technicalDetails: `Unknown MCP prompt: ${promptName}`
+      });
   }
 }

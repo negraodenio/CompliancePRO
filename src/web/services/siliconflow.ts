@@ -1,6 +1,3 @@
-export const DEFAULT_SILICONFLOW_KEY = 'sk-bxsuvptkfzbpzvsuvswhhokmwvlhbtgpnvifylzwauurzqtq';
-export const SILICONFLOW_BASE_URL = 'https://api.siliconflow.com/v1/chat/completions';
-
 export const AVAILABLE_MODELS = [
   {
     id: 'deepseek-ai/DeepSeek-V3',
@@ -33,20 +30,12 @@ export const AVAILABLE_MODELS = [
 ];
 
 export function getSiliconFlowApiKey(): string {
-  // 1. Check Vite Environment Variable (Vercel / .env)
-  if (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SILICONFLOW_API_KEY) {
-    const envKey = (import.meta as any).env.VITE_SILICONFLOW_API_KEY.trim();
-    if (envKey && envKey !== 'your_siliconflow_api_key_here') return envKey;
-  }
-
-  // 2. Check LocalStorage if user customized it in Settings Modal
+  // Check LocalStorage if user customized it in Settings Modal (BYOK mode)
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem('siliconflow_api_key');
     if (saved && saved.trim()) return saved.trim();
   }
-
-  // 3. Fallback to default key
-  return DEFAULT_SILICONFLOW_KEY;
+  return '';
 }
 
 export function setSiliconFlowApiKey(key: string): void {
@@ -74,31 +63,44 @@ interface ChatMessage {
   content: string;
 }
 
+const API_BASE = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_URL) || '';
+
 async function callSiliconFlow(messages: ChatMessage[], modelOverride?: string): Promise<string> {
-  const apiKey = getSiliconFlowApiKey();
+  const customApiKey = getSiliconFlowApiKey();
   const model = modelOverride || getSelectedModel();
 
-  const response = await fetch(SILICONFLOW_BASE_URL, {
+  // Route through secure backend proxy endpoint
+  const endpoint = `${API_BASE}/api/v1/ai/chat`;
+
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model,
       messages,
       temperature: 0.2,
       max_tokens: 2500,
+      ...(customApiKey ? { customApiKey } : {})
     }),
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`SiliconFlow API Error (${response.status}): ${errorText}`);
+    let errorMsg = `Erro na comunicação com o Motor IA (${response.status})`;
+    try {
+      const errJson = await response.json();
+      if (errJson.error?.message) {
+        errorMsg = errJson.error.message;
+      }
+    } catch {
+      // Fallback
+    }
+    throw new Error(errorMsg);
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content || 'Nenhuma resposta retornada pelo modelo.';
+  return data.content || 'Nenhuma resposta retornada pelo modelo.';
 }
 
 export interface RemediationResult {

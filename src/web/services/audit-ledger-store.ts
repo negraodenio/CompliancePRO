@@ -1,4 +1,3 @@
-import * as crypto from 'crypto';
 /**
  * Authoritative Store for Cryptographically Chained Audit Ledger Blocks
  * Pillar: ASSURE (Can we prove the historical record was not altered?)
@@ -28,6 +27,7 @@ export interface AuditBlock {
   controlId: string;
   payloadData: Record<string, any>;
   isTampered?: boolean;
+  tenantId?: string;
 }
 
 export interface ChainVerificationResult {
@@ -41,13 +41,99 @@ export interface ChainVerificationResult {
 
 const STORAGE_KEY_LEDGER = 'cg_ag_audit_ledger_v1';
 
-// Cryptographically authentic FIPS 180-4 SHA-256 standard implementation
+function rightRotate(value: number, amount: number) {
+  return (value >>> amount) | (value << (32 - amount));
+}
+
+// Pure universal FIPS 180-4 standard SHA-256 implementation
+export function pureSha256(ascii: string): string {
+  const mathPow = Math.pow;
+  const maxWord = mathPow(2, 32);
+  let i = 0, j = 0;
+  let result = '';
+  const words: number[] = [];
+  const asciiBitLength = ascii.length * 8;
+  const k: number[] = [];
+  let primeCounter = 0;
+  const isComposite: Record<number, boolean> = {};
+
+  for (let candidate = 2; primeCounter < 64; candidate++) {
+    if (!isComposite[candidate]) {
+      for (i = 0; i < 313; i += candidate) {
+        isComposite[i] = true;
+      }
+      k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+    }
+  }
+
+  let hash = [
+    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
+  ];
+
+  ascii += '\x80';
+  while (ascii.length % 64 - 56) ascii += '\x00';
+  for (i = 0; i < ascii.length; i++) {
+    j = ascii.charCodeAt(i);
+    words[i >> 2] |= j << ((3 - i) % 4) * 8;
+  }
+  words[words.length] = (asciiBitLength / maxWord) | 0;
+  words[words.length] = asciiBitLength | 0;
+
+  for (j = 0; j < words.length; ) {
+    const w = words.slice(j, (j += 16));
+    const oldHash = hash.slice(0);
+    hash = hash.slice(0, 8);
+
+    for (i = 0; i < 64; i++) {
+      const w15 = w[i - 15], w2 = w[i - 2];
+      const a = hash[0], e = hash[4];
+      const temp1 =
+        hash[7] +
+        (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) +
+        ((e & hash[5]) ^ (~e & hash[6])) +
+        k[i] +
+        (w[i] =
+          i < 16
+            ? (w[i] || 0)
+            : ((w[i - 16] || 0) +
+                (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) +
+                (w[i - 7] || 0) +
+                (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) |
+              0);
+      const temp2 =
+        (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) +
+        ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+
+      hash = [(temp1 + temp2) | 0, hash[0], hash[1], hash[2], (hash[3] + temp1) | 0, hash[4], hash[5], hash[6]];
+    }
+
+    for (i = 0; i < 8; i++) {
+      hash[i] = (hash[i] + oldHash[i]) | 0;
+    }
+  }
+
+  for (i = 0; i < 8; i++) {
+    for (j = 3; j >= 0; j--) {
+      const b = (hash[i] >> (j * 8)) & 255;
+      result += (b < 16 ? '0' : '') + b.toString(16);
+    }
+  }
+  return result;
+}
+
 export function sha256Digest(str: string): string {
   try {
-    return crypto.createHash('sha256').update(str, 'utf8').digest('hex');
+    if (typeof process !== 'undefined' && process.versions?.node) {
+      const nodeCrypto = require('crypto');
+      if (nodeCrypto?.createHash) {
+        return nodeCrypto.createHash('sha256').update(str, 'utf8').digest('hex');
+      }
+    }
   } catch {
-    return 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+    // fallback to pure implementation
   }
+  return pureSha256(str);
 }
 
 export function computeDeterministicHash(str: string): string {
@@ -210,21 +296,30 @@ export class AuditLedgerStore {
     this.listeners.forEach(fn => fn());
   }
 
-  static getBlocks(): AuditBlock[] {
-    if (typeof localStorage !== 'undefined') {
+  static getBlocks(tenantId?: string): AuditBlock[] {
+    let list: AuditBlock[] = BASELINE_BLOCKS;
+    if (this.memoryOverride) {
+      list = JSON.parse(JSON.stringify(this.memoryOverride));
+    } else if (typeof localStorage !== 'undefined') {
       const saved = localStorage.getItem(STORAGE_KEY_LEDGER);
       if (saved) {
         try {
-          return JSON.parse(saved);
+          list = JSON.parse(saved);
         } catch (e) {
           // fallback
         }
       }
     }
-    if (this.memoryOverride) {
-      return JSON.parse(JSON.stringify(this.memoryOverride));
+
+    if (tenantId) {
+      return list.filter(b => !b.tenantId || b.tenantId === tenantId || b.tenantId === 'TENANT-DEFAULT');
     }
-    return JSON.parse(JSON.stringify(BASELINE_BLOCKS));
+    return JSON.parse(JSON.stringify(list));
+  }
+
+  static getBlockByHeight(height: number, tenantId?: string): AuditBlock | undefined {
+    const list = this.getBlocks(tenantId);
+    return list.find(b => b.blockHeight === height);
   }
 
       static resetToBaseline() {
