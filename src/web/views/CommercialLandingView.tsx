@@ -139,6 +139,10 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
             <a href="#triad" className="hover:text-sky-400 transition">Governance Triad</a>
             <a href="#controls" className="hover:text-sky-400 transition">12 Controls</a>
             <a href="#compliance" className="hover:text-sky-400 transition">Global Frameworks</a>
+            <a href="#mcp" className="hover:text-sky-400 transition flex items-center gap-1">
+              <Terminal className="w-3 h-3" />
+              <span>Universal MCP</span>
+            </a>
           </nav>
 
           <div className="flex items-center space-x-3">
@@ -732,6 +736,356 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
               ))}
             </div>
           </div>
+        </section>
+
+        {/* ========================================================================= */}
+        {/* 6.5 UNIVERSAL MCP — COMMERCIAL PRESENTATION */}
+        {/* ========================================================================= */}
+        <section id="mcp" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-10">
+
+          {/* Section Header */}
+          <div className="max-w-3xl mx-auto text-center space-y-3">
+            <span className="inline-flex items-center gap-2 text-xs font-mono font-bold tracking-widest text-sky-400 uppercase">
+              <Terminal className="w-3.5 h-3.5" />
+              MODEL CONTEXT PROTOCOL INTERFACE
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">
+              CG-AG Universal MCP
+            </h2>
+            <p className="text-base font-semibold text-sky-300">
+              Bring AI Governance directly into your AI agents and IDEs.
+            </p>
+            <p className="text-sm text-slate-400 leading-relaxed max-w-2xl mx-auto">
+              The same CG-AG governance capabilities available through the platform can be accessed
+              by compatible AI agents through the Model Context Protocol — without building a
+              separate governance engine.
+            </p>
+          </div>
+
+          {/* ONE PLATFORM — THREE WAYS */}
+          <div className="p-8 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950/40 border border-slate-800 space-y-6">
+            <div className="text-center space-y-1">
+              <span className="text-xs font-mono font-bold tracking-widest text-indigo-400 uppercase">Commercial Architecture</span>
+              <h3 className="text-lg font-bold text-white">One CG-AG Platform. Three Ways to Consume It.</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* SaaS */}
+              <div className="p-6 rounded-2xl bg-slate-950/80 border border-sky-500/30 space-y-3 text-center hover:border-sky-400/60 transition">
+                <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center mx-auto">
+                  <Globe className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">SAAS</span>
+                  <h4 className="text-sm font-bold text-white mt-2">Human Governance Workspace</h4>
+                  <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                    CISOs, DPOs, AI Officers and Auditors govern AI assets through the full OS interface.
+                  </p>
+                </div>
+                <div className="text-[10px] font-mono text-sky-400 font-bold tracking-wider">FOR HUMAN USERS</div>
+              </div>
+
+              {/* POD */}
+              <div className="p-6 rounded-2xl bg-slate-950/80 border border-indigo-500/30 space-y-3 text-center hover:border-indigo-400/60 transition">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center mx-auto">
+                  <Database className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">POD</span>
+                  <h4 className="text-sm font-bold text-white mt-2">Dedicated Enterprise Deployment</h4>
+                  <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                    Air-gapped or VPC-isolated deployment inside your own infrastructure and data perimeter.
+                  </p>
+                </div>
+                <div className="text-[10px] font-mono text-indigo-400 font-bold tracking-wider">FOR ENTERPRISE</div>
+              </div>
+
+              {/* MCP */}
+              <div className="p-6 rounded-2xl bg-slate-950/80 border border-emerald-500/30 space-y-3 text-center hover:border-emerald-400/60 transition relative">
+                <div className="absolute top-3 right-3">
+                  <span className="text-[9px] font-mono font-bold text-emerald-400 uppercase tracking-wider px-1.5 py-0.5 rounded border border-emerald-500/30 bg-emerald-500/10">PRODUCTION-READY</span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto">
+                  <Terminal className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">MCP</span>
+                  <h4 className="text-sm font-bold text-white mt-2">Agent-Native Governance Interface</h4>
+                  <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                    AI agents and IDEs connect directly to the CG-AG governance engine through MCP.
+                  </p>
+                </div>
+                <div className="text-[10px] font-mono text-emerald-400 font-bold tracking-wider">FOR AI AGENTS</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Connection Flow */}
+          <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800 space-y-5">
+            <div className="text-center space-y-1">
+              <span className="text-xs font-mono font-bold tracking-widest text-sky-400 uppercase">Connection Model</span>
+              <h3 className="text-base font-bold text-white">Connect Your AI Environment to CG-AG Universal MCP</h3>
+              <p className="text-xs text-slate-400">Any MCP-compatible agent or IDE connects directly to the CG-AG governance layer.</p>
+            </div>
+
+            {/* Flow Diagram */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2 py-2">
+              {/* Layer: Agent/IDE */}
+              <div className="flex flex-col gap-2">
+                {['Claude · Cursor · Gemini', 'OpenCode · VS Code (MCP)', 'Custom AI Agents · CI/CD'].map((item) => (
+                  <div key={item} className="px-4 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs font-mono text-slate-300 text-center whitespace-nowrap">
+                    {item}
+                  </div>
+                ))}
+              </div>
+
+              {/* Arrow */}
+              <div className="flex flex-col items-center gap-1 px-3">
+                <div className="text-slate-600 text-lg font-light hidden sm:block">→</div>
+                <div className="text-slate-600 text-lg font-light sm:hidden">↓</div>
+                <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider">MCP Protocol</span>
+              </div>
+
+              {/* Layer: MCP */}
+              <div className="px-6 py-4 rounded-2xl bg-gradient-to-br from-sky-950/60 to-indigo-950/60 border-2 border-sky-500/40 text-center space-y-1 min-w-[180px]">
+                <Terminal className="w-4 h-4 text-sky-400 mx-auto" />
+                <p className="text-xs font-bold text-white">CG-AG Universal MCP</p>
+                <p className="text-[10px] font-mono text-sky-400">14 Tools · 7 Resources · 4 Prompts</p>
+                <div className="flex items-center justify-center gap-1 mt-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span className="text-[9px] font-mono text-emerald-400">stdio + sse</span>
+                </div>
+              </div>
+
+              {/* Arrow */}
+              <div className="flex flex-col items-center gap-1 px-3">
+                <div className="text-slate-600 text-lg font-light hidden sm:block">→</div>
+                <div className="text-slate-600 text-lg font-light sm:hidden">↓</div>
+                <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider">Engine</span>
+              </div>
+
+              {/* Layer: Engine */}
+              <div className="flex flex-col gap-2">
+                {[
+                  { label: 'Discovery Engine', color: 'text-sky-400', bg: 'border-sky-500/30' },
+                  { label: 'Governance Engine', color: 'text-indigo-400', bg: 'border-indigo-500/30' },
+                  { label: 'Evidence Ledger', color: 'text-emerald-400', bg: 'border-emerald-500/30' },
+                  { label: 'Security Layer', color: 'text-amber-400', bg: 'border-amber-500/30' },
+                ].map((item) => (
+                  <div key={item.label} className={`px-4 py-1.5 rounded-xl bg-slate-950 border ${item.bg} text-[11px] font-mono ${item.color} font-bold text-center whitespace-nowrap`}>
+                    {item.label}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Strip */}
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { number: '14', label: 'Semantic Tools', sub: 'Discovery · Governance · Evidence · Security', color: 'text-sky-400', border: 'border-sky-500/20' },
+              { number: '7', label: 'MCP Resources', sub: 'cgag:// protocol URIs', color: 'text-indigo-400', border: 'border-indigo-500/20' },
+              { number: '4', label: 'Guided Prompts', sub: 'Executive · CISO · DPO · Vendor Risk', color: 'text-emerald-400', border: 'border-emerald-500/20' },
+            ].map((stat) => (
+              <div key={stat.label} className={`p-5 rounded-2xl bg-slate-900/80 border ${stat.border} text-center space-y-1`}>
+                <div className={`text-3xl font-extrabold ${stat.color} font-mono`}>{stat.number}</div>
+                <div className="text-xs font-bold text-white">{stat.label}</div>
+                <div className="text-[10px] text-slate-500 font-mono">{stat.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tool Groups — 4 cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+            {/* Discovery */}
+            <div className="p-6 rounded-2xl bg-slate-900/80 border border-sky-500/20 hover:border-sky-500/40 transition space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center shrink-0">
+                  <Eye className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[9px] font-mono font-bold tracking-widest text-sky-400 uppercase">Group 1 · 5 Tools</span>
+                  <h4 className="text-sm font-bold text-white">Discovery</h4>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {[
+                  { name: 'scan_repository', desc: 'Full AST compliance scan on a target repository' },
+                  { name: 'get_scan_summary', desc: 'Compliance score, risk level, agent counts' },
+                  { name: 'discover_agents', desc: 'Enumerate all autonomous agents found in code' },
+                  { name: 'discover_capabilities', desc: 'Map all DB, cloud, API and shell execution access' },
+                  { name: 'detect_shadow_apis', desc: 'Identify unapproved direct LLM API calls' },
+                ].map((t) => (
+                  <div key={t.name} className="flex items-start gap-2">
+                    <CheckCircle2 className="w-3 h-3 text-sky-400/60 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="text-[11px] font-mono font-bold text-sky-300">{t.name}</span>
+                      <span className="text-[10px] text-slate-500 ml-1.5">{t.desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Governance */}
+            <div className="p-6 rounded-2xl bg-slate-900/80 border border-indigo-500/20 hover:border-indigo-500/40 transition space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0">
+                  <Shield className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[9px] font-mono font-bold tracking-widest text-indigo-400 uppercase">Group 2 · 4 Tools</span>
+                  <h4 className="text-sm font-bold text-white">Governance</h4>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {[
+                  { name: 'get_agent_passport', desc: 'Cryptographic agent identity and authorization passport' },
+                  { name: 'get_business_xray', desc: 'End-to-end SIPOC business lineage for each agent' },
+                  { name: 'get_governance_controls', desc: '12 canonical CG-AG controls and active policies' },
+                  { name: 'get_governance_snapshot', desc: 'Real-time governance posture across all pillars' },
+                ].map((t) => (
+                  <div key={t.name} className="flex items-start gap-2">
+                    <CheckCircle2 className="w-3 h-3 text-indigo-400/60 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="text-[11px] font-mono font-bold text-indigo-300">{t.name}</span>
+                      <span className="text-[10px] text-slate-500 ml-1.5">{t.desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Evidence & Audit */}
+            <div className="p-6 rounded-2xl bg-slate-900/80 border border-emerald-500/20 hover:border-emerald-500/40 transition space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
+                  <FileBadge className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[9px] font-mono font-bold tracking-widest text-emerald-400 uppercase">Group 3 · 3 Tools</span>
+                  <h4 className="text-sm font-bold text-white">Evidence &amp; Audit</h4>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {[
+                  { name: 'get_audit_ledger', desc: 'Read SHA-256 chained immutable audit blocks' },
+                  { name: 'verify_audit_ledger', desc: 'Cryptographically verify entire ledger integrity' },
+                  { name: 'get_evidence_records', desc: 'Retrieve sealed governance evidence records' },
+                ].map((t) => (
+                  <div key={t.name} className="flex items-start gap-2">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400/60 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="text-[11px] font-mono font-bold text-emerald-300">{t.name}</span>
+                      <span className="text-[10px] text-slate-500 ml-1.5">{t.desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Security & Ops */}
+            <div className="p-6 rounded-2xl bg-slate-900/80 border border-amber-500/20 hover:border-amber-500/40 transition space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
+                  <KeyRound className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[9px] font-mono font-bold tracking-widest text-amber-400 uppercase">Group 4 · 2 Tools</span>
+                  <h4 className="text-sm font-bold text-white">Security &amp; Operations</h4>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {[
+                  { name: 'get_tenant_context', desc: 'Current session identity, tenant, workspace and roles' },
+                  { name: 'get_mcp_server_info', desc: 'Server version, capabilities and governance invariants' },
+                ].map((t) => (
+                  <div key={t.name} className="flex items-start gap-2">
+                    <CheckCircle2 className="w-3 h-3 text-amber-400/60 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="text-[11px] font-mono font-bold text-amber-300">{t.name}</span>
+                      <span className="text-[10px] text-slate-500 ml-1.5">{t.desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Guided Prompts inline in this card */}
+              <div className="border-t border-slate-800 pt-3 mt-1 space-y-2">
+                <span className="text-[9px] font-mono font-bold tracking-widest text-slate-500 uppercase">4 Guided Prompts</span>
+                {[
+                  'executive_governance_review',
+                  'ciso_security_review',
+                  'dpo_privacy_review',
+                  'vendor_risk_assessment',
+                ].map((p) => (
+                  <div key={p} className="flex items-center gap-2">
+                    <Sparkles className="w-3 h-3 text-slate-500 shrink-0" />
+                    <span className="text-[11px] font-mono text-slate-400">{p}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+
+          {/* Resources Strip */}
+          <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+            <div className="flex items-center gap-2">
+              <Database className="w-4 h-4 text-cyan-400" />
+              <span className="text-xs font-bold text-white">7 MCP Resources</span>
+              <span className="text-[10px] font-mono text-slate-500">— accessible via cgag:// protocol URIs</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                'cgag://controls',
+                'cgag://policies',
+                'cgag://ledger',
+                'cgag://ledger/{height}',
+                'cgag://evidence',
+                'cgag://evidence/{id}',
+                'cgag://tenant',
+              ].map((uri) => (
+                <span key={uri} className="px-2.5 py-1 rounded-lg bg-slate-900 border border-cyan-500/20 text-[11px] font-mono text-cyan-400">
+                  {uri}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Governance Principles */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { principle: 'OBSERVED ≠ AUTHORIZED', desc: 'Coded capability does not imply authorized capability' },
+              { principle: 'API KEY ≠ AUTHORIZATION', desc: 'Authentication alone is not sufficient for governance' },
+              { principle: 'UNKNOWN IS EXPLICIT', desc: 'Absence of authorization evidence is a finding, not silence' },
+              { principle: 'ZERO SECRET LEAKAGE', desc: 'Credentials and secrets are masked in all MCP outputs' },
+            ].map((p) => (
+              <div key={p.principle} className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1.5">
+                <div className="text-[10px] font-mono font-bold text-sky-400 tracking-wider">{p.principle}</div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">{p.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* MCP section CTA */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button
+              onClick={onEnterApp}
+              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-extrabold text-sm shadow-xl shadow-sky-500/25 flex items-center justify-center gap-2 cursor-pointer transition transform hover:-translate-y-0.5"
+            >
+              <Terminal className="w-4 h-4" />
+              <span>Explore the Platform</span>
+            </button>
+            <button
+              onClick={() => onOpenAuth('signup')}
+              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-white border border-slate-700 font-bold text-sm transition cursor-pointer flex items-center justify-center gap-2"
+            >
+              <KeyRound className="w-4 h-4 text-slate-400" />
+              <span>Request Enterprise Access</span>
+            </button>
+          </div>
+
         </section>
 
         {/* ========================================================================= */}
