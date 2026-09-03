@@ -107,7 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setEnterpriseRole(entRole);
     setAdminRole(data.admin_role || 'owner');
     setIsOwner(Boolean(data.is_owner));
-    setIsMaster(Boolean(data.is_master || data.email === 'negraodenio@gmail.com'));
+    setIsMaster(Boolean(data.is_master));
 
     syncPersistence(activeOrg.id);
   };

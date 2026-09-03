@@ -77,3 +77,57 @@ body {
 .exposure-glow {
   box-shadow: 0 0 12px -2px rgba(239, 68, 68, 0.25);
 }
+
+/* Subtle Technical Hatched Footer Accent for Major Result Sections */
+.technical-hatch-footer {
+  position: relative;
+  overflow: hidden;
+}
+
+.technical-hatch-footer::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(56, 189, 248, 0.04) 0px,
+    rgba(56, 189, 248, 0.04) 1px,
+    transparent 1px,
+    transparent 10px
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(0, 0, 0, 0.6) 12%,
+    rgba(0, 0, 0, 0.9) 50%,
+    rgba(0, 0, 0, 0.6) 88%,
+    transparent 100%
+  ),
+  linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.8) 0%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(0, 0, 0, 0.6) 12%,
+    rgba(0, 0, 0, 0.9) 50%,
+    rgba(0, 0, 0, 0.6) 88%,
+    transparent 100%
+  ),
+  linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.8) 0%,
+    transparent 100%
+  );
+  mask-composite: intersect;
+  -webkit-mask-composite: destination-in;
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+  z-index: 1;
+}

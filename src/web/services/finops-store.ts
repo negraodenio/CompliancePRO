@@ -4,6 +4,7 @@
  */
 
 import { DecisionStore } from './decision-store';
+import { PersistenceAdapter } from './persistence-adapter';
 import { ProtectedEvidenceRecord } from '../../core/governance-control-plane';
 
 export type FinOpsStatus = 'WITHIN_LIMIT' | 'APPROACHING_LIMIT' | 'LIMIT_EXCEEDED' | 'THROTTLED' | 'FALLBACK_ACTIVE';
@@ -166,26 +167,23 @@ export class FinOpsStore {
     this.listeners.forEach(fn => fn());
   }
 
-  static getUsage(): FinOpsEntityUsage[] {
-    if (this.scanFinOpsOverride) {
+  static getUsage(tenantId?: string): FinOpsEntityUsage[] {
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    const saved = PersistenceAdapter.read<FinOpsEntityUsage[]>('finops', STORAGE_KEY_FINOPS);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      return saved;
+    }
+    if (this.scanFinOpsOverride && (!tenantId || PersistenceAdapter.getContext().tenantId === 'TENANT-DEFAULT')) {
       return JSON.parse(JSON.stringify(this.scanFinOpsOverride));
     }
-    if (typeof localStorage !== 'undefined') {
-      const saved = localStorage.getItem(STORAGE_KEY_FINOPS);
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {
-          // fallback
-        }
-      }
-    }
-    return BASELINE_FINOPS;
+    return JSON.parse(JSON.stringify(BASELINE_FINOPS));
   }
 
     private static scanFinOpsOverride: FinOpsEntityUsage[] | null = null;
 
-  static ingestScanFinOps(monthlyUsd: number, monthlyTokens: number, providerSummary: Record<string, number>) {
+  static ingestScanFinOps(monthlyUsd: number, monthlyTokens: number, providerSummary: Record<string, number>, tenantId?: string) {
     const primaryProvider = Object.keys(providerSummary)[0] || 'OpenAI';
     const mappedProvider: FinOpsEntityUsage['modelProvider'] = 
       primaryProvider.toLowerCase().includes('anthropic') ? 'Anthropic' :
@@ -217,15 +215,22 @@ export class FinOpsStore {
       controlId: 'CG-AG-10',
       controlName: 'FinOps AI Token Quota & Cost Control',
       costPerThousandTokens: 0.002
-      
     };
 
     this.scanFinOpsOverride = [scannedEntity];
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    PersistenceAdapter.write('finops', [scannedEntity], STORAGE_KEY_FINOPS);
     this.notify();
   }
 
-  static resetToBaseline() {
+  static resetToBaseline(tenantId?: string) {
     this.scanFinOpsOverride = null;
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    PersistenceAdapter.delete('finops', STORAGE_KEY_FINOPS);
     this.notify();
   }
 
@@ -235,9 +240,13 @@ export class FinOpsStore {
     newTokenQuota: number,
     newEnforcementMode: FinOpsEnforcementMode,
     rationale: string,
-    updatedBy = 'Roberto Silva (CISO & Accountable Lead)'
+    updatedBy = 'Roberto Silva (CISO & Accountable Lead)',
+    tenantId?: string
   ): { entity: FinOpsEntityUsage; evidence: ProtectedEvidenceRecord } {
-    const list = this.getUsage();
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    const list = this.getUsage(tenantId);
     const index = list.findIndex(e => e.entityId === entityId);
     if (index === -1) {
       throw new Error(`Entity ${entityId} not found in FinOps store`);
@@ -256,9 +265,7 @@ export class FinOpsStore {
     };
 
     list[index] = updated;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY_FINOPS, JSON.stringify(list));
-    }
+    PersistenceAdapter.write('finops', list, STORAGE_KEY_FINOPS);
 
     // Record Protected Evidence in Ledger
     const evidence: ProtectedEvidenceRecord = {
@@ -273,10 +280,8 @@ export class FinOpsStore {
       retentionDays: 1825
     };
 
-    if (typeof localStorage !== 'undefined') {
-      const ledger = [evidence, ...DecisionStore.getEvidenceLedger()];
-      localStorage.setItem('cg_ag_unified_evidence_v2', JSON.stringify(ledger.slice(0, 30)));
-    }
+    const ledger = [evidence, ...DecisionStore.getEvidenceLedger(tenantId)];
+    PersistenceAdapter.write('evidence_ledger', ledger.slice(0, 30), 'cg_ag_unified_evidence_v2');
 
     this.notify();
     return { entity: updated, evidence };

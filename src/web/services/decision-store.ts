@@ -4,6 +4,7 @@
  */
 
 import { GovernanceDecision, ProtectedEvidenceRecord, GovernanceControlPlane } from '../../core/governance-control-plane';
+import { PersistenceAdapter } from './persistence-adapter';
 
 export interface OperationalFinding {
   sourceType?: 'REAL_SCAN' | 'CANONICAL_BASELINE' | 'SIMULATION';
@@ -216,29 +217,27 @@ export class DecisionStore {
     this.listeners.forEach(fn => fn());
   }
 
-  static getFindings(): OperationalFinding[] {
-    if (this.scanFindingsOverride) {
+  static getFindings(tenantId?: string): OperationalFinding[] {
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    const saved = PersistenceAdapter.read<OperationalFinding[]>('findings', STORAGE_KEY_FINDINGS);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      return saved;
+    }
+    if (this.scanFindingsOverride && (!tenantId || PersistenceAdapter.getContext().tenantId === 'TENANT-DEFAULT')) {
       return JSON.parse(JSON.stringify(this.scanFindingsOverride));
     }
-    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY_FINDINGS) : null;
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        // fallback
-      }
-    }
-    return BASELINE_FINDINGS;
+    return JSON.parse(JSON.stringify(BASELINE_FINDINGS));
   }
 
-  static getEvidenceLedger(): ProtectedEvidenceRecord[] {
-    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY_EVIDENCE) : null;
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        // fallback
-      }
+  static getEvidenceLedger(tenantId?: string): ProtectedEvidenceRecord[] {
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    const saved = PersistenceAdapter.read<ProtectedEvidenceRecord[]>('evidence_ledger', STORAGE_KEY_EVIDENCE);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      return saved;
     }
     return [
       {
@@ -266,52 +265,67 @@ export class DecisionStore {
     ];
   }
 
-    private static scanFindingsOverride: OperationalFinding[] | null = null;
+  private static scanFindingsOverride: OperationalFinding[] | null = null;
 
-  static ingestFindings(findings: OperationalFinding[]) {
+  static ingestFindings(findings: OperationalFinding[], tenantId?: string) {
     this.scanFindingsOverride = findings;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY_FINDINGS, JSON.stringify(findings));
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
     }
+    PersistenceAdapter.write('findings', findings, STORAGE_KEY_FINDINGS);
     this.notify();
   }
 
-  static resetToBaseline() {
+  static resetToBaseline(tenantId?: string) {
     this.scanFindingsOverride = null;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(STORAGE_KEY_FINDINGS);
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
     }
+    PersistenceAdapter.delete('findings', STORAGE_KEY_FINDINGS);
+    PersistenceAdapter.delete('evidence_ledger', STORAGE_KEY_EVIDENCE);
     this.notify();
   }
 
-static recordDecision(
+  static recordDecision(
     findingId: string,
     decisionType: 'MITIGATE' | 'ACCEPT' | 'TRANSFER' | 'AVOID' | 'ESCALATE',
     decider: {
       name: string;
       role: string;
-      stakeholderGroup: 'AI_OFFICE' | 'CISO' | 'DPO' | 'COMPLIANCE' | 'LEGAL' | 'RISK' | 'INTERNAL_AUDIT' | 'BOARD';
-    } = { name: 'Roberto Silva', role: 'CISO & Accountable Lead', stakeholderGroup: 'CISO' }
+      stakeholderGroup: 'CISO' | 'DPO' | 'HEAD_OF_AI' | 'ENGINEER' | 'COMPLIANCE_OFFICER' | 'AI_OFFICE' | 'LEGAL' | 'RISK' | 'INTERNAL_AUDIT' | 'BOARD';
+    } = {
+      name: 'Roberto Silva',
+      role: 'CISO & Accountable Lead',
+      stakeholderGroup: 'CISO'
+    },
+    rationale?: string,
+    treatment?: {
+      actionRequired: string;
+      assignedTo: string;
+      targetDueDate: string;
+    },
+    tenantId?: string
   ): { finding: OperationalFinding; decision: GovernanceDecision; evidence: ProtectedEvidenceRecord } {
-    const findings = this.getFindings();
-    const targetIndex = findings.findIndex(f => f.id === findingId || f.riskId === findingId);
-    const target = targetIndex >= 0 ? findings[targetIndex] : BASELINE_FINDINGS[0];
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    const findings = this.getFindings(tenantId);
+    const targetIndex = findings.findIndex(f => f.id === findingId);
+    const target = targetIndex >= 0 ? findings[targetIndex] : findings[0];
 
-    const pipelineResult = GovernanceControlPlane.resolveGovernancePipeline(target.severity, target.recommendedAction, decider);
-    const decision: GovernanceDecision = { 
-      ...pipelineResult.decision, 
+    const pipelineResult = GovernanceControlPlane.resolveGovernancePipeline(target.severity, target.recommendedAction, decider as any);
+    const decision: GovernanceDecision = {
+      ...pipelineResult.decision,
       decision: decisionType as any,
-      decisionId: `DEC-2026-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
+      decisionId: `DEC-2026-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+      rationale: rationale || `Formal governance action ${decisionType} applied to finding [${target.finding}]`
     };
-
-    let newStatus: OperationalFinding['status'] = 'IN_TREATMENT';
-    if (decisionType === 'ACCEPT') newStatus = 'ACCEPTED';
-    if (decisionType === 'ESCALATE') newStatus = 'ESCALATED';
 
     const updatedFinding: OperationalFinding = {
       ...target,
-      status: newStatus,
+      status: decisionType === 'ACCEPT' ? 'ACCEPTED' : decisionType === 'ESCALATE' ? 'ESCALATED' : 'IN_TREATMENT',
       decisionType,
+      treatment: treatment ? { ...treatment, status: 'PLANNED' } : target.treatment,
       decision,
       updatedAt: new Date().toISOString()
     };
@@ -319,7 +333,7 @@ static recordDecision(
     if (targetIndex >= 0) {
       findings[targetIndex] = updatedFinding;
     }
-    if (typeof localStorage !== 'undefined') { localStorage.setItem(STORAGE_KEY_FINDINGS, JSON.stringify(findings)); }
+    PersistenceAdapter.write('findings', findings, STORAGE_KEY_FINDINGS);
 
     // Emit real protected evidence record into ledger
     const hash = Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -335,8 +349,8 @@ static recordDecision(
       retentionDays: 1825
     };
 
-    const ledger = [evidence, ...this.getEvidenceLedger()];
-    if (typeof localStorage !== 'undefined') { localStorage.setItem(STORAGE_KEY_EVIDENCE, JSON.stringify(ledger.slice(0, 30))); }
+    const ledger = [evidence, ...this.getEvidenceLedger(tenantId)];
+    PersistenceAdapter.write('evidence_ledger', ledger.slice(0, 30), STORAGE_KEY_EVIDENCE);
 
     this.notify();
     return { finding: updatedFinding, decision, evidence };

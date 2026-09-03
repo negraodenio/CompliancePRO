@@ -441,7 +441,7 @@ export async function executeMcpTool(
         const auth = checkAuthorization(session, 'VIEW_FINDING', 'LOW');
         if (!auth.allowed) return { ok: false, error: { code: 'FORBIDDEN', message: auth.reason }, metadata: { ...baseMetadata, riskClassification: 'READ' } };
 
-        const policies = PolicyStore.getPolicies();
+        const policies = PolicyStore.getPolicies(session?.tenantId);
         return {
           ok: true,
           data: {
@@ -470,9 +470,9 @@ export async function executeMcpTool(
         const auth = checkAuthorization(session, 'VIEW_FINDING', 'LOW');
         if (!auth.allowed) return { ok: false, error: { code: 'FORBIDDEN', message: auth.reason }, metadata: { ...baseMetadata, riskClassification: 'READ' } };
 
-        const policies = PolicyStore.getPolicies();
-        const blocks = AuditLedgerStore.getBlocks(session.tenantId);
-        const evidence = EvidenceStore.getEvidenceRecords(session.tenantId);
+        const policies = PolicyStore.getPolicies(session?.tenantId);
+        const blocks = AuditLedgerStore.getBlocks(session?.tenantId);
+        const evidence = EvidenceStore.getEvidenceRecords(session?.tenantId);
 
         return {
           ok: true,
@@ -707,7 +707,7 @@ export async function resolveMcpResource(
 
   // cgag://policies
   if (uri === 'cgag://policies') {
-    const policies = PolicyStore.getPolicies();
+    const policies = PolicyStore.getPolicies(session?.tenantId);
     return {
       text: JSON.stringify({ policies }, null, 2),
       mimeType: 'application/json'

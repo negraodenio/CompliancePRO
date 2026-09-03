@@ -4,6 +4,7 @@
  */
 
 import { DecisionStore } from './decision-store';
+import { PersistenceAdapter } from './persistence-adapter';
 import { ProtectedEvidenceRecord } from '../../core/governance-control-plane';
 
 export type PolicyType = 
@@ -527,25 +528,36 @@ export class PolicyStore {
     this.listeners.forEach(fn => fn());
   }
 
-  static getPolicies(): GovernancePolicy[] {
-    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY_POLICIES) : null;
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        // fallback
-      }
+  static getPolicies(tenantId?: string): GovernancePolicy[] {
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
     }
-    return BASELINE_POLICIES;
+    const saved = PersistenceAdapter.read<GovernancePolicy[]>('policies', STORAGE_KEY_POLICIES);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      return saved;
+    }
+    return JSON.parse(JSON.stringify(BASELINE_POLICIES));
+  }
+
+  static resetToBaseline(tenantId?: string) {
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    PersistenceAdapter.delete('policies', STORAGE_KEY_POLICIES);
+    this.notify();
   }
 
   static recordPolicyException(
     policyId: string,
     reason: string,
     accountableOwner: string,
-    expiryDate: string
+    expiryDate: string,
+    tenantId?: string
   ): { policy: GovernancePolicy; exception: PolicyException; evidence: ProtectedEvidenceRecord } {
-    const policies = this.getPolicies();
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    const policies = this.getPolicies(tenantId);
     const policyIndex = policies.findIndex(p => p.id === policyId);
     if (policyIndex === -1) {
       throw new Error(`Policy ${policyId} not found`);
@@ -559,7 +571,10 @@ export class PolicyStore {
     const decisionResult = DecisionStore.recordDecision(
       targetPolicy.id,
       'ACCEPT',
-      { name: accountableOwner, role: 'Accountable Executive', stakeholderGroup: 'CISO' }
+      { name: accountableOwner, role: 'Accountable Executive', stakeholderGroup: 'CISO' },
+      undefined,
+      undefined,
+      tenantId
     );
 
     const exception: PolicyException = {
@@ -580,7 +595,7 @@ export class PolicyStore {
     };
 
     policies[policyIndex] = updatedPolicy;
-    if (typeof localStorage !== 'undefined') { localStorage.setItem(STORAGE_KEY_POLICIES, JSON.stringify(policies)); }
+    PersistenceAdapter.write('policies', policies, STORAGE_KEY_POLICIES);
 
     this.notify();
     return { policy: updatedPolicy, exception, evidence: decisionResult.evidence };

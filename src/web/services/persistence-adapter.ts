@@ -96,11 +96,15 @@ export class PersistenceAdapter {
 
     if (typeof localStorage !== 'undefined') {
       raw = localStorage.getItem(primaryKey);
-      if (!raw && legacyKey && legacyKey !== primaryKey) {
+      // SEC-P4: Only fall back to legacyKey if active tenantId is explicitly 'TENANT-DEFAULT' and legacyKey is defined
+      if (!raw && legacyKey && legacyKey !== primaryKey && this.activeContext.tenantId === 'TENANT-DEFAULT') {
         raw = localStorage.getItem(legacyKey);
       }
     } else {
-      raw = this.inMemoryStore.get(primaryKey) || (legacyKey ? this.inMemoryStore.get(legacyKey) || null : null);
+      raw = this.inMemoryStore.get(primaryKey) || 
+        (legacyKey && legacyKey !== primaryKey && this.activeContext.tenantId === 'TENANT-DEFAULT' 
+          ? this.inMemoryStore.get(legacyKey) || null 
+          : null);
     }
 
     if (!raw) return null;
@@ -112,13 +116,13 @@ export class PersistenceAdapter {
     }
   }
 
-  static write<T extends VersionedEntity>(collection: string, data: T, legacyKey?: string, expectedVersion?: number): T {
+  static write<T = any>(collection: string, data: T, legacyKey?: string, expectedVersion?: number): T {
     const primaryKey = this.buildScopedKey(collection, legacyKey);
     const existing = this.read<T>(collection, legacyKey);
 
     // Optimistic Concurrency Check
     if (existing && typeof expectedVersion === 'number') {
-      const currentVer = existing.version || 1;
+      const currentVer = (existing as any).version || 1;
       if (currentVer !== expectedVersion) {
         throw createPersistenceError(
           'CONCURRENT_MODIFICATION',
@@ -133,15 +137,15 @@ export class PersistenceAdapter {
       throw createPersistenceError('STORAGE_QUOTA_EXCEEDED', `Simulated write failure on collection [${collection}]`);
     }
 
-    const currentVersion = existing && typeof existing.version === 'number' ? existing.version : 0;
+    const currentVersion = existing && typeof (existing as any).version === 'number' ? (existing as any).version : 0;
     const versionedData: T = Array.isArray(data)
       ? data
       : {
           ...data,
           version: currentVersion + 1,
           updatedAt: new Date().toISOString(),
-          tenantId: data.tenantId || this.activeContext.tenantId,
-          workspaceId: data.workspaceId || this.activeContext.workspaceId
+          tenantId: (data as any).tenantId || this.activeContext.tenantId,
+          workspaceId: (data as any).workspaceId || this.activeContext.workspaceId
         };
 
     const serialized = JSON.stringify(versionedData);
@@ -163,10 +167,10 @@ export class PersistenceAdapter {
     const primaryKey = this.buildScopedKey(collection, legacyKey);
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(primaryKey);
-      if (legacyKey) localStorage.removeItem(legacyKey);
+      if (legacyKey && this.activeContext.tenantId === 'TENANT-DEFAULT') localStorage.removeItem(legacyKey);
     } else {
       this.inMemoryStore.delete(primaryKey);
-      if (legacyKey) this.inMemoryStore.delete(legacyKey);
+      if (legacyKey && this.activeContext.tenantId === 'TENANT-DEFAULT') this.inMemoryStore.delete(legacyKey);
     }
   }
 
@@ -188,8 +192,8 @@ export class PersistenceAdapter {
       const legacyKey = legacyKeyMap ? legacyKeyMap[mut.collection] : undefined;
       const key = this.buildScopedKey(mut.collection, legacyKey);
       const rawBefore = typeof localStorage !== 'undefined'
-        ? localStorage.getItem(key) || (legacyKey ? localStorage.getItem(legacyKey) : null)
-        : this.inMemoryStore.get(key) || null;
+        ? localStorage.getItem(key) || (legacyKey && this.activeContext.tenantId === 'TENANT-DEFAULT' ? localStorage.getItem(legacyKey) : null)
+        : this.inMemoryStore.get(key) || (legacyKey && this.activeContext.tenantId === 'TENANT-DEFAULT' ? this.inMemoryStore.get(legacyKey) || null : null);
 
       snapshotsBefore[key] = rawBefore;
     }

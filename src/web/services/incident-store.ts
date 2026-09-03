@@ -4,6 +4,7 @@
  */
 
 import { DecisionStore } from './decision-store';
+import { PersistenceAdapter } from './persistence-adapter';
 import { ProtectedEvidenceRecord } from '../../core/governance-control-plane';
 
 export type IncidentSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
@@ -157,26 +158,35 @@ export class IncidentStore {
     this.listeners.forEach(fn => fn());
   }
 
-  static getIncidents(): AIIncident[] {
-    if (typeof localStorage !== 'undefined') {
-      const saved = localStorage.getItem(STORAGE_KEY_INCIDENTS);
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {
-          // fallback
-        }
-      }
+  static getIncidents(tenantId?: string): AIIncident[] {
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
     }
-    return BASELINE_INCIDENTS;
+    const saved = PersistenceAdapter.read<AIIncident[]>('incidents', STORAGE_KEY_INCIDENTS);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      return saved;
+    }
+    return JSON.parse(JSON.stringify(BASELINE_INCIDENTS));
+  }
+
+  static resetToBaseline(tenantId?: string) {
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    PersistenceAdapter.delete('incidents', STORAGE_KEY_INCIDENTS);
+    this.notify();
   }
 
   static authorizeSystemRecovery(
     incidentId: string,
     recoveryRationale: string,
-    approvedBy = 'Roberto Silva (CISO & Accountable Lead)'
+    approvedBy = 'Roberto Silva (CISO & Accountable Lead)',
+    tenantId?: string
   ): { incident: AIIncident; evidence: ProtectedEvidenceRecord } {
-    const incidents = this.getIncidents();
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    const incidents = this.getIncidents(tenantId);
     const index = incidents.findIndex(i => i.incidentId === incidentId);
     if (index === -1) {
       throw new Error(`Incident ${incidentId} not found`);
@@ -199,9 +209,7 @@ export class IncidentStore {
     };
 
     incidents[index] = updated;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY_INCIDENTS, JSON.stringify(incidents));
-    }
+    PersistenceAdapter.write('incidents', incidents, STORAGE_KEY_INCIDENTS);
 
     // Record Protected Evidence in Ledger
     const evidence: ProtectedEvidenceRecord = {
@@ -216,10 +224,8 @@ export class IncidentStore {
       retentionDays: 1825
     };
 
-    if (typeof localStorage !== 'undefined') {
-      const ledger = [evidence, ...DecisionStore.getEvidenceLedger()];
-      localStorage.setItem('cg_ag_unified_evidence_v2', JSON.stringify(ledger.slice(0, 30)));
-    }
+    const ledger = [evidence, ...DecisionStore.getEvidenceLedger(tenantId)];
+    PersistenceAdapter.write('evidence_ledger', ledger.slice(0, 30), 'cg_ag_unified_evidence_v2');
 
     this.notify();
     return { incident: updated, evidence };

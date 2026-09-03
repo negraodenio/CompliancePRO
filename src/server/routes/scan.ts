@@ -23,8 +23,25 @@ scanRouter.post('/', async (req: Request, res: Response) => {
       function readRecursive(dir: string, base: string) {
         const entries = fs.readdirSync(dir, { withFileTypes: true });
         for (const entry of entries) {
-          if (entry.name.startsWith('.') || entry.name === 'node_modules' || entry.name === '__pycache__') continue;
+          if (entry.name.startsWith('.') || entry.name === 'node_modules' || entry.name === '__pycache__' || entry.name === 'dist' || entry.name === 'build') continue;
+          if (entry.isSymbolicLink()) continue; // SEC-REST-02: reject symbolic links
+
           const full = path.join(dir, entry.name);
+
+          // Additional reparse-point and realpath containment check (cross-platform / Windows junctions)
+          try {
+            const lstat = fs.lstatSync(full);
+            if (lstat.isSymbolicLink()) continue;
+            const real = fs.realpathSync(full);
+            const normalizedBase = path.resolve(base);
+            const normalizedReal = path.resolve(real);
+            if (!normalizedReal.startsWith(normalizedBase + path.sep) && normalizedReal !== normalizedBase) {
+              continue; // Exits workspace root via junction or reparse point
+            }
+          } catch {
+            continue;
+          }
+
           const rel = path.relative(base, full).replace(/\\/g, '/');
           if (entry.isDirectory()) {
             readRecursive(full, base);

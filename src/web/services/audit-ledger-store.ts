@@ -4,6 +4,8 @@
  * Chaining: GENESIS (BLK-0000) -> BLK-0001 -> BLK-0002 -> ... -> BLK-0089 (HEAD)
  */
 
+import { PersistenceAdapter } from './persistence-adapter';
+
 export interface AuditBlock {
   blockHeight: number;
   blockId: string;
@@ -37,6 +39,13 @@ export interface ChainVerificationResult {
   hashMismatches: number;
   tamperedBlockId: string | null;
   verificationTimestamp: string;
+  verified?: boolean;
+  totalBlocks?: number;
+  headHeight?: number;
+  headHash?: string;
+  genesisHash?: string;
+  auditTimestamp?: string;
+  failureNodes?: string[];
 }
 
 const STORAGE_KEY_LEDGER = 'cg_ag_audit_ledger_v1';
@@ -297,22 +306,21 @@ export class AuditLedgerStore {
   }
 
   static getBlocks(tenantId?: string): AuditBlock[] {
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
     let list: AuditBlock[] = BASELINE_BLOCKS;
     if (this.memoryOverride) {
       list = JSON.parse(JSON.stringify(this.memoryOverride));
-    } else if (typeof localStorage !== 'undefined') {
-      const saved = localStorage.getItem(STORAGE_KEY_LEDGER);
-      if (saved) {
-        try {
-          list = JSON.parse(saved);
-        } catch (e) {
-          // fallback
-        }
+    } else {
+      const saved = PersistenceAdapter.read<AuditBlock[]>('audit_ledger', STORAGE_KEY_LEDGER);
+      if (saved && Array.isArray(saved) && saved.length > 0) {
+        list = saved;
       }
     }
 
     if (tenantId) {
-      return list.filter(b => !b.tenantId || b.tenantId === tenantId || b.tenantId === 'TENANT-DEFAULT');
+      return list.filter(b => !b.tenantId || b.tenantId === tenantId);
     }
     return JSON.parse(JSON.stringify(list));
   }
@@ -322,22 +330,27 @@ export class AuditLedgerStore {
     return list.find(b => b.blockHeight === height);
   }
 
-      static resetToBaseline() {
+  static resetToBaseline(tenantId?: string) {
     this.memoryOverride = null;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(STORAGE_KEY_LEDGER);
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
     }
+    PersistenceAdapter.delete('audit_ledger', STORAGE_KEY_LEDGER);
     this.notify();
   }
 
-static appendScanBlock(
+  static appendScanBlock(
     evidenceRef: string,
     payloadData: any,
     actor = 'AST Ingestion Scanner',
     eventType: AuditBlock['eventType'] = 'PASSPORT_ISSUED',
-    controlId = 'CG-AG-12'
+    controlId = 'CG-AG-12',
+    tenantId?: string
   ): AuditBlock {
-    const blocks = this.getBlocks();
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    const blocks = this.getBlocks(tenantId);
     const prevBlock = blocks[blocks.length - 1];
     const blockHeight = prevBlock ? prevBlock.blockHeight + 1 : 1;
     const blockId = 'LEDGER-BLK-' + String(blockHeight).padStart(4, '0');
@@ -358,21 +371,18 @@ static appendScanBlock(
       sourceModule: 'DISCOVER',
       evidenceRef,
       controlId,
-      payloadData
+      payloadData,
+      tenantId: tenantId || PersistenceAdapter.getContext().tenantId
     };
 
     blocks.push(newBlock);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY_LEDGER, JSON.stringify(blocks));
-    } else {
-      this.memoryOverride = blocks;
-    }
+    PersistenceAdapter.write('audit_ledger', blocks, STORAGE_KEY_LEDGER);
     this.notify();
     return newBlock;
   }
 
-static verifyEntireLedger(): ChainVerificationResult {
-    const blocks = this.getBlocks();
+  static verifyEntireLedger(tenantId?: string): ChainVerificationResult {
+    const blocks = this.getBlocks(tenantId);
     let brokenLinks = 0;
     let hashMismatches = 0;
     let tamperedBlockId: string | null = null;
@@ -393,18 +403,29 @@ static verifyEntireLedger(): ChainVerificationResult {
       }
     }
 
+    const isChainValid = brokenLinks === 0 && hashMismatches === 0;
     return {
-      isChainValid: brokenLinks === 0 && hashMismatches === 0,
+      isChainValid,
+      verified: isChainValid,
       blocksVerified: blocks.length,
+      totalBlocks: blocks.length,
       brokenLinks,
       hashMismatches,
       tamperedBlockId,
-      verificationTimestamp: new Date().toISOString()
+      headHeight: blocks.length > 0 ? blocks[blocks.length - 1].blockHeight : 0,
+      headHash: blocks.length > 0 ? blocks[blocks.length - 1].blockHash : GENESIS_PREV_HASH,
+      genesisHash: blocks.length > 0 ? blocks[0].blockHash : GENESIS_PREV_HASH,
+      verificationTimestamp: new Date().toISOString(),
+      auditTimestamp: new Date().toISOString(),
+      failureNodes: tamperedBlockId ? [tamperedBlockId] : []
     };
   }
 
-  static simulateTamper(blockId: string) {
-    const blocks = this.getBlocks();
+  static simulateTamper(blockId: string, tenantId?: string) {
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    const blocks = this.getBlocks(tenantId);
     const index = blocks.findIndex(b => b.blockId === blockId);
     if (index === -1) return;
 
@@ -419,19 +440,34 @@ static verifyEntireLedger(): ChainVerificationResult {
       payloadHash: 'SHA256:tamperedunauthorizedhashalteration0000000000000000000000000000'
     };
 
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY_LEDGER, JSON.stringify(blocks));
-    } else {
-      this.memoryOverride = blocks;
-    }
+    PersistenceAdapter.write('audit_ledger', blocks, STORAGE_KEY_LEDGER);
     this.notify();
   }
 
-  static restoreCanonicalLedger() {
-    this.memoryOverride = null;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(STORAGE_KEY_LEDGER);
+  static simulateTampering(targetBlockHeight: number, tenantId?: string) {
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
     }
+    const blocks = this.getBlocks(tenantId);
+    const index = blocks.findIndex(b => b.blockHeight === targetBlockHeight);
+    if (index === -1) return;
+
+    blocks[index] = {
+      ...blocks[index],
+      isTampered: true,
+      payloadData: {
+        ...blocks[index].payloadData,
+        TAMPERED_FIELD: 'MALICIOUS_UNAUTHORIZED_ALTERATION',
+        maxAutonomousCapBRL: 999999999
+      },
+      payloadHash: 'SHA256:tamperedunauthorizedhashalteration0000000000000000000000000000'
+    };
+
+    PersistenceAdapter.write('audit_ledger', blocks, STORAGE_KEY_LEDGER);
     this.notify();
+  }
+
+  static restoreCanonicalLedger(tenantId?: string) {
+    this.resetToBaseline(tenantId);
   }
 }

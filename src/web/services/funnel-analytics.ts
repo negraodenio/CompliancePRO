@@ -13,7 +13,16 @@ export type FunnelEventName =
   | 'PRESERVE_CLICKED'
   | 'SIGNUP_STARTED'
   | 'WORKSPACE_CREATED'
-  | 'GOVERNANCE_ENTERED';
+  | 'GOVERNANCE_ENTERED'
+  | 'lp_hero_scan_click'
+  | 'lp_hero_expert_click'
+  | 'free_scan_started'
+  | 'free_scan_completed'
+  | 'free_scan_governance_cta'
+  | 'workspace_signup_started'
+  | 'workspace_signup_completed'
+  | 'enterprise_cta_click'
+  | 'mcp_section_view';
 
 export interface FunnelEvent {
   event: FunnelEventName;

@@ -4,6 +4,7 @@
  */
 
 import { DecisionStore } from './decision-store';
+import { PersistenceAdapter } from './persistence-adapter';
 import { ProtectedEvidenceRecord } from '../../core/governance-control-plane';
 
 export type RemediationStatus = 'OPEN' | 'IN_PROGRESS' | 'PENDING_VERIFICATION' | 'VERIFIED_CLOSED' | 'OVERDUE';
@@ -156,38 +157,37 @@ export class RemediationStore {
     this.listeners.forEach(fn => fn());
   }
 
-  static getActions(): RemediationAction[] {
-    if (this.scanActionsOverride) {
+  static getActions(tenantId?: string): RemediationAction[] {
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    const saved = PersistenceAdapter.read<RemediationAction[]>('remediations', STORAGE_KEY_REMEDIATIONS);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      return saved;
+    }
+    if (this.scanActionsOverride && (!tenantId || PersistenceAdapter.getContext().tenantId === 'TENANT-DEFAULT')) {
       return JSON.parse(JSON.stringify(this.scanActionsOverride));
     }
-    if (typeof localStorage !== 'undefined') {
-      const saved = localStorage.getItem(STORAGE_KEY_REMEDIATIONS);
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {
-          // fallback
-        }
-      }
-    }
-    return BASELINE_REMEDIATIONS;
+    return JSON.parse(JSON.stringify(BASELINE_REMEDIATIONS));
   }
 
     private static scanActionsOverride: RemediationAction[] | null = null;
 
-  static ingestActions(actions: RemediationAction[]) {
+  static ingestActions(actions: RemediationAction[], tenantId?: string) {
     this.scanActionsOverride = actions;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY_REMEDIATIONS, JSON.stringify(actions));
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
     }
+    PersistenceAdapter.write('remediations', actions, STORAGE_KEY_REMEDIATIONS);
     this.notify();
   }
 
-  static resetToBaseline() {
+  static resetToBaseline(tenantId?: string) {
     this.scanActionsOverride = null;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(STORAGE_KEY_REMEDIATIONS);
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
     }
+    PersistenceAdapter.delete('remediations', STORAGE_KEY_REMEDIATIONS);
     this.notify();
   }
 
@@ -195,9 +195,13 @@ static verifyAndCloseAction(
     actionId: string,
     closureRationale: string,
     testOutcome: string,
-    verifiedBy = 'Roberto Silva (CISO & Accountable Lead)'
+    verifiedBy = 'Roberto Silva (CISO & Accountable Lead)',
+    tenantId?: string
   ): { action: RemediationAction; evidence: ProtectedEvidenceRecord } {
-    const actions = this.getActions();
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    const actions = this.getActions(tenantId);
     const index = actions.findIndex(a => a.actionId === actionId);
     if (index === -1) {
       throw new Error(`Action ${actionId} not found`);
@@ -220,9 +224,7 @@ static verifyAndCloseAction(
     };
 
     actions[index] = updated;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY_REMEDIATIONS, JSON.stringify(actions));
-    }
+    PersistenceAdapter.write('remediations', actions, STORAGE_KEY_REMEDIATIONS);
 
     // Record Protected Evidence in Ledger
     const evidence: ProtectedEvidenceRecord = {
@@ -237,10 +239,8 @@ static verifyAndCloseAction(
       retentionDays: 1825
     };
 
-    if (typeof localStorage !== 'undefined') {
-      const ledger = [evidence, ...DecisionStore.getEvidenceLedger()];
-      localStorage.setItem('cg_ag_unified_evidence_v2', JSON.stringify(ledger.slice(0, 30)));
-    }
+    const ledger = [evidence, ...DecisionStore.getEvidenceLedger(tenantId)];
+    PersistenceAdapter.write('evidence_ledger', ledger.slice(0, 30), 'cg_ag_unified_evidence_v2');
 
     this.notify();
     return { action: updated, evidence };

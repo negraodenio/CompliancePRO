@@ -5,6 +5,7 @@
  */
 
 import { DecisionStore } from './decision-store';
+import { PersistenceAdapter } from './persistence-adapter';
 import { ProtectedEvidenceRecord } from '../../core/governance-control-plane';
 
 export type EvidenceType = 
@@ -255,22 +256,21 @@ export class EvidenceStore {
   }
 
   static getEvidenceRecords(tenantId?: string): ComprehensiveEvidenceRecord[] {
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
     let list: ComprehensiveEvidenceRecord[] = BASELINE_EVIDENCE;
     if (this.scanEvidenceOverride) {
       list = JSON.parse(JSON.stringify(this.scanEvidenceOverride));
-    } else if (typeof localStorage !== 'undefined') {
-      const saved = localStorage.getItem(STORAGE_KEY_EVIDENCE);
-      if (saved) {
-        try {
-          list = JSON.parse(saved);
-        } catch (e) {
-          // fallback
-        }
+    } else {
+      const saved = PersistenceAdapter.read<ComprehensiveEvidenceRecord[]>('evidence_catalog', STORAGE_KEY_EVIDENCE);
+      if (saved && Array.isArray(saved) && saved.length > 0) {
+        list = saved;
       }
     }
 
     if (tenantId) {
-      return list.filter(r => !r.tenantId || r.tenantId === tenantId || r.tenantId === 'TENANT-DEFAULT');
+      return list.filter(r => !r.tenantId || r.tenantId === tenantId);
     }
     return list;
   }
@@ -282,21 +282,23 @@ export class EvidenceStore {
 
     private static scanEvidenceOverride: ComprehensiveEvidenceRecord[] | null = null;
 
-  static ingestEvidence(records: ComprehensiveEvidenceRecord[]) {
-    const current = this.getEvidenceRecords();
+  static ingestEvidence(records: ComprehensiveEvidenceRecord[], tenantId?: string) {
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    const current = this.getEvidenceRecords(tenantId);
     const combined = [...records, ...current.filter(c => !records.some(r => r.evidenceId === c.evidenceId))];
     this.scanEvidenceOverride = combined;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY_EVIDENCE, JSON.stringify(combined));
-    }
+    PersistenceAdapter.write('evidence_catalog', combined, STORAGE_KEY_EVIDENCE);
     this.notify();
   }
 
-  static resetToBaseline() {
+  static resetToBaseline(tenantId?: string) {
     this.scanEvidenceOverride = null;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(STORAGE_KEY_EVIDENCE);
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
     }
+    PersistenceAdapter.delete('evidence_catalog', STORAGE_KEY_EVIDENCE);
     this.notify();
   }
 

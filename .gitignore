@@ -8,3 +8,6 @@ dist-ssr
 *.log
 
 .vercel
+supabase/.temp/
+__pycache__/
+*.pyc

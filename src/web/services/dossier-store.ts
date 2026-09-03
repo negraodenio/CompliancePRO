@@ -4,6 +4,8 @@
  * Causal Pipeline: Controls -> Policies -> Findings -> Risks -> Decisions -> Actions/Incidents -> Evidence -> Ledger -> Dossier Package
  */
 
+import { PersistenceAdapter } from './persistence-adapter';
+
 export type RegulatoryFramework = 'EU_AI_ACT' | 'LGPD_RIPD' | 'NIST_AI_RMF' | 'ISO_IEC_42001';
 export type DossierStatus = 'DRAFT' | 'GENERATED' | 'INTEGRITY_VERIFIED' | 'EXPORTED';
 
@@ -162,26 +164,34 @@ export class DossierStore {
     this.listeners.forEach(fn => fn());
   }
 
-  static getDossiers(): RegulatoryDossier[] {
-    if (typeof localStorage !== 'undefined') {
-      const saved = localStorage.getItem(STORAGE_KEY_DOSSIERS);
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {
-          // fallback
-        }
-      }
+  static getDossiers(tenantId?: string): RegulatoryDossier[] {
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
     }
-    return BASELINE_DOSSIERS;
+    const saved = PersistenceAdapter.read<RegulatoryDossier[]>('dossiers', STORAGE_KEY_DOSSIERS);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      return saved;
+    }
+    return JSON.parse(JSON.stringify(BASELINE_DOSSIERS));
   }
 
-    static updateDossierContextFromScan(compliance: any) {
+  static resetToBaseline(tenantId?: string) {
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    PersistenceAdapter.delete('dossiers', STORAGE_KEY_DOSSIERS);
     this.notify();
   }
 
-static markDossierExported(dossierId: string): RegulatoryDossier {
-    const list = this.getDossiers();
+  static updateDossierContextFromScan(compliance: any) {
+    this.notify();
+  }
+
+  static markDossierExported(dossierId: string, tenantId?: string): RegulatoryDossier {
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    const list = this.getDossiers(tenantId);
     const index = list.findIndex(d => d.dossierId === dossierId);
     if (index === -1) throw new Error(`Dossier ${dossierId} not found`);
 
@@ -190,10 +200,7 @@ static markDossierExported(dossierId: string): RegulatoryDossier {
       status: 'EXPORTED'
     };
 
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY_DOSSIERS, JSON.stringify(list));
-    }
-
+    PersistenceAdapter.write('dossiers', list, STORAGE_KEY_DOSSIERS);
     this.notify();
     return list[index];
   }

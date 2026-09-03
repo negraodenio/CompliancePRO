@@ -24,9 +24,22 @@ app = FastAPI(
     version="1.1.0"
 )
 
+CORS_ORIGINS = [
+    "https://complypro.pt",
+    "https://www.complypro.pt",
+    "https://standalone-compliance-scanner.vercel.app",
+]
+if os.getenv("ENVIRONMENT", "production") == "development":
+    CORS_ORIGINS.extend([
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+    ])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -265,10 +278,9 @@ def login(payload: LoginRequest):
     ent = entitlements_service.get_organization_entitlements(org_id) or {}
     role_info = parse_membership_role(org_data.get("role"))
 
-    # Super admin bypass
-    is_master = payload.email == "negraodenio@gmail.com"
-    plan_tier = "enterprise" if is_master else org_info.get("plan_tier", "free")
-    quota = 999999 if is_master else ent.get("monthly_scan_quota", 5)
+    # Plan, quota and roles strictly derived from authenticated database record
+    plan_tier = org_info.get("plan_tier", "free")
+    quota = ent.get("monthly_scan_quota", 5)
 
     # Fetch all organizations for switching
     all_members = admin.table("organization_members").select("organization_id, role, organizations(id, name, slug, plan_tier)").eq("user_id", user_id).execute()
@@ -294,9 +306,9 @@ def login(payload: LoginRequest):
         organization_id=org_id,
         organization_name=org_info.get("name", "Workspace"),
         plan_tier=plan_tier,
-        admin_role="owner" if is_master else role_info["admin_role"],
-        enterprise_role="CISO" if is_master else role_info["enterprise_role"],
-        is_owner=True if is_master else role_info["is_owner"],
+        admin_role=role_info["admin_role"],
+        enterprise_role=role_info["enterprise_role"],
+        is_owner=role_info["is_owner"],
         monthly_scan_quota=quota,
         used_scans=ent.get("used_scans_period", 0),
         organizations=org_list
@@ -342,7 +354,7 @@ def get_current_user_profile(
     ent = entitlements_service.get_organization_entitlements(org_id) or {}
     role_info = parse_membership_role(org_item.get("role"))
 
-    is_master = email == "negraodenio@gmail.com"
+    is_master = False
 
     org_list = []
     for m in all_members.data:
@@ -364,12 +376,26 @@ def get_current_user_profile(
         "full_name": full_name,
         "is_master": is_master,
         "active_organization": org_item["organizations"],
-        "is_owner": True if is_master else role_info["is_owner"],
-        "admin_role": "owner" if is_master else role_info["admin_role"],
-        "enterprise_role": "CISO" if is_master else role_info["enterprise_role"],
+        "is_owner": role_info["is_owner"],
+        "admin_role": role_info["admin_role"],
+        "enterprise_role": role_info["enterprise_role"],
         "entitlements": ent,
         "organizations": org_list
     }
+
+# --- HELPER DE AUTORIZAÇÃO TENANT (BOLA DEFENSE) ---
+
+def assert_tenant_access(requested_org_id: str, tenant_ctx: TenantContext):
+    """
+    Garante isolamento absoluto multi-tenant (BOLA Defense / SEC-P0).
+    O ID da organização no path da URL DEVE ser idêntico ao organization_id
+    autenticado no contexto da sessão (TenantContext).
+    """
+    if not tenant_ctx or requested_org_id != tenant_ctx.organization_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Acesso negado: O workspace solicitado não corresponde ao contexto autenticado."
+        )
 
 # --- TEAM MANAGEMENT & INVITATION ENDPOINTS ---
 
@@ -378,6 +404,7 @@ def list_organization_members(
     org_id: str,
     tenant_ctx: TenantContext = Depends(get_tenant_context)
 ):
+    assert_tenant_access(org_id, tenant_ctx)
     admin = get_admin_client()
     members_res = admin.table("organization_members").select("id, user_id, role, created_at").eq("organization_id", org_id).execute()
     
@@ -414,6 +441,7 @@ def invite_member(
     payload: InviteCreateRequest,
     tenant_ctx: TenantContext = Depends(get_tenant_context)
 ):
+    assert_tenant_access(org_id, tenant_ctx)
     # Only Owner or Admin can invite
     parsed_role = parse_membership_role(tenant_ctx.role)
     if not (parsed_role["is_owner"] or parsed_role["admin_role"] in ["owner", "admin"]):
@@ -438,6 +466,7 @@ def list_org_invitations(
     org_id: str,
     tenant_ctx: TenantContext = Depends(get_tenant_context)
 ):
+    assert_tenant_access(org_id, tenant_ctx)
     return invitations_service.list_organization_invitations(org_id)
 
 @app.delete("/api/v1/organizations/{org_id}/invitations/{invitation_id}", summary="Revogar Convite")
@@ -446,6 +475,7 @@ def revoke_org_invitation(
     invitation_id: str,
     tenant_ctx: TenantContext = Depends(get_tenant_context)
 ):
+    assert_tenant_access(org_id, tenant_ctx)
     parsed_role = parse_membership_role(tenant_ctx.role)
     if not (parsed_role["is_owner"] or parsed_role["admin_role"] in ["owner", "admin"]):
         raise HTTPException(status_code=403, detail="Apenas Owners ou Administradores podem revogar convites.")
@@ -500,6 +530,7 @@ def update_member_role(
     payload: RoleUpdateRequest,
     tenant_ctx: TenantContext = Depends(get_tenant_context)
 ):
+    assert_tenant_access(org_id, tenant_ctx)
     parsed_role = parse_membership_role(tenant_ctx.role)
     if not (parsed_role["is_owner"] or parsed_role["admin_role"] in ["owner", "admin"]):
         raise HTTPException(status_code=403, detail="Apenas Owners ou Administradores podem alterar papéis.")
@@ -526,6 +557,7 @@ def remove_member(
     user_id: str,
     tenant_ctx: TenantContext = Depends(get_tenant_context)
 ):
+    assert_tenant_access(org_id, tenant_ctx)
     parsed_role = parse_membership_role(tenant_ctx.role)
     if not (parsed_role["is_owner"] or parsed_role["admin_role"] in ["owner", "admin"]):
         raise HTTPException(status_code=403, detail="Apenas Owners ou Administradores podem remover membros.")

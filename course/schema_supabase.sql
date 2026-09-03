@@ -92,24 +92,28 @@ ALTER TABLE public.repositories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.scans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.scan_findings ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view their organization data" ON public.organizations;
 CREATE POLICY "Users can view their organization data"
     ON public.organizations FOR SELECT
     USING (id IN (
         SELECT organization_id FROM public.organization_members WHERE user_id = auth.uid()
     ));
 
+DROP POLICY IF EXISTS "Users can view their organization members" ON public.organization_members;
 CREATE POLICY "Users can view their organization members"
     ON public.organization_members FOR SELECT
     USING (organization_id IN (
         SELECT organization_id FROM public.organization_members WHERE user_id = auth.uid()
     ));
 
+DROP POLICY IF EXISTS "Users can view their scans" ON public.scans;
 CREATE POLICY "Users can view their scans"
     ON public.scans FOR SELECT
     USING (organization_id IN (
         SELECT organization_id FROM public.organization_members WHERE user_id = auth.uid()
     ));
 
+DROP POLICY IF EXISTS "Users can view their findings" ON public.scan_findings;
 CREATE POLICY "Users can view their findings"
     ON public.scan_findings FOR SELECT
     USING (organization_id IN (

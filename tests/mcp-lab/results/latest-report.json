@@ -1,0 +1,628 @@
+{
+  "name": "CG-AG MCP Test Lab",
+  "timestamp": "2026-09-01T17:11:25.508Z",
+  "projectRoot": "C:\\Users\\denio\\Documents\\Denio\\PluginVIbeCOde\\standalone-compliance-scanner",
+  "fixtureDir": "C:\\Users\\denio\\Documents\\Denio\\PluginVIbeCOde\\standalone-compliance-scanner\\tests\\mcp-lab\\fixtures\\safe-target-repo",
+  "serverCommand": "npm --silent run mcp:lab:server",
+  "productionServerCommand": "npm --silent run mcp",
+  "expected": {
+    "tools": 14,
+    "staticResources": 5,
+    "resourceTemplates": 2,
+    "prompts": 4
+  },
+  "summary": {
+    "pass": 33,
+    "fail": 0,
+    "skip": 1
+  },
+  "checks": [
+    {
+      "name": "Initialize over STDIO",
+      "status": "PASS",
+      "expected": "complypro-universal-mcp",
+      "actual": {
+        "name": "complypro-universal-mcp",
+        "version": "2.0.0"
+      }
+    },
+    {
+      "name": "Tool contract: exactly 14 canonical tools",
+      "status": "PASS",
+      "expected": [
+        "detect_shadow_apis",
+        "discover_agents",
+        "discover_capabilities",
+        "get_agent_passport",
+        "get_audit_ledger",
+        "get_business_xray",
+        "get_evidence_records",
+        "get_governance_controls",
+        "get_governance_snapshot",
+        "get_mcp_server_info",
+        "get_scan_summary",
+        "get_tenant_context",
+        "scan_repository",
+        "verify_audit_ledger"
+      ],
+      "actual": [
+        "detect_shadow_apis",
+        "discover_agents",
+        "discover_capabilities",
+        "get_agent_passport",
+        "get_audit_ledger",
+        "get_business_xray",
+        "get_evidence_records",
+        "get_governance_controls",
+        "get_governance_snapshot",
+        "get_mcp_server_info",
+        "get_scan_summary",
+        "get_tenant_context",
+        "scan_repository",
+        "verify_audit_ledger"
+      ],
+      "details": {
+        "missing": [],
+        "unexpected": []
+      }
+    },
+    {
+      "name": "Static resource contract: 5 listed resources",
+      "status": "PASS",
+      "expected": [
+        "cgag://controls",
+        "cgag://evidence",
+        "cgag://ledger",
+        "cgag://policies",
+        "cgag://tenant"
+      ],
+      "actual": [
+        "cgag://controls",
+        "cgag://evidence",
+        "cgag://ledger",
+        "cgag://policies",
+        "cgag://tenant"
+      ],
+      "details": {
+        "missing": [],
+        "unexpected": []
+      }
+    },
+    {
+      "name": "Resource template contract: 2 listed templates",
+      "status": "PASS",
+      "expected": [
+        "cgag://evidence/{id}",
+        "cgag://ledger/{blockHeight}"
+      ],
+      "actual": [
+        "cgag://evidence/{id}",
+        "cgag://ledger/{blockHeight}"
+      ],
+      "details": {
+        "missing": [],
+        "unexpected": []
+      }
+    },
+    {
+      "name": "Resource contract: exactly 7 total resources/templates",
+      "status": "PASS",
+      "expected": 7,
+      "actual": 7,
+      "details": {
+        "resources": [
+          "cgag://controls",
+          "cgag://evidence",
+          "cgag://ledger",
+          "cgag://policies",
+          "cgag://tenant"
+        ],
+        "templates": [
+          "cgag://evidence/{id}",
+          "cgag://ledger/{blockHeight}"
+        ]
+      }
+    },
+    {
+      "name": "Prompt contract: exactly 4 canonical prompts",
+      "status": "PASS",
+      "expected": [
+        "ciso_security_review",
+        "dpo_privacy_review",
+        "executive_governance_review",
+        "vendor_risk_assessment"
+      ],
+      "actual": [
+        "ciso_security_review",
+        "dpo_privacy_review",
+        "executive_governance_review",
+        "vendor_risk_assessment"
+      ],
+      "details": {
+        "missing": [],
+        "unexpected": []
+      }
+    },
+    {
+      "name": "Tool execution: discover_capabilities",
+      "status": "PASS",
+      "expected": "ok=true",
+      "actual": {
+        "ok": true,
+        "dataKeys": [
+          "summary",
+          "capabilities",
+          "identities"
+        ],
+        "metadata": {
+          "tenantId": "TENANT-DEFAULT",
+          "workspaceId": "WS-DEFAULT",
+          "executedBy": "USR-CISO-01",
+          "roles": [
+            "CISO",
+            "SECURITY_LEAD"
+          ],
+          "riskClassification": "READ",
+          "epistemicState": "CANONICAL_CAPABILITIES"
+        }
+      }
+    },
+    {
+      "name": "Tool execution: get_scan_summary",
+      "status": "PASS",
+      "expected": "ok=true",
+      "actual": {
+        "ok": true,
+        "dataKeys": [
+          "complianceScore",
+          "riskScore",
+          "riskLevel",
+          "agentsCount",
+          "frameworks",
+          "violationsBySeverity"
+        ],
+        "metadata": {
+          "tenantId": "TENANT-DEFAULT",
+          "workspaceId": "WS-DEFAULT",
+          "executedBy": "USR-CISO-01",
+          "roles": [
+            "CISO",
+            "SECURITY_LEAD"
+          ],
+          "riskClassification": "READ",
+          "epistemicState": "DIRECTLY_DERIVED"
+        }
+      }
+    },
+    {
+      "name": "Tool execution: get_business_xray",
+      "status": "PASS",
+      "expected": "ok=true",
+      "actual": {
+        "ok": true,
+        "dataKeys": [
+          "primaryAgent",
+          "businessPurpose",
+          "sipoc",
+          "systemXRay"
+        ],
+        "metadata": {
+          "tenantId": "TENANT-DEFAULT",
+          "workspaceId": "WS-DEFAULT",
+          "executedBy": "USR-CISO-01",
+          "roles": [
+            "CISO",
+            "SECURITY_LEAD"
+          ],
+          "riskClassification": "READ",
+          "epistemicState": "SIPOC_CONFIDENCE_SCORED"
+        }
+      }
+    },
+    {
+      "name": "Tool execution: get_governance_controls",
+      "status": "PASS",
+      "expected": "ok=true",
+      "actual": {
+        "ok": true,
+        "dataKeys": [
+          "framework",
+          "controlsCount",
+          "controls",
+          "activePoliciesCount",
+          "policies"
+        ],
+        "metadata": {
+          "tenantId": "TENANT-DEFAULT",
+          "workspaceId": "WS-DEFAULT",
+          "executedBy": "USR-CISO-01",
+          "roles": [
+            "CISO",
+            "SECURITY_LEAD"
+          ],
+          "riskClassification": "READ",
+          "epistemicState": "CANONICAL_STANDARDS"
+        }
+      }
+    },
+    {
+      "name": "Tool execution: get_agent_passport",
+      "status": "PASS",
+      "expected": "ok=true",
+      "actual": {
+        "ok": true,
+        "dataKeys": [
+          "identity",
+          "governance",
+          "technical",
+          "operational",
+          "assurance"
+        ],
+        "metadata": {
+          "tenantId": "TENANT-DEFAULT",
+          "workspaceId": "WS-DEFAULT",
+          "executedBy": "USR-CISO-01",
+          "roles": [
+            "CISO",
+            "SECURITY_LEAD"
+          ],
+          "riskClassification": "READ",
+          "epistemicState": "AUTHENTICATED_PASSPORT"
+        }
+      }
+    },
+    {
+      "name": "Tool execution: get_evidence_records",
+      "status": "PASS",
+      "expected": "ok=true",
+      "actual": {
+        "ok": true,
+        "dataKeys": [
+          "totalRecords",
+          "records"
+        ],
+        "metadata": {
+          "tenantId": "TENANT-DEFAULT",
+          "workspaceId": "WS-DEFAULT",
+          "executedBy": "USR-CISO-01",
+          "roles": [
+            "CISO",
+            "SECURITY_LEAD"
+          ],
+          "riskClassification": "READ",
+          "epistemicState": "SEALED_EVIDENCE"
+        }
+      }
+    },
+    {
+      "name": "Tool execution: get_audit_ledger",
+      "status": "PASS",
+      "expected": "ok=true",
+      "actual": {
+        "ok": true,
+        "dataKeys": [
+          "totalBlocks",
+          "genesisHash",
+          "latestHeight",
+          "blocks"
+        ],
+        "metadata": {
+          "tenantId": "TENANT-DEFAULT",
+          "workspaceId": "WS-DEFAULT",
+          "executedBy": "USR-CISO-01",
+          "roles": [
+            "CISO",
+            "SECURITY_LEAD"
+          ],
+          "riskClassification": "READ",
+          "epistemicState": "REAL_SHA256_CHAIN"
+        }
+      }
+    },
+    {
+      "name": "Tool execution: verify_audit_ledger",
+      "status": "PASS",
+      "expected": "ok=true",
+      "actual": {
+        "ok": true,
+        "dataKeys": [
+          "isChainValid",
+          "blocksVerified",
+          "brokenLinks",
+          "hashMismatches",
+          "tamperedBlockId",
+          "verificationTimestamp"
+        ],
+        "metadata": {
+          "tenantId": "TENANT-DEFAULT",
+          "workspaceId": "WS-DEFAULT",
+          "executedBy": "USR-CISO-01",
+          "roles": [
+            "CISO",
+            "SECURITY_LEAD"
+          ],
+          "riskClassification": "READ",
+          "epistemicState": "CRYPTOGRAPHICALLY_VERIFIED"
+        }
+      }
+    },
+    {
+      "name": "Tool execution: get_tenant_context",
+      "status": "PASS",
+      "expected": "ok=true",
+      "actual": {
+        "ok": true,
+        "dataKeys": [
+          "userId",
+          "tenantId",
+          "workspaceId",
+          "roles",
+          "authenticatedAt",
+          "expiresAt",
+          "isRevoked"
+        ],
+        "metadata": {
+          "tenantId": "TENANT-DEFAULT",
+          "workspaceId": "WS-DEFAULT",
+          "executedBy": "USR-CISO-01",
+          "roles": [
+            "CISO",
+            "SECURITY_LEAD"
+          ],
+          "riskClassification": "READ",
+          "epistemicState": "SESSION_BOUND"
+        }
+      }
+    },
+    {
+      "name": "Tool execution: get_mcp_server_info",
+      "status": "PASS",
+      "expected": "ok=true",
+      "actual": {
+        "ok": true,
+        "dataKeys": [
+          "serverName",
+          "version",
+          "description",
+          "toolsCount",
+          "resourcesCount",
+          "promptsCount",
+          "supportedTransports",
+          "cryptography",
+          "governancePrinciples"
+        ],
+        "metadata": {
+          "tenantId": "TENANT-DEFAULT",
+          "workspaceId": "WS-DEFAULT",
+          "executedBy": "USR-CISO-01",
+          "roles": [
+            "CISO",
+            "SECURITY_LEAD"
+          ],
+          "riskClassification": "READ",
+          "epistemicState": "SYSTEM_METADATA"
+        }
+      }
+    },
+    {
+      "name": "Resource read: cgag://controls",
+      "status": "PASS",
+      "expected": "content returned",
+      "actual": [
+        {
+          "uri": "cgag://controls",
+          "mimeType": "application/json",
+          "hasText": true
+        }
+      ]
+    },
+    {
+      "name": "Resource read: cgag://policies",
+      "status": "PASS",
+      "expected": "content returned",
+      "actual": [
+        {
+          "uri": "cgag://policies",
+          "mimeType": "application/json",
+          "hasText": true
+        }
+      ]
+    },
+    {
+      "name": "Resource read: cgag://ledger",
+      "status": "PASS",
+      "expected": "content returned",
+      "actual": [
+        {
+          "uri": "cgag://ledger",
+          "mimeType": "application/json",
+          "hasText": true
+        }
+      ]
+    },
+    {
+      "name": "Resource read: cgag://evidence",
+      "status": "PASS",
+      "expected": "content returned",
+      "actual": [
+        {
+          "uri": "cgag://evidence",
+          "mimeType": "application/json",
+          "hasText": true
+        }
+      ]
+    },
+    {
+      "name": "Resource read: cgag://tenant",
+      "status": "PASS",
+      "expected": "content returned",
+      "actual": [
+        {
+          "uri": "cgag://tenant",
+          "mimeType": "application/json",
+          "hasText": true
+        }
+      ]
+    },
+    {
+      "name": "Resource read: cgag://ledger/0",
+      "status": "PASS",
+      "expected": "content returned",
+      "actual": [
+        {
+          "uri": "cgag://ledger/0",
+          "mimeType": "application/json",
+          "hasText": true
+        }
+      ]
+    },
+    {
+      "name": "Resource read: cgag://evidence/EV-2026-0055",
+      "status": "PASS",
+      "expected": "content returned",
+      "actual": [
+        {
+          "uri": "cgag://evidence/EV-2026-0055",
+          "mimeType": "application/json",
+          "hasText": true
+        }
+      ]
+    },
+    {
+      "name": "Parameterized resource read: cgag://controls/{id}",
+      "status": "SKIP",
+      "expected": "registered template before execution",
+      "actual": "not registered by current MCP contract"
+    },
+    {
+      "name": "Prompt retrieval: ciso_security_review",
+      "status": "PASS",
+      "expected": "messages returned",
+      "actual": {
+        "messages": 1
+      }
+    },
+    {
+      "name": "Prompt retrieval: dpo_privacy_review",
+      "status": "PASS",
+      "expected": "messages returned",
+      "actual": {
+        "messages": 1
+      }
+    },
+    {
+      "name": "Prompt retrieval: executive_governance_review",
+      "status": "PASS",
+      "expected": "messages returned",
+      "actual": {
+        "messages": 1
+      }
+    },
+    {
+      "name": "Prompt retrieval: vendor_risk_assessment",
+      "status": "PASS",
+      "expected": "messages returned",
+      "actual": {
+        "messages": 1
+      }
+    },
+    {
+      "name": "Security: valid session accepted",
+      "status": "PASS",
+      "expected": "TENANT-DEFAULT authenticated context",
+      "actual": {
+        "ok": true,
+        "dataKeys": [
+          "userId",
+          "tenantId",
+          "workspaceId",
+          "roles",
+          "authenticatedAt",
+          "expiresAt",
+          "isRevoked"
+        ],
+        "metadata": {
+          "tenantId": "TENANT-DEFAULT",
+          "workspaceId": "WS-DEFAULT",
+          "executedBy": "USR-CISO-01",
+          "roles": [
+            "CISO",
+            "SECURITY_LEAD"
+          ],
+          "riskClassification": "READ",
+          "epistemicState": "SESSION_BOUND"
+        }
+      }
+    },
+    {
+      "name": "Security: invalid request rejected without stack/secrets",
+      "status": "PASS",
+      "expected": "MCP validation error, sanitized",
+      "actual": {
+        "threw": false,
+        "value": {
+          "content": [
+            {
+              "type": "text",
+              "text": "MCP error -32602: Input validation error: Invalid arguments for tool get_audit_ledger: Expected number, received string at limit"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "name": "Security: nonexistent tool rejected without stack/secrets",
+      "status": "PASS",
+      "expected": "MCP tool-not-found error, sanitized",
+      "actual": {
+        "threw": false,
+        "value": {
+          "content": [
+            {
+              "type": "text",
+              "text": "MCP error -32602: Tool non_existent_tool_xyz not found"
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    {
+      "name": "Security: nonexistent resource rejected without stack/secrets",
+      "status": "PASS",
+      "expected": "MCP resource-not-found error, sanitized",
+      "actual": {
+        "threw": true,
+        "error": {
+          "name": "McpError",
+          "message": "MCP error -32602: MCP error -32602: Resource cgag://does-not-exist not found"
+        }
+      }
+    },
+    {
+      "name": "Security: valid-session stderr has no stack traces or secrets",
+      "status": "PASS",
+      "expected": "no stack traces or secrets",
+      "actual": "[ComplyPRO Universal MCP] Stdio Transport active and listening (Mode: PRODUCTION_AUTHENTICATED)."
+    },
+    {
+      "name": "Security: missing session fails closed",
+      "status": "PASS",
+      "expected": "UNAUTHENTICATED fail-closed envelope",
+      "actual": {
+        "ok": false,
+        "code": "UNAUTHENTICATED",
+        "message": "UNAUTHENTICATED: Missing authorization token. Set CGAG_MCP_AUTH_TOKEN or enable explicit development mode (CGAG_MCP_DEV_MODE=true).",
+        "dataKeys": [],
+        "metadata": {
+          "tenantId": "ANONYMOUS",
+          "workspaceId": "ANONYMOUS",
+          "executedBy": "ANONYMOUS",
+          "roles": [],
+          "riskClassification": "READ"
+        }
+      }
+    }
+  ]
+}

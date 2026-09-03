@@ -4,6 +4,7 @@
  */
 
 import { DecisionStore } from './decision-store';
+import { PersistenceAdapter } from './persistence-adapter';
 import { ProtectedEvidenceRecord } from '../../core/governance-control-plane';
 
 export type GateStatus = 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'EXPIRED_BLOCKED';
@@ -146,38 +147,37 @@ export class HitlStore {
     this.listeners.forEach(fn => fn());
   }
 
-  static getGates(): HITLApprovalRequest[] {
-    if (this.scanGatesOverride) {
+  static getGates(tenantId?: string): HITLApprovalRequest[] {
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    const saved = PersistenceAdapter.read<HITLApprovalRequest[]>('hitl_gates', STORAGE_KEY_HITL);
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      return saved;
+    }
+    if (this.scanGatesOverride && (!tenantId || PersistenceAdapter.getContext().tenantId === 'TENANT-DEFAULT')) {
       return JSON.parse(JSON.stringify(this.scanGatesOverride));
     }
-    if (typeof localStorage !== 'undefined') {
-      const saved = localStorage.getItem(STORAGE_KEY_HITL);
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {
-          // fallback
-        }
-      }
-    }
-    return BASELINE_GATES;
+    return JSON.parse(JSON.stringify(BASELINE_GATES));
   }
 
     private static scanGatesOverride: HITLApprovalRequest[] | null = null;
 
-  static ingestGates(gates: HITLApprovalRequest[]) {
+  static ingestGates(gates: HITLApprovalRequest[], tenantId?: string) {
     this.scanGatesOverride = gates;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY_HITL, JSON.stringify(gates));
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
     }
+    PersistenceAdapter.write('hitl_gates', gates, STORAGE_KEY_HITL);
     this.notify();
   }
 
-  static resetToBaseline() {
+  static resetToBaseline(tenantId?: string) {
     this.scanGatesOverride = null;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(STORAGE_KEY_HITL);
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
     }
+    PersistenceAdapter.delete('hitl_gates', STORAGE_KEY_HITL);
     this.notify();
   }
 
@@ -186,9 +186,13 @@ static executeHumanApproval(
     decision: 'APPROVE' | 'REJECT',
     rationale: string,
     decidedBy = 'Roberto Silva',
-    role = 'CISO & Accountable Lead'
+    role = 'CISO & Accountable Lead',
+    tenantId?: string
   ): { gate: HITLApprovalRequest; evidence: ProtectedEvidenceRecord } {
-    const gates = this.getGates();
+    if (tenantId) {
+      PersistenceAdapter.setContext({ tenantId });
+    }
+    const gates = this.getGates(tenantId);
     const index = gates.findIndex(g => g.gateId === gateId);
     if (index === -1) {
       throw new Error(`Gate ${gateId} not found`);
@@ -213,9 +217,7 @@ static executeHumanApproval(
     };
 
     gates[index] = updatedGate;
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY_HITL, JSON.stringify(gates));
-    }
+    PersistenceAdapter.write('hitl_gates', gates, STORAGE_KEY_HITL);
 
     // Record Protected Evidence in Ledger
     const evidence: ProtectedEvidenceRecord = {
@@ -230,10 +232,8 @@ static executeHumanApproval(
       retentionDays: 1825
     };
 
-    if (typeof localStorage !== 'undefined') {
-      const ledger = [evidence, ...DecisionStore.getEvidenceLedger()];
-      localStorage.setItem('cg_ag_unified_evidence_v2', JSON.stringify(ledger.slice(0, 30)));
-    }
+    const ledger = [evidence, ...DecisionStore.getEvidenceLedger(tenantId)];
+    PersistenceAdapter.write('evidence_ledger', ledger.slice(0, 30), 'cg_ag_unified_evidence_v2');
 
     this.notify();
     return { gate: updatedGate, evidence };
