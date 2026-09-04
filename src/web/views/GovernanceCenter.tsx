@@ -63,7 +63,7 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
   const [selectedAttentionCategory, setSelectedAttentionCategory] = useState<AttentionCategory | null>(null);
   const [selectedFindingId, setSelectedFindingId] = useState<string | null>(null);
   const [expandedDomainTile, setExpandedDomainTile] = useState<'controls' | 'passports' | 'full-table' | null>(null);
-  const [expandedDeepTab, setExpandedDeepTab] = useState<'boundaries' | 'evidence' | 'controls' | 'impact'>('boundaries');
+  const [activeDeepDisclosure, setActiveDeepDisclosure] = useState<'impact' | 'controls' | 'passport' | 'evidence' | 'raw' | null>(null);
 
   const refreshState = () => {
     setFindings(DecisionStore.getFindings());
@@ -161,17 +161,18 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
   };
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto animate-fadeIn">
+    <div className="space-y-3.5 max-w-7xl mx-auto animate-fadeIn">
       {/* ========================================================================= */}
-      {/* HEADER: COMPACT CONTROL PLANE CONTEXT                                      */}
+      {/* HEADER: QUIET EXECUTIVE GOVERNANCE CONTROL PLANE CONTEXT                   */}
       {/* ========================================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200 dark:border-slate-800/80">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200 dark:border-slate-800/70">
         <div>
-          <div className="flex items-center space-x-2 text-[10px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-widest font-mono">
-            <span>Level 2 Control Plane</span>
+          <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400">
+            <span className="font-semibold text-slate-700 dark:text-slate-300">Governance Control Plane</span>
             <span>·</span>
-            <span>{activeProfile.name} Profile</span>
-            <span className="px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-500 border border-sky-500/20">{environment}</span>
+            <span>{activeProfile.name}</span>
+            <span>·</span>
+            <span className="capitalize">{environment}</span>
           </div>
           <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
             Governance Center
@@ -184,9 +185,9 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
         <div className="flex items-center space-x-2 shrink-0">
           <button 
             onClick={onNavigateToScanner}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer"
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700/80 rounded-lg text-xs font-semibold transition cursor-pointer"
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <Sparkles className="w-3.5 h-3.5 text-sky-400" />
             <span>Ingest / Scan Codebase</span>
           </button>
         </div>
@@ -213,45 +214,41 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
       {/* ========================================================================= */}
       {/* ZONE 1 — SOVEREIGN POSTURE & RECENT VERIFIED CHANGES                       */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
-        {/* Posture Card (7 cols on desktop) */}
-        <div className="lg:col-span-7 p-4 sm:p-5 rounded-2xl bg-[#0A1628] border border-[#1e3a5f]/60 shadow-[0_10px_30px_rgba(2,16,36,0.35)] flex flex-col justify-between space-y-3 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-sky-500/5 rounded-full blur-3xl pointer-events-none" />
-
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+        {/* Posture Card (7 cols on desktop - Compact & Sovereign) */}
+        <div className="lg:col-span-7 p-3.5 sm:p-4 rounded-xl bg-[#0A1628] border border-slate-800 flex flex-col justify-between space-y-2.5 relative overflow-hidden">
           <div className="flex items-center justify-between relative z-10">
             <div className="space-y-0.5">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-sky-400">
-                Primary Executive Signal
-              </span>
               <h2 className="text-xs font-semibold text-slate-300">
                 AI Governance Posture
               </h2>
+              <p className="text-[11px] text-slate-400">Baseline adherence across active controls</p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold font-mono">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[11px] font-medium font-mono">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                 Governed
               </span>
-              <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">
-                EU AI Act & LGPD Baseline
+              <span className="text-[10px] text-slate-500 hidden sm:inline font-mono">
+                EU AI Act & LGPD
               </span>
             </div>
           </div>
 
           {/* Sovereign Gauge and Context */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10 pt-1">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10 pt-0.5">
             <div className="flex items-baseline gap-3">
-              <span className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight font-mono">
+              <span className="text-3xl sm:text-4xl font-bold text-white tracking-tight font-mono">
                 84%
               </span>
               <div className="space-y-0.5">
                 <span className="text-xs font-bold text-slate-200 block">10 of 12 Controls Active</span>
-                <span className="text-[11px] text-slate-400 block">2 items under human review</span>
+                <span className="text-[11px] text-slate-400 block">2 items under review</span>
               </div>
             </div>
 
             {/* Quiet Supporting Metrics */}
-            <div className="flex items-center gap-4 border-t sm:border-t-0 sm:border-l border-slate-800 pt-2 sm:pt-0 sm:pl-4 text-xs font-mono">
+            <div className="flex items-center gap-4 border-t sm:border-t-0 sm:border-l border-slate-800/80 pt-2 sm:pt-0 sm:pl-4 text-xs font-mono">
               <div 
                 onClick={onNavigateToInventory}
                 className="cursor-pointer hover:text-sky-400 transition"
@@ -270,18 +267,18 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
               </div>
               <div>
                 <span className="text-[10px] text-slate-500 uppercase block">Ledger</span>
-                <span className="text-sm font-bold text-emerald-400">Protected</span>
+                <span className="text-sm font-bold text-slate-200">Protected</span>
               </div>
             </div>
           </div>
 
           {/* Slim Progress Arc Bar */}
-          <div className="space-y-1 relative z-10 pt-1">
+          <div className="space-y-1 relative z-10 pt-0.5">
             <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800">
               <div className="bg-gradient-to-r from-sky-500 via-emerald-400 to-emerald-500 h-full rounded-full" style={{ width: '84%' }} />
             </div>
-            <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
-              <span>Core Control Plane: Operational</span>
+            <div className="flex items-center justify-between text-[10px] text-slate-400">
+              <span>Status: Operational</span>
               <button onClick={onNavigateToControls} className="text-sky-400 hover:underline cursor-pointer">
                 View 12 CG-AG Controls →
               </button>
@@ -290,25 +287,25 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
         </div>
 
         {/* Recent Verified Changes (5 cols on desktop) */}
-        <div className="lg:col-span-5 p-4 sm:p-5 rounded-2xl bg-[#0A1628] border border-[#1e3a5f]/60 shadow-[0_10px_30px_rgba(2,16,36,0.35)] flex flex-col justify-between space-y-2.5">
+        <div className="lg:col-span-5 p-3.5 sm:p-4 rounded-xl bg-[#0A1628] border border-slate-800 flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-sky-400" />
+              <Clock className="w-3.5 h-3.5 text-slate-400" />
               <h3 className="text-xs font-semibold text-slate-300">
                 Recent Verified Changes
               </h3>
             </div>
-            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded">
-              Tamper-Evident
+            <span className="text-[10px] font-mono text-slate-400">
+              Tamper-Evident Ledger
             </span>
           </div>
 
-          {/* 2 to 3 live events from actual ledger */}
+          {/* 2 live events from actual ledger */}
           <div className="space-y-2">
             {ledger.slice(0, 2).map((item) => (
-              <div key={item.evidenceId} className="p-2.5 rounded-xl bg-[#060F1D] border border-slate-800/80 space-y-0.5">
+              <div key={item.evidenceId} className="p-2 rounded-lg bg-[#060F1D] border border-slate-800/80 space-y-0.5">
                 <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                  <span className="text-sky-400 font-semibold">{item.eventType.replace(/_/g, ' ')}</span>
+                  <span className="text-sky-400 font-medium">{item.eventType.replace(/_/g, ' ')}</span>
                   <span>{new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
                 <p className="text-xs text-slate-200 font-sans truncate">{item.payloadSummary}</p>
@@ -318,13 +315,13 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
               </div>
             ))}
             {ledger.length === 0 && (
-              <div className="p-3 rounded-xl bg-[#060F1D] border border-slate-800 text-xs text-slate-400 text-center">
+              <div className="p-3 rounded-lg bg-[#060F1D] border border-slate-800 text-xs text-slate-400 text-center">
                 System initialized in tamper-evident ledger.
               </div>
             )}
           </div>
 
-          <div className="pt-1 flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/80">
+          <div className="pt-0.5 flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/80">
             <span>RFC 8785 Canonical Chain</span>
             <button 
               onClick={onNavigateToAudit || onNavigateToRisk}
@@ -338,42 +335,42 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
       </div>
 
       {/* ========================================================================= */}
-      {/* ZONE 2 — WHAT NEEDS YOUR ATTENTION? (THREE COMPACT HORIZONTAL SIGNALS)     */}
+      {/* ZONE 2 — WHAT NEEDS YOUR ATTENTION? (PRIMARY ACTION SURFACE)              */}
       {/* ========================================================================= */}
-      <div className="space-y-2">
+      <div className="space-y-2 pt-1">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-bold tracking-wider text-slate-400 uppercase">
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-xs sm:text-sm font-bold tracking-tight text-white uppercase font-sans">
               What Needs Your Attention?
-            </span>
-            <span className="text-[11px] font-mono text-slate-500">
-              ({pendingFindings.length} open findings requiring decision)
+            </h2>
+            <span className="text-xs font-mono font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+              {pendingFindings.length} requiring action
             </span>
           </div>
-          <span className="text-[10px] font-mono text-slate-500 hidden sm:inline">
-            Click any signal to investigate contextually
+          <span className="text-xs text-slate-400 hidden sm:inline font-sans">
+            Select a signal to investigate and resolve
           </span>
         </div>
 
-        {/* 3 Interactive Horizontal Chips / Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        {/* 3 Actionable Horizontal Chips */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {/* Chip 1: Unverified Auth */}
           <button
             onClick={() => handleSelectCategory('unverified-auth')}
-            className={`p-3 rounded-xl border text-left transition cursor-pointer flex items-center justify-between gap-3 ${
+            className={`p-3.5 rounded-xl border text-left transition cursor-pointer flex items-center justify-between gap-3 ${
               selectedAttentionCategory === 'unverified-auth'
-                ? 'bg-rose-950/40 border-rose-500/80 shadow-md shadow-rose-950/30'
-                : 'bg-[#0A1628] border-slate-800 hover:border-rose-500/40 hover:bg-slate-900/80'
+                ? 'bg-[#141224] border-rose-500/80 shadow-md shadow-rose-950/40'
+                : 'bg-[#0A1628] border-slate-800 hover:border-rose-500/40 hover:bg-slate-900/90'
             }`}
           >
             <div className="flex items-center space-x-3 min-w-0">
-              <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0 shadow-xs shadow-rose-500/50" />
+              <div className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
               <div className="truncate">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-bold text-white font-mono">{unverifiedAuthFindings.length || 2}</span>
-                  <span className="text-xs font-bold text-rose-300 truncate">Unverified Auth</span>
+                  <span className="text-xs font-bold text-rose-200 truncate">Unverified Auth</span>
                 </div>
-                <p className="text-[10px] text-slate-400 truncate">Missing IAM / OAuth scopes</p>
+                <p className="text-[11px] text-slate-400 truncate mt-0.5">Missing IAM / OAuth scopes</p>
               </div>
             </div>
             <span className={`text-[10px] font-mono px-2 py-0.5 rounded shrink-0 ${
@@ -381,27 +378,27 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
                 ? 'bg-rose-500 text-white font-bold'
                 : 'bg-slate-800 text-slate-400'
             }`}>
-              {selectedAttentionCategory === 'unverified-auth' ? 'Active' : 'Inspect →'}
+              {selectedAttentionCategory === 'unverified-auth' ? 'Inspecting' : 'Inspect →'}
             </span>
           </button>
 
           {/* Chip 2: Missing HITL */}
           <button
             onClick={() => handleSelectCategory('missing-hitl')}
-            className={`p-3 rounded-xl border text-left transition cursor-pointer flex items-center justify-between gap-3 ${
+            className={`p-3.5 rounded-xl border text-left transition cursor-pointer flex items-center justify-between gap-3 ${
               selectedAttentionCategory === 'missing-hitl'
-                ? 'bg-amber-950/40 border-amber-500/80 shadow-md shadow-amber-950/30'
-                : 'bg-[#0A1628] border-slate-800 hover:border-amber-500/40 hover:bg-slate-900/80'
+                ? 'bg-[#191512] border-amber-500/80 shadow-md shadow-amber-950/40'
+                : 'bg-[#0A1628] border-slate-800 hover:border-amber-500/40 hover:bg-slate-900/90'
             }`}
           >
             <div className="flex items-center space-x-3 min-w-0">
-              <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0 shadow-xs shadow-amber-500/50" />
+              <div className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
               <div className="truncate">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-bold text-white font-mono">{missingHitlFindings.length || 1}</span>
-                  <span className="text-xs font-bold text-amber-300 truncate">Missing HITL Gate</span>
+                  <span className="text-xs font-bold text-amber-200 truncate">Missing HITL Gate</span>
                 </div>
-                <p className="text-[10px] text-slate-400 truncate">Autonomous workflow gate</p>
+                <p className="text-[11px] text-slate-400 truncate mt-0.5">Autonomous workflow gate</p>
               </div>
             </div>
             <span className={`text-[10px] font-mono px-2 py-0.5 rounded shrink-0 ${
@@ -409,27 +406,27 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
                 ? 'bg-amber-500 text-slate-950 font-bold'
                 : 'bg-slate-800 text-slate-400'
             }`}>
-              {selectedAttentionCategory === 'missing-hitl' ? 'Active' : 'Inspect →'}
+              {selectedAttentionCategory === 'missing-hitl' ? 'Inspecting' : 'Inspect →'}
             </span>
           </button>
 
           {/* Chip 3: Assets Missing Owner */}
           <button
             onClick={() => handleSelectCategory('no-owner')}
-            className={`p-3 rounded-xl border text-left transition cursor-pointer flex items-center justify-between gap-3 ${
+            className={`p-3.5 rounded-xl border text-left transition cursor-pointer flex items-center justify-between gap-3 ${
               selectedAttentionCategory === 'no-owner'
-                ? 'bg-sky-950/40 border-sky-500/80 shadow-md shadow-sky-950/30'
-                : 'bg-[#0A1628] border-slate-800 hover:border-sky-500/40 hover:bg-slate-900/80'
+                ? 'bg-[#0C192E] border-sky-500/80 shadow-md shadow-sky-950/40'
+                : 'bg-[#0A1628] border-slate-800 hover:border-sky-500/40 hover:bg-slate-900/90'
             }`}
           >
             <div className="flex items-center space-x-3 min-w-0">
-              <div className="w-2.5 h-2.5 rounded-full bg-sky-400 shrink-0 shadow-xs shadow-sky-400/50" />
+              <div className="w-2 h-2 rounded-full bg-sky-400 shrink-0" />
               <div className="truncate">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-bold text-white font-mono">{noOwnerFindings.length || 4}</span>
-                  <span className="text-xs font-bold text-sky-300 truncate">Missing Owner</span>
+                  <span className="text-xs font-bold text-sky-200 truncate">Missing Owner</span>
                 </div>
-                <p className="text-[10px] text-slate-400 truncate">Unassigned legal business owner</p>
+                <p className="text-[11px] text-slate-400 truncate mt-0.5">Unassigned legal business owner</p>
               </div>
             </div>
             <span className={`text-[10px] font-mono px-2 py-0.5 rounded shrink-0 ${
@@ -437,7 +434,7 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
                 ? 'bg-sky-500 text-slate-950 font-bold'
                 : 'bg-slate-800 text-slate-400'
             }`}>
-              {selectedAttentionCategory === 'no-owner' ? 'Active' : 'Inspect →'}
+              {selectedAttentionCategory === 'no-owner' ? 'Inspecting' : 'Inspect →'}
             </span>
           </button>
         </div>
@@ -448,24 +445,19 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
       {/* ========================================================================= */}
       {selectedAttentionCategory === null ? (
         /* Calm Initial Placeholder */
-        <div className="p-4 rounded-xl border border-dashed border-slate-800/80 bg-[#060F1D]/50 text-center text-xs text-slate-400 flex items-center justify-center gap-2.5">
-          <Eye className="w-4 h-4 text-sky-400 shrink-0" />
+        <div className="p-3.5 rounded-xl border border-dashed border-slate-800 bg-[#060F1D]/40 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+          <Eye className="w-3.5 h-3.5 text-slate-400 shrink-0" />
           <span>Select an attention item above to investigate affected agent, capability boundaries, and evidence ledger trail.</span>
         </div>
       ) : (
-        /* Contextual Workspace Opened In-Place */
-        <div className="p-4 sm:p-5 rounded-2xl bg-[#060F1D] border border-sky-500/30 shadow-xl space-y-4 animate-fadeIn">
+        /* Contextual Workspace Opened In-Place: Simplified Around Business Risk + Agent + Verdict Action */
+        <div className="p-4 sm:p-5 rounded-xl bg-[#060F1D] border border-slate-800 shadow-xl space-y-3.5 animate-fadeIn">
           {/* Workspace Header: Investigated Target & Verdict Actions */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
             <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                  CRITICAL GOVERNANCE EXPOSURE
-                </span>
-                <span className="text-xs font-mono text-slate-400">
-                  Control: <strong className="text-white">{activeInvestigatedFinding?.controlId || 'CG-AG-02'}</strong>
-                </span>
-              </div>
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-400 block">
+                INVESTIGATION WORKSPACE
+              </span>
               <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
                 <Bot className="w-4 h-4 text-sky-400" />
                 <span>{activeInvestigatedFinding?.agentName || 'CreditDecisionAgent'}</span>
@@ -475,7 +467,7 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
               </h3>
             </div>
 
-            {/* Verdict Action Buttons invoking existing DecisionStore */}
+            {/* Verdict Action Buttons */}
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => activeInvestigatedFinding && handleDecision(activeInvestigatedFinding.id, 'MITIGATE')}
@@ -494,13 +486,16 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
               </button>
               <button
                 onClick={() => activeInvestigatedFinding && handleDecision(activeInvestigatedFinding.id, 'ESCALATE')}
-                className="px-3 py-1.5 bg-rose-950/60 hover:bg-rose-900 text-rose-300 rounded-lg text-xs font-medium border border-rose-800/60 transition cursor-pointer"
+                className="px-3 py-1.5 bg-rose-950/50 hover:bg-rose-900 text-rose-300 rounded-lg text-xs font-medium border border-rose-800/50 transition cursor-pointer"
                 title="Escalate to C-Level / Board"
               >
                 <span>Escalate</span>
               </button>
               <button
-                onClick={() => setSelectedAttentionCategory(null)}
+                onClick={() => {
+                  setSelectedAttentionCategory(null);
+                  setActiveDeepDisclosure(null);
+                }}
                 className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition cursor-pointer ml-1"
                 title="Close investigation workspace"
               >
@@ -509,75 +504,190 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
             </div>
           </div>
 
+          {/* Primary 4-Block Executive Summary Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            {/* 1. BUSINESS RISK */}
+            <div className="p-3 rounded-lg bg-slate-950/70 border border-slate-800/80 space-y-1">
+              <span className="text-[10px] font-mono text-slate-400 uppercase font-semibold block">
+                BUSINESS RISK
+              </span>
+              <p className="text-xs font-bold text-white line-clamp-2">
+                {activeInvestigatedFinding?.finding.split(' without ')[0] || activeInvestigatedFinding?.finding || 'High-impact credit decision workflow'}
+              </p>
+              <span className="text-[11px] text-slate-400 block pt-0.5">
+                EU AI Act Art. 14 · LGPD Art. 20
+              </span>
+            </div>
+
+            {/* 2. CAPABILITY */}
+            <div className="p-3 rounded-lg bg-slate-950/70 border border-slate-800/80 space-y-1">
+              <span className="text-[10px] font-mono text-slate-400 uppercase font-semibold block">
+                CAPABILITY
+              </span>
+              <p className="text-xs font-bold text-white truncate">
+                {activeInvestigatedFinding?.toolsAffected?.[0] || 'Database Mutation'}
+              </p>
+              <span className="text-[11px] text-slate-400 block pt-0.5">
+                Target: {activeInvestigatedFinding?.systemId || 'Production DB / APIs'}
+              </span>
+            </div>
+
+            {/* 3. AUTHORIZATION */}
+            <div className="p-3 rounded-lg bg-slate-950/70 border border-slate-800/80 space-y-1">
+              <span className="text-[10px] font-mono text-slate-400 uppercase font-semibold block">
+                AUTHORIZATION
+              </span>
+              <p className="text-xs font-bold text-rose-400 flex items-center gap-1">
+                <span>⚠ Not Verified</span>
+              </p>
+              <span className="text-[11px] text-slate-400 block pt-0.5">
+                Missing explicit IAM / OAuth scope
+              </span>
+            </div>
+
+            {/* 4. EVIDENCE */}
+            <div className="p-3 rounded-lg bg-slate-950/70 border border-slate-800/80 space-y-1">
+              <span className="text-[10px] font-mono text-slate-400 uppercase font-semibold block">
+                EVIDENCE
+              </span>
+              <p className="text-xs font-bold text-emerald-400 truncate">
+                Tamper-Evident Ledger
+              </p>
+              <span className="text-[10px] font-mono text-slate-400 block truncate pt-0.5">
+                SHA-256: {activeInvestigatedFinding?.evidenceDigest.slice(0, 14)}...
+              </span>
+            </div>
+          </div>
+
           {/* Epistemic Invariant Reminder */}
-          <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800/80 flex items-center justify-between text-xs font-mono">
+          <div className="px-3 py-2 rounded-lg bg-slate-950/50 border border-slate-800/60 flex items-center justify-between text-xs">
             <span className="text-slate-400">
-              Epistemic Principle: <strong className="text-slate-200">OBSERVED_CAPABILITY ≠ AUTHORIZED_CAPABILITY</strong>
+              Epistemic Guarantee: <strong className="text-slate-300">Observed capability does not imply authorization.</strong>
             </span>
-            <span className="text-[11px] text-rose-400">
-              State: <strong>UNVERIFIED_AUTHORIZATION</strong>
+            <span className="text-[11px] text-slate-500 font-mono">
+              Control: {activeInvestigatedFinding?.controlId || 'CG-AG-02'}
             </span>
           </div>
 
-          {/* Detailed Workspace Panels */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {/* Panel 1: Capability Boundaries */}
-            <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
-                <span className="flex items-center gap-1.5">
-                  <Zap className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Discovered Capability</span>
-                </span>
-                <span className="text-[10px] font-mono text-emerald-400">Scope: Production</span>
-              </div>
-              <p className="text-xs font-bold text-white">
-                {activeInvestigatedFinding?.finding || 'Database Mutation: Credit Limit Approval'}
-              </p>
-              <div className="space-y-1 text-[11px] text-slate-400 font-mono">
-                <div>• Invocation: SQL write via SQLAlchemy</div>
-                <div>• Resource Target: customers.credit_limit</div>
-                <div>• Autonomy Level: CG-AG L3 (Bounded Automated Action)</div>
-              </div>
+          {/* Progressive Disclosure Triggers (Level 3–5) */}
+          <div className="space-y-1 pt-1 border-t border-slate-800/80">
+            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block mb-1">
+              De-escalate to Technical Detail (On Demand):
+            </span>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-1.5">
+              <button
+                onClick={() => setActiveDeepDisclosure(prev => prev === 'impact' ? null : 'impact')}
+                className={`px-2.5 py-1.5 rounded text-xs font-medium text-left flex items-center justify-between border transition cursor-pointer ${
+                  activeDeepDisclosure === 'impact'
+                    ? 'bg-sky-950/50 border-sky-500/50 text-sky-200'
+                    : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span className="truncate">▸ Business Impact</span>
+                {activeDeepDisclosure === 'impact' ? <ChevronDown className="w-3 h-3 ml-1 shrink-0" /> : <ChevronRight className="w-3 h-3 ml-1 shrink-0" />}
+              </button>
+
+              <button
+                onClick={() => setActiveDeepDisclosure(prev => prev === 'controls' ? null : 'controls')}
+                className={`px-2.5 py-1.5 rounded text-xs font-medium text-left flex items-center justify-between border transition cursor-pointer ${
+                  activeDeepDisclosure === 'controls'
+                    ? 'bg-sky-950/50 border-sky-500/50 text-sky-200'
+                    : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span className="truncate">▸ CG-AG Controls</span>
+                {activeDeepDisclosure === 'controls' ? <ChevronDown className="w-3 h-3 ml-1 shrink-0" /> : <ChevronRight className="w-3 h-3 ml-1 shrink-0" />}
+              </button>
+
+              <button
+                onClick={() => setActiveDeepDisclosure(prev => prev === 'passport' ? null : 'passport')}
+                className={`px-2.5 py-1.5 rounded text-xs font-medium text-left flex items-center justify-between border transition cursor-pointer ${
+                  activeDeepDisclosure === 'passport'
+                    ? 'bg-sky-950/50 border-sky-500/50 text-sky-200'
+                    : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span className="truncate">▸ AI Passport</span>
+                {activeDeepDisclosure === 'passport' ? <ChevronDown className="w-3 h-3 ml-1 shrink-0" /> : <ChevronRight className="w-3 h-3 ml-1 shrink-0" />}
+              </button>
+
+              <button
+                onClick={() => setActiveDeepDisclosure(prev => prev === 'evidence' ? null : 'evidence')}
+                className={`px-2.5 py-1.5 rounded text-xs font-medium text-left flex items-center justify-between border transition cursor-pointer ${
+                  activeDeepDisclosure === 'evidence'
+                    ? 'bg-sky-950/50 border-sky-500/50 text-sky-200'
+                    : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span className="truncate">▸ Evidence Details</span>
+                {activeDeepDisclosure === 'evidence' ? <ChevronDown className="w-3 h-3 ml-1 shrink-0" /> : <ChevronRight className="w-3 h-3 ml-1 shrink-0" />}
+              </button>
+
+              <button
+                onClick={() => setActiveDeepDisclosure(prev => prev === 'raw' ? null : 'raw')}
+                className={`px-2.5 py-1.5 rounded text-xs font-medium text-left flex items-center justify-between border transition cursor-pointer ${
+                  activeDeepDisclosure === 'raw'
+                    ? 'bg-sky-950/50 border-sky-500/50 text-sky-200'
+                    : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span className="truncate">▸ Raw Tech Data</span>
+                {activeDeepDisclosure === 'raw' ? <ChevronDown className="w-3 h-3 ml-1 shrink-0" /> : <ChevronRight className="w-3 h-3 ml-1 shrink-0" />}
+              </button>
             </div>
 
-            {/* Panel 2: Governance & Regulatory Exposure */}
-            <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
-                <span className="flex items-center gap-1.5">
-                  <Scale className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Regulatory Impact</span>
-                </span>
-                <span className="text-[10px] font-mono text-rose-400">High-Impact</span>
-              </div>
-              <p className="text-xs text-slate-300">
-                {activeInvestigatedFinding?.recommendedAction || 'Enforce approval gate (HITL) and assign explicit IAM policy before runtime invocation.'}
-              </p>
-              <div className="space-y-1 text-[11px] text-slate-400">
-                <div className="text-sky-300 font-mono">• EU AI Act: Art. 14 (Human Oversight)</div>
-                <div className="text-emerald-300 font-mono">• LGPD: Art. 20 (Automated Decision Audit)</div>
-              </div>
-            </div>
+            {/* Expanded Drawer Content (When one is active) */}
+            {activeDeepDisclosure && (
+              <div className="mt-2 p-3 rounded-lg bg-slate-950 border border-slate-800/80 text-xs space-y-2 animate-fadeIn">
+                {activeDeepDisclosure === 'impact' && (
+                  <div className="space-y-1.5">
+                    <span className="font-bold text-slate-200 block">Regulatory & Business Impact</span>
+                    <p className="text-slate-400">{activeInvestigatedFinding?.recommendedAction}</p>
+                    <div className="flex flex-wrap gap-3 text-[11px] text-slate-400 font-mono pt-1">
+                      <span>• Severity: <strong className="text-rose-400">{activeInvestigatedFinding?.severity}</strong></span>
+                      <span>• Likelihood: <strong>{activeInvestigatedFinding?.likelihood}</strong></span>
+                      <span>• Impact: <strong>{activeInvestigatedFinding?.impact}</strong></span>
+                    </div>
+                  </div>
+                )}
 
-            {/* Panel 3: Cryptographic Proof & Ledger Digest */}
-            <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
-                <span className="flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Ledger Evidence</span>
-                </span>
-                <span className="text-[10px] font-mono text-slate-400">RFC 8785</span>
+                {activeDeepDisclosure === 'controls' && (
+                  <div className="space-y-1.5">
+                    <span className="font-bold text-slate-200 block">CG-AG Framework Controls</span>
+                    <p className="text-slate-400">Control ID: <strong>{activeInvestigatedFinding?.controlId}</strong> — {activeInvestigatedFinding?.controlName}</p>
+                    <p className="text-[11px] text-slate-400">Required treatment: {activeInvestigatedFinding?.treatment.actionRequired}</p>
+                  </div>
+                )}
+
+                {activeDeepDisclosure === 'passport' && (
+                  <div className="space-y-1.5">
+                    <span className="font-bold text-slate-200 block">Verifiable AI Passport</span>
+                    <p className="text-slate-400">Agent: <strong>{activeInvestigatedFinding?.agentName}</strong> ({activeInvestigatedFinding?.agentId || 'CG-AG-911E'})</p>
+                    <p className="text-[11px] text-slate-400">Accountable: {activeInvestigatedFinding?.owner.name} ({activeInvestigatedFinding?.owner.role}) · Dept: {activeInvestigatedFinding?.owner.department}</p>
+                  </div>
+                )}
+
+                {activeDeepDisclosure === 'evidence' && (
+                  <div className="space-y-1.5">
+                    <span className="font-bold text-slate-200 block">RFC 8785 Canonical Evidence</span>
+                    <p className="text-[11px] font-mono text-sky-400 bg-slate-900 p-2 rounded border border-slate-800 break-all">
+                      SHA-256 Digest: {activeInvestigatedFinding?.evidenceDigest}
+                    </p>
+                    <p className="text-[11px] text-slate-400">Recorded into immutable session ledger with human accountability timestamp.</p>
+                  </div>
+                )}
+
+                {activeDeepDisclosure === 'raw' && (
+                  <div className="space-y-1.5 font-mono text-[11px]">
+                    <span className="font-bold text-slate-200 font-sans block">Raw Technical Data</span>
+                    <div>Source Target: <span className="text-slate-300">{activeInvestigatedFinding?.sourceTarget}</span></div>
+                    <div>Tools Affected: <span className="text-slate-300">{activeInvestigatedFinding?.toolsAffected?.join(', ') || 'None'}</span></div>
+                    <div>Finding ID: <span className="text-slate-400">{activeInvestigatedFinding?.id}</span></div>
+                  </div>
+                )}
               </div>
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-mono uppercase text-slate-500 block">SHA-256 Digest</span>
-                <p className="text-[11px] font-mono text-sky-400 bg-slate-900 px-2 py-1 rounded border border-slate-800 truncate">
-                  {activeInvestigatedFinding?.evidenceDigest || 'a129206c6d435843a5464667d98182557a5375cb3d583b4'}
-                </p>
-                <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-1">
-                  <span>Accountable: {activeInvestigatedFinding?.owner.name || 'AI Governance Board'}</span>
-                  <span className="text-emerald-400">Tamper-Evident</span>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Sibling Finding Switcher if category has more than 1 item */}
@@ -590,7 +700,10 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
                 {activeCategoryFindings.map((item, idx) => (
                   <button
                     key={item.id}
-                    onClick={() => setSelectedFindingId(item.id)}
+                    onClick={() => {
+                      setSelectedFindingId(item.id);
+                      setActiveDeepDisclosure(null);
+                    }}
                     className={`px-2 py-0.5 rounded text-[11px] font-mono transition cursor-pointer ${
                       activeInvestigatedFinding?.id === item.id
                         ? 'bg-sky-600 text-white font-bold'
