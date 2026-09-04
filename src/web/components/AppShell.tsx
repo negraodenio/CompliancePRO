@@ -23,6 +23,8 @@ import {
   Terminal, 
   Share2, 
   ChevronDown, 
+  ChevronRight,
+  AlertCircle,
   Sun, 
   Moon, 
   Building2,
@@ -145,45 +147,44 @@ export const AppShell: React.FC<AppShellProps> = ({
     };
   }, []);
 
-  // Standard Domain Navigation Groups (All 18+ Modules)
-  const navItems = [
+  // Fixed Top-Level Destinations (Always visible at top of sidebar)
+  const topLevelItems = [
+    { id: 'overview-center', label: 'Governance Center', icon: LayoutDashboard, badge: null },
+    { id: 'operate-decisions', label: 'Attention Queue', icon: AlertCircle, badge: pendingDecisionsCount > 0 ? `${pendingDecisionsCount} Action` : null }
+  ];
+
+  // 4 Conceptual Architecture Groups (Collapsible)
+  const navGroups = [
     {
-      group: 'OVERVIEW',
+      id: 'governance',
+      label: 'GOVERNANCE',
       items: [
-        { id: 'overview-center', label: 'Governance Center', icon: LayoutDashboard, badge: null }
-      ]
-    },
-    {
-      group: 'DISCOVER',
-      items: [
-        { id: 'discover-inventory', label: 'AI Inventory', icon: Layers, badge: '142' },
-        { id: 'discover-agents', label: 'Agents & Teams', icon: Bot, badge: String(totalAgentsCount) },
+        { id: 'govern-controls', label: '12 Controls', icon: CheckSquare, badge: '12/12' },
         { id: 'discover-passports', label: 'Agent Passports', icon: FileBadge, badge: 'Verified' },
-        { id: 'discover-assessments', label: 'Assessments', icon: ClipboardCheck, badge: null }
-      ]
-    },
-    {
-      group: 'GOVERN',
-      items: [
-        { id: 'govern-controls', label: '12 CG-AG Controls', icon: CheckSquare, badge: '12/12' },
         { id: 'govern-risk', label: 'Risk Engine', icon: AlertTriangle, badge: pendingDecisionsCount > 0 ? `${pendingDecisionsCount} Pending` : null },
         { id: 'govern-policies', label: 'Policy Engine', icon: FileText, badge: null },
         { id: 'govern-compliance', label: 'Compliance Frameworks', icon: Scale, badge: 'AI Act' }
       ]
     },
     {
-      group: 'OPERATE',
+      id: 'discovery',
+      label: 'DISCOVERY & ANALYSIS',
       items: [
-        { id: 'operate-decisions', label: 'Decisions Pipeline', icon: Scale, badge: null },
-        { id: 'operate-approvals', label: 'HITL Approvals', icon: CheckCircle2, badge: pendingHitlCount > 0 ? `${pendingHitlCount} Action` : null },
-        { id: 'operate-actions', label: 'Remediation Actions', icon: FolderCheck, badge: pendingRemedCount > 0 ? `${pendingRemedCount} Open` : null },
-        { id: 'operate-incidents', label: 'Incidents & Failsafe', icon: Zap, badge: activeIncidentsCount > 0 ? `${activeIncidentsCount} Active` : null },
-        { id: 'operate-runtime', label: 'Runtime FinOps', icon: Activity, badge: 'Tokens' }
+        { id: 'discover-inventory', label: 'AI Inventory', icon: Layers, badge: '142' },
+        { id: 'discover-agents', label: 'Agents & Teams', icon: Bot, badge: String(totalAgentsCount) },
+        { id: 'discover-assessments', label: 'Assessments', icon: ClipboardCheck, badge: null },
+        { id: 'operate-runtime', label: 'Business X-Ray (SIPOC)', icon: Activity, badge: 'SIPOC' },
+        { id: 'tools-scanner', label: 'Codebase Scanner', icon: Terminal, badge: 'Sensor' }
       ]
     },
     {
-      group: 'ASSURE',
+      id: 'operate-assure',
+      label: 'OPERATE & ASSURE',
       items: [
+        { id: 'operate-decisions', label: 'Decisions Pipeline', icon: Scale, badge: null },
+        { id: 'operate-approvals', label: 'HITL Approvals', icon: CheckCircle2, badge: pendingHitlCount > 0 ? `${pendingHitlCount} Action` : null },
+        { id: 'operate-actions', label: 'Remediations', icon: FolderCheck, badge: pendingRemedCount > 0 ? `${pendingRemedCount} Open` : null },
+        { id: 'operate-incidents', label: 'Incidents & Failsafe', icon: Zap, badge: activeIncidentsCount > 0 ? `${activeIncidentsCount} Active` : null },
         { id: 'assure-evidence', label: 'Protected Evidence', icon: LockKeyhole, badge: 'RFC 8785' },
         { id: 'assure-audit', label: 'Audit Ledger', icon: BookOpen, badge: 'Immutable' },
         { id: 'assure-reports', label: 'Regulatory Dossiers', icon: FileDown, badge: 'Annex IV' },
@@ -192,30 +193,55 @@ export const AppShell: React.FC<AppShellProps> = ({
       ]
     },
     {
-      group: 'OPERATIONS & TOOLS',
+      id: 'platform-system',
+      label: 'PLATFORM & SYSTEM',
       items: [
         { id: 'tools-operations', label: 'Operations Center', icon: Activity, badge: 'Live' },
+        { id: 'tools-integrations', label: 'Universal MCP', icon: Share2, badge: 'Stdio/SSE' },
         { id: 'tools-deployment', label: 'Production Deployment', icon: Zap, badge: 'Preflight' },
-        { id: 'tools-scanner', label: 'Codebase Scanner', icon: Terminal, badge: 'Sensor' },
-        { id: 'tools-integrations', label: 'MCP & Connectors', icon: Share2, badge: 'Stdio/SSE' }
-      ]
-    },
-    {
-      group: 'TEAM & IDENTITY',
-      items: [
-        { id: 'manage-team', label: 'Team & Access', icon: Users, badge: 'RBAC' }
-      ]
-    },
-    {
-      group: 'LEARNING & CERTIFICATION',
-      items: [
-        { id: 'learn-academy', label: 'CG-AG Academy', icon: GraduationCap, badge: '18 Modules' }
+        { id: 'manage-team', label: 'Team & RBAC', icon: Users, badge: 'RBAC' },
+        { id: 'learn-academy', label: 'CG-AG Academy', icon: GraduationCap, badge: '18 Modules' },
+        { id: 'settings', label: 'Settings', icon: Lock, badge: null }
       ]
     }
   ];
 
+  // Collapsible Groups State: Active group opens automatically, inactive remain collapsed
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    for (const group of navGroups) {
+      if (group.items.some(item => item.id === activeView)) {
+        initial[group.id] = true;
+      }
+    }
+    return initial;
+  });
+
+  // Automatically open the section containing the activeView when it changes
+  useEffect(() => {
+    for (const group of navGroups) {
+      if (group.items.some(item => item.id === activeView)) {
+        setOpenGroups(prev => ({
+          ...prev,
+          [group.id]: true
+        }));
+        break;
+      }
+    }
+  }, [activeView]);
+
+  const toggleGroup = (groupId: string) => {
+    setOpenGroups(prev => ({
+      ...prev,
+      [groupId]: !prev[groupId]
+    }));
+  };
+
   const findNavItem = (id: ActiveNavView) => {
-    for (const g of navItems) {
+    for (const item of topLevelItems) {
+      if (item.id === id) return item;
+    }
+    for (const g of navGroups) {
       for (const item of g.items) {
         if (item.id === id) return item;
       }
@@ -554,50 +580,109 @@ export const AppShell: React.FC<AppShellProps> = ({
               </div>
             )}
 
-            {/* FULL ARCHITECTURE DOMAIN GROUPS */}
-            <div className="space-y-4">
-              {navItems.map((group) => (
-                <div key={group.group}>
-                  <div className="px-2.5 mb-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 tracking-wider uppercase">
-                    {group.group}
-                  </div>
-                  <div className="space-y-0.5">
-                    {group.items.map((item) => {
-                      const Icon = item.icon;
-                      const isActive = activeView === item.id;
-                      const isPriority = isLensPrioritized && activeLens.priorityViews.includes(item.id as ActiveNavView);
+            {/* REDESIGNED NAVIGATION: FIXED TOP-LEVEL + 4 COLLAPSIBLE GROUPS */}
+            <div className="space-y-3">
+              {/* Fixed Top-Level Destinations */}
+              <div className="space-y-1 pb-2 mb-2 border-b border-slate-200/80 dark:border-slate-800/80">
+                {topLevelItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeView === item.id;
+                  return (
+                    <button
+                      key={`top-${item.id}-${item.label}`}
+                      onClick={() => setActiveView(item.id as ActiveNavView)}
+                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        isActive
+                          ? 'bg-sky-600 text-white shadow-xs'
+                          : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2.5 truncate">
+                        <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-sky-500 dark:text-sky-400'}`} />
+                        <span className="truncate">{item.label}</span>
+                      </div>
+                      {item.badge && (
+                        <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono shrink-0 ${
+                          isActive ? 'bg-white/20 text-white' : 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/20'
+                        }`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
 
-                      return (
-                        <button
-                          key={item.id}
-                          onClick={() => setActiveView(item.id as ActiveNavView)}
-                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
-                            isActive
-                              ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-semibold border border-sky-200/80 dark:border-sky-800/50'
-                              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
-                          }`}
-                        >
-                          <div className="flex items-center space-x-2.5 truncate">
-                            <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-sky-600 dark:text-sky-400' : 'text-slate-400'}`} />
-                            <span className="truncate">{item.label}</span>
-                          </div>
-                          {item.badge ? (
-                            <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono shrink-0 ${
-                              item.badge.includes('Active') || item.badge.includes('Pending') || item.badge.includes('Action')
-                                ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                            }`}>
-                              {item.badge}
-                            </span>
-                          ) : isPriority ? (
-                            <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" title="Item prioritário para seu papel" />
-                          ) : null}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+              {/* 4 Conceptual Architecture Groups */}
+              <div className="space-y-2">
+                {navGroups.map((group) => {
+                  const isOpen = !!openGroups[group.id];
+                  const hasActiveItem = group.items.some(i => i.id === activeView);
+
+                  return (
+                    <div key={group.id} className="rounded-xl overflow-hidden">
+                      {/* Group Header Button (Accordion Toggle) */}
+                      <button
+                        type="button"
+                        onClick={() => toggleGroup(group.id)}
+                        className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[10px] font-bold tracking-wider uppercase transition cursor-pointer select-none ${
+                          hasActiveItem
+                            ? 'text-sky-600 dark:text-sky-400 bg-sky-50/60 dark:bg-sky-950/30'
+                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
+                        }`}
+                      >
+                        <span className="truncate">{group.label}</span>
+                        <span className="ml-1 shrink-0 text-slate-400">
+                          {isOpen ? (
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          ) : (
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          )}
+                        </span>
+                      </button>
+
+                      {/* Group Items (Collapsible with subtle CSS transition) */}
+                      {isOpen && (
+                        <div className="space-y-0.5 mt-0.5 pl-1 transition-all duration-150">
+                          {group.items.map((item) => {
+                            const Icon = item.icon;
+                            const isActive = activeView === item.id;
+                            const isPriority = isLensPrioritized && activeLens.priorityViews.includes(item.id as ActiveNavView);
+
+                            return (
+                              <button
+                                key={item.id}
+                                onClick={() => setActiveView(item.id as ActiveNavView)}
+                                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+                                  isActive
+                                    ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-semibold border border-sky-200/80 dark:border-sky-800/50'
+                                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
+                                }`}
+                              >
+                                <div className="flex items-center space-x-2.5 truncate">
+                                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-sky-600 dark:text-sky-400' : 'text-slate-400'}`} />
+                                  <span className="truncate">{item.label}</span>
+                                </div>
+                                {item.badge ? (
+                                  <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono shrink-0 ${
+                                    item.badge.includes('Active') || item.badge.includes('Pending') || item.badge.includes('Action')
+                                      ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+                                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                                  }`}>
+                                    {item.badge}
+                                  </span>
+                                ) : isPriority ? (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" title="Item prioritário para seu papel" />
+                                ) : null}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
           </div>
