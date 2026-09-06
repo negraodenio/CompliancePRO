@@ -90,6 +90,15 @@ export const App: React.FC = () => {
     }
   }, []);
 
+  // Settings nav item opens the existing SettingsModal overlay
+  // (SettingsModal is an overlay, not a dedicated page view)
+  useEffect(() => {
+    if (pageMode === 'app' && activeView === 'settings') {
+      setShowSettings(true);
+      setActiveView('overview-center');
+    }
+  }, [activeView, pageMode]);
+
   const triggerConfetti = () => {
     confetti({
       particleCount: 50,
@@ -441,7 +450,90 @@ export const App: React.FC = () => {
                   <TeamManagementView />
                 )}
 
-                {!['overview-center', 'discover-inventory', 'discover-agents', 'discover-passports', 'discover-assessments', 'govern-risk', 'govern-policies', 'govern-compliance', 'operate-decisions', 'operate-approvals', 'operate-actions', 'tools-scanner', 'govern-controls', 'assure-simulator', 'assure-reports', 'assure-audit', 'assure-evidence', 'operate-runtime', 'operate-incidents', 'manage-team', 'learn-academy', 'tools-operations', 'tools-deployment', 'assure-readiness'].includes(activeView) && (
+                {/* Universal MCP — Informational Status View */}
+                {activeView === 'tools-integrations' && (
+                  <div className="space-y-5">
+                    <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
+                      <div className="flex items-center space-x-2 text-xs font-semibold text-sky-600 dark:text-sky-400 uppercase tracking-wider">
+                        <span>Platform & System</span>
+                        <span>·</span>
+                        <span>Model Context Protocol</span>
+                      </div>
+                      <h1 className="text-xl font-bold text-slate-900 dark:text-white mt-0.5">Universal MCP Server</h1>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        CG-AG Control Plane exposes a fully operational MCP server for AI agent integration via Stdio (local IDEs) and SSE (remote hosts).
+                      </p>
+                    </div>
+
+                    {/* Server Identity */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {[{ label: 'Tools', value: '14', desc: 'Semantic governance tools', color: 'sky' },
+                        { label: 'Resources', value: '7', desc: 'Live data resources (controls, policies, ledger)', color: 'indigo' },
+                        { label: 'Prompts', value: '4', desc: 'Guided prompts (Executive, CISO, DPO, Vendor)', color: 'violet' }
+                      ].map(item => (
+                        <div key={item.label} className="p-4 rounded-xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800">
+                          <div className={`text-2xl font-black text-${item.color}-600 dark:text-${item.color}-400`}>{item.value}</div>
+                          <div className="font-bold text-slate-800 dark:text-slate-200 text-sm mt-0.5">{item.label}</div>
+                          <div className="text-[11px] text-slate-500 mt-0.5">{item.desc}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Transport Configuration */}
+                    <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
+                      <div className="font-bold text-slate-800 dark:text-slate-200">Transport Configuration</div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded">STDIO</span>
+                            <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs">Local IDE Integration</span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 leading-relaxed">
+                            Connect from Cursor, Claude Desktop, VS Code Copilot or any MCP-compatible IDE.
+                          </p>
+                          <pre className="bg-slate-900 text-slate-300 rounded p-2.5 text-[10px] font-mono overflow-x-auto">{`npx tsx src/mcp/server.ts`}</pre>
+                        </div>
+                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 rounded">SSE</span>
+                            <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs">Remote / HTTP Integration</span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 leading-relaxed">
+                            Streamable HTTP/SSE transport for remote agents and multi-tenant access with Bearer token auth.
+                          </p>
+                          <pre className="bg-slate-900 text-slate-300 rounded p-2.5 text-[10px] font-mono overflow-x-auto">{`TRANSPORT_MODE=sse npx tsx src/mcp/server.ts`}</pre>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tool Categories */}
+                    <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl p-5 space-y-3">
+                      <div className="font-bold text-slate-800 dark:text-slate-200">Tool Categories (14 Canonical Tools)</div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        {[
+                          { cat: 'Discovery', tools: ['scan_repository', 'get_scan_summary', 'discover_agents', 'discover_capabilities'] },
+                          { cat: 'Governance', tools: ['get_governance_score', 'list_controls', 'get_control_detail', 'get_policy'] },
+                          { cat: 'Evidence & Decisions', tools: ['get_evidence_ledger', 'list_findings', 'record_decision'] },
+                          { cat: 'Operations', tools: ['get_hitl_gates', 'get_remediation_actions', 'get_incidents'] }
+                        ].map(({ cat, tools: tl }) => (
+                          <div key={cat} className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                            <div className="font-semibold text-slate-700 dark:text-slate-300 mb-1.5">{cat}</div>
+                            {tl.map(t => (
+                              <div key={t} className="font-mono text-[10px] text-slate-500 py-0.5">{t}</div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-[11px] text-amber-800 dark:text-amber-200">
+                      <strong>Production note:</strong> The MCP server runs as a Node.js process (Stdio or SSE). It is not embedded in the browser frontend.
+                      Remote SSE deployment requires a dedicated server host. See <code className="font-mono">docs/MCP_SETUP.md</code> for full integration instructions.
+                    </div>
+                  </div>
+                )}
+
+                {!['overview-center', 'discover-inventory', 'discover-agents', 'discover-passports', 'discover-assessments', 'govern-risk', 'govern-policies', 'govern-compliance', 'operate-decisions', 'operate-approvals', 'operate-actions', 'tools-scanner', 'govern-controls', 'assure-simulator', 'assure-reports', 'assure-audit', 'assure-evidence', 'operate-runtime', 'operate-incidents', 'manage-team', 'learn-academy', 'tools-operations', 'tools-deployment', 'assure-readiness', 'tools-integrations', 'settings'].includes(activeView) && (
                   <div className="p-12 text-center bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-slate-800 elevation-card space-y-4">
                     <div className="w-12 h-12 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center mx-auto">
                       <Lock className="w-6 h-6" />
@@ -450,9 +542,9 @@ export const App: React.FC = () => {
                       {activeView.replace('-', ' → ')}
                     </h2>
                     <p className="text-xs text-slate-500 max-w-md mx-auto">
-                      This Control Plane operational workspace is part of the CG-AG Enterprise SaaS roadmap. 
+                      This Control Plane operational workspace is part of the CG-AG Enterprise SaaS roadmap.
                     </p>
-                    <button 
+                    <button
                       onClick={() => setActiveView('overview-center')}
                       className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-md text-xs font-medium transition"
                     >
