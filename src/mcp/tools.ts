@@ -26,6 +26,7 @@ import { IdentityProvider } from '../server/security/identity-provider';
 import { UserSession, EnterprisePermission, ActionCriticality } from '../server/security/identity-types';
 import * as fs from 'fs';
 import * as path from 'path';
+import crypto from 'crypto';
 
 // Initialize baseline identity users in IdentityProvider
 IdentityProvider.initializeBaselineUsers();
@@ -60,34 +61,45 @@ export interface McpExecutionEnvelope<T = any> {
  * In explicit development mode (CGAG_MCP_DEV_MODE=true), allows controlled dev session.
  */
 export function resolveMcpSession(context?: McpRequestContext): { session: UserSession | null; error?: string } {
-  const token = context?.authToken || process.env.CGAG_MCP_AUTH_TOKEN;
+  const token = context?.authToken;
   const isExplicitlyDenied = context?.isDevModeAllowed === false || process.env.NODE_ENV === 'production';
   const isDevModeExplicit = (process.env.CGAG_MCP_DEV_MODE === 'true' || context?.isDevModeAllowed === true || !isExplicitlyDenied);
 
   if (token) {
+    // 1. Active user session lookup in IdentityProvider
     const valid = IdentityProvider.validateSession(token);
     if (valid.valid && valid.session) {
       return { session: valid.session };
     }
-    // 1. Server configured master authentication token (Render or container environment)
-    const configuredToken = process.env.CGAG_MCP_AUTH_TOKEN;
-    if (configuredToken && configuredToken.trim() !== '' && token === configuredToken) {
-      const cisoSession = IdentityProvider.createSession('USR-CISO-01', 'TENANT-DEFAULT', 'WS-DEFAULT');
-      return { session: cisoSession };
+
+    // 2. Deterministic service credential resolution for CGAG_MCP_AUTH_TOKEN
+    const configuredSecret = process.env.CGAG_MCP_AUTH_TOKEN;
+    if (configuredSecret && configuredSecret.trim() !== '') {
+      const tokenHash = crypto.createHash('sha256').update(token).digest();
+      const secretHash = crypto.createHash('sha256').update(configuredSecret).digest();
+      const isLengthMatch = Buffer.byteLength(token) === Buffer.byteLength(configuredSecret);
+      const isHashMatch = crypto.timingSafeEqual(tokenHash, secretHash);
+      if (isLengthMatch && isHashMatch) {
+        const serviceSession = IdentityProvider.bootstrapServiceSession(configuredSecret);
+        return { session: serviceSession };
+      }
     }
 
-    // 2. Canonical Enterprise role-based API keys
-    if (token === 'sk-ciso-enterprise-key') {
-      const cisoSession = IdentityProvider.createSession('USR-CISO-01', 'TENANT-DEFAULT', 'WS-DEFAULT');
-      return { session: cisoSession };
-    }
-    if (token === 'sk-dpo-enterprise-key') {
-      const dpoSession = IdentityProvider.createSession('USR-DPO-02', 'TENANT-DEFAULT', 'WS-DEFAULT');
-      return { session: dpoSession };
-    }
-    if (token === 'sk-viewer-key') {
-      const engSession = IdentityProvider.createSession('USR-ENG-03', 'TENANT-DEFAULT', 'WS-DEFAULT');
-      return { session: engSession };
+    // 3. SEC-P1-03: Strict test token check (ONLY allowed if NODE_ENV === 'test' and CGAG_ALLOW_TEST_TOKENS === 'true')
+    const allowTestTokens = process.env.NODE_ENV === 'test' && process.env.CGAG_ALLOW_TEST_TOKENS === 'true';
+    if (allowTestTokens) {
+      if (token === 'sk-ciso-enterprise-key') {
+        const cisoSession = IdentityProvider.createSession('USR-CISO-01', 'TENANT-DEFAULT', 'WS-DEFAULT');
+        return { session: cisoSession };
+      }
+      if (token === 'sk-dpo-enterprise-key') {
+        const dpoSession = IdentityProvider.createSession('USR-DPO-02', 'TENANT-DEFAULT', 'WS-DEFAULT');
+        return { session: dpoSession };
+      }
+      if (token === 'sk-viewer-key') {
+        const engSession = IdentityProvider.createSession('USR-ENG-03', 'TENANT-DEFAULT', 'WS-DEFAULT');
+        return { session: engSession };
+      }
     }
 
     return { session: null, error: 'UNAUTHENTICATED: Invalid or expired authentication token.' };

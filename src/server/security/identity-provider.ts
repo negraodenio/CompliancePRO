@@ -80,6 +80,59 @@ export class IdentityProvider {
     for (const item of baselineUsers) {
       this.users.set(item.user.userId, item);
     }
+
+    const mcpSecret = process.env.CGAG_MCP_AUTH_TOKEN;
+    if (mcpSecret && mcpSecret.trim() !== '') {
+      this.bootstrapServiceSession(mcpSecret);
+    }
+  }
+
+  static bootstrapServiceSession(token: string, userId = 'USR-CISO-01', tenantId = 'TENANT-DEFAULT', workspaceId = 'WS-DEFAULT'): UserSession {
+    if (!token || typeof token !== 'string' || token.trim() === '') {
+      throw new Error('Service token cannot be empty');
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex').substring(0, 16);
+    const sessionId = `SES-SVC-${tokenHash}`;
+
+    // Idempotency: Reuse existing unrevoked and unexpired service session
+    const existing = this.sessions.get(sessionId) || this.sessions.get(token);
+    if (existing && !existing.isRevoked && Date.now() < existing.expiresAt) {
+      existing.lastActivityAt = Date.now();
+      return existing;
+    }
+
+    if (this.users.size === 0) {
+      this.initializeBaselineUsers();
+    }
+
+    const userRecord = this.users.get(userId);
+    if (!userRecord || !userRecord.user.isActive) {
+      throw new Error(`Service user [${userId}] not found or inactive`);
+    }
+
+    const membership = userRecord.memberships.find(m => m.tenantId === tenantId && m.workspaceId === workspaceId);
+    if (!membership) {
+      throw new Error(`Service user [${userId}] has no membership in tenant [${tenantId}] / workspace [${workspaceId}]`);
+    }
+
+    const now = Date.now();
+    const session: UserSession = {
+      sessionId,
+      userId,
+      tenantId,
+      workspaceId,
+      roles: membership.roles,
+      issuedAt: now,
+      expiresAt: now + 365 * 24 * 60 * 60 * 1000,
+      lastActivityAt: now,
+      isRevoked: false,
+      stepUpAuthenticated: false
+    };
+
+    this.sessions.set(token, session);
+    this.sessions.set(sessionId, session);
+    return session;
   }
 
   static createSession(userId: string, tenantId: string, workspaceId: string): UserSession {
@@ -127,7 +180,8 @@ export class IdentityProvider {
       return { valid: false, error: 'SESSION_EXPIRED' };
     }
 
-    if (now - session.lastActivityAt > this.idleTimeoutMs) {
+    const isServiceSession = session.sessionId.startsWith('SES-SVC-');
+    if (!isServiceSession && now - session.lastActivityAt > this.idleTimeoutMs) {
       session.isRevoked = true;
       return { valid: false, error: 'SESSION_IDLE_TIMEOUT' };
     }
