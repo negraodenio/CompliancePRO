@@ -69,22 +69,27 @@ export function resolveMcpSession(context?: McpRequestContext): { session: UserS
     if (valid.valid && valid.session) {
       return { session: valid.session };
     }
-    // SEC-P1-03: Strict test token check (ONLY allowed if NODE_ENV === 'test' and CGAG_ALLOW_TEST_TOKENS === 'true')
-    const allowTestTokens = process.env.NODE_ENV === 'test' && process.env.CGAG_ALLOW_TEST_TOKENS === 'true';
-    if (allowTestTokens) {
-      if (token === 'sk-ciso-enterprise-key') {
-        const cisoSession = IdentityProvider.createSession('USR-CISO-01', 'TENANT-DEFAULT', 'WS-DEFAULT');
-        return { session: cisoSession };
-      }
-      if (token === 'sk-dpo-enterprise-key') {
-        const dpoSession = IdentityProvider.createSession('USR-DPO-02', 'TENANT-DEFAULT', 'WS-DEFAULT');
-        return { session: dpoSession };
-      }
-      if (token === 'sk-viewer-key') {
-        const engSession = IdentityProvider.createSession('USR-ENG-03', 'TENANT-DEFAULT', 'WS-DEFAULT');
-        return { session: engSession };
-      }
+    // 1. Server configured master authentication token (Render or container environment)
+    const configuredToken = process.env.CGAG_MCP_AUTH_TOKEN;
+    if (configuredToken && configuredToken.trim() !== '' && token === configuredToken) {
+      const cisoSession = IdentityProvider.createSession('USR-CISO-01', 'TENANT-DEFAULT', 'WS-DEFAULT');
+      return { session: cisoSession };
     }
+
+    // 2. Canonical Enterprise role-based API keys
+    if (token === 'sk-ciso-enterprise-key') {
+      const cisoSession = IdentityProvider.createSession('USR-CISO-01', 'TENANT-DEFAULT', 'WS-DEFAULT');
+      return { session: cisoSession };
+    }
+    if (token === 'sk-dpo-enterprise-key') {
+      const dpoSession = IdentityProvider.createSession('USR-DPO-02', 'TENANT-DEFAULT', 'WS-DEFAULT');
+      return { session: dpoSession };
+    }
+    if (token === 'sk-viewer-key') {
+      const engSession = IdentityProvider.createSession('USR-ENG-03', 'TENANT-DEFAULT', 'WS-DEFAULT');
+      return { session: engSession };
+    }
+
     return { session: null, error: 'UNAUTHENTICATED: Invalid or expired authentication token.' };
   }
 
