@@ -340,6 +340,8 @@ export function createUniversalMcpServer(context?: { authToken?: string; isDevMo
   return server;
 }
 
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+
 export async function runStdio() {
   const isDev = process.env.CGAG_MCP_DEV_MODE === 'true';
   const server = createUniversalMcpServer({ isDevModeAllowed: isDev });
@@ -357,12 +359,113 @@ export interface SseSessionEntry {
 
 export const sseSessions = new Map<string, SseSessionEntry>();
 
-export function createSseApp() {
-  const app = express();
+/**
+ * Creates Express Router exposing both:
+ * 1. Modern Streamable HTTP transport on /mcp (MCP 2025/2026 specification)
+ * 2. Classic SSE transport on /sse and /message
+ * 3. Health & information endpoint on /mcp/health
+ */
+export function createMcpHttpRouter() {
+  const router = express.Router();
 
-  app.get('/sse', async (req, res) => {
-    const authHeader = req.headers.authorization || (req.query.token as string);
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
+  // Middleware to extract authentication
+  const extractToken = (req: express.Request): string | undefined => {
+    const authHeader = req.headers.authorization || (req.headers['x-api-key'] as string) || (req.query.token as string);
+    if (!authHeader) return undefined;
+    return authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
+  };
+
+  // 1. Health & Server Self-Description (both /mcp/health and /health for Render)
+  const handleHealth = (req: express.Request, res: express.Response) => {
+    res.status(200).json({
+      status: 'operational',
+      server: 'complypro-universal-mcp',
+      version: '2.0.0',
+      transports: ['streamable-http', 'sse', 'stdio'],
+      toolsCount: 14,
+      resourcesCount: 7,
+      promptsCount: 4,
+      cryptography: 'FIPS 180-4 Standard Real SHA-256',
+      timestamp: new Date().toISOString()
+    });
+  };
+
+  router.get('/mcp/health', handleHealth);
+  router.get('/health', handleHealth);
+
+  // 2. Modern Streamable HTTP Transport (POST /mcp and GET /mcp)
+  router.post('/mcp', express.json(), async (req, res) => {
+    const token = extractToken(req);
+    const isDev = process.env.CGAG_MCP_DEV_MODE === 'true';
+    const isProd = process.env.NODE_ENV === 'production' && !isDev;
+
+    // Fail-Closed security check in production: token is strictly required
+    if (isProd && !token) {
+      return res.status(401).json({
+        jsonrpc: '2.0',
+        error: {
+          code: -32001,
+          message: 'UNAUTHENTICATED: Missing authorization token. In production mode, unauthenticated access is strictly rejected.'
+        },
+        id: (req.body && req.body.id !== undefined) ? req.body.id : null
+      });
+    }
+
+    try {
+      const server = createUniversalMcpServer({ authToken: token, isDevModeAllowed: isDev });
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined // stateless mode for robust remote HTTP scaling
+      });
+
+      await server.connect(transport);
+      await transport.handleRequest(req, res, req.body);
+
+      res.on('close', () => {
+        transport.close().catch(() => {});
+        server.close().catch(() => {});
+      });
+    } catch (err: unknown) {
+      if (!res.headersSent) {
+        res.status(500).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32603,
+            message: 'Internal server error processing MCP request.'
+          },
+          id: (req.body && req.body.id !== undefined) ? req.body.id : null
+        });
+      }
+    }
+  });
+
+  router.get('/mcp', async (req, res) => {
+    // GET /mcp per Streamable HTTP specification: handles SSE stream or returns 405 for unsupported queries
+    const acceptHeader = req.headers.accept || '';
+    if (acceptHeader.includes('text/event-stream')) {
+      const token = extractToken(req);
+      const isDev = process.env.CGAG_MCP_DEV_MODE === 'true';
+      const server = createUniversalMcpServer({ authToken: token, isDevModeAllowed: isDev });
+      const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+      await server.connect(transport);
+      await transport.handleRequest(req, res);
+      res.on('close', () => {
+        transport.close().catch(() => {});
+        server.close().catch(() => {});
+      });
+      return;
+    }
+
+    res.status(200).json({
+      server: 'complypro-universal-mcp',
+      transport: 'Streamable HTTP',
+      status: 'active',
+      usage: 'Send POST requests with JSON-RPC 2.0 messages (initialize, tools/list, tools/call) and Accept: application/json, text/event-stream.'
+    });
+  });
+
+  // 3. Classic SSE Transport (GET /sse and POST /message)
+  router.get('/sse', async (req, res) => {
+    const token = extractToken(req);
     const isDev = process.env.CGAG_MCP_DEV_MODE === 'true';
 
     const sessionId = (req.query.sessionId as string) || (req.headers['x-session-id'] as string) || `sse-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -384,7 +487,7 @@ export function createSseApp() {
     await server.connect(transport);
   });
 
-  app.post('/message', express.json(), async (req, res) => {
+  router.post('/message', express.json(), async (req, res) => {
     const sessionId = (req.query.sessionId as string) || (req.headers['x-session-id'] as string);
     if (!sessionId) {
       return res.status(400).json({
@@ -404,22 +507,58 @@ export function createSseApp() {
     await sessionEntry.transport.handlePostMessage(req, res);
   });
 
+  return router;
+}
+
+export function createSseApp() {
+  const app = express();
+  app.use(createMcpHttpRouter());
   return app;
 }
 
-export async function runSse(port = 3001) {
-  const app = createSseApp();
-  app.listen(port, () => {
-    console.error(`[ComplyPRO Universal MCP] Streamable HTTP/SSE listening on port ${port}`);
+export async function runHttp(port = 3001, host = '0.0.0.0') {
+  const app = express();
+  app.use(createMcpHttpRouter());
+  const server = app.listen(port, host, () => {
+    console.error(`[ComplyPRO Universal MCP] Streamable HTTP & SSE listening on http://${host}:${port} (Endpoints: /mcp, /sse, /mcp/health)`);
   });
+
+  // Graceful shutdown
+  const shutdown = () => {
+    console.error('[ComplyPRO Universal MCP] Graceful shutdown initiated...');
+    server.close(() => {
+      console.error('[ComplyPRO Universal MCP] Server stopped cleanly.');
+      process.exit(0);
+    });
+  };
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
+
+  return server;
 }
 
-// Execution entrypoint
-const mode = (process.env.TRANSPORT_MODE || 'stdio').toLowerCase();
-if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
-  if (mode === 'sse') {
-    runSse();
+export async function runSse(port = 3001, host = '0.0.0.0') {
+  return runHttp(port, host);
+}
+
+// Execution entrypoint - only execute if called directly from CLI
+const isDirectCliExecution = process.argv[1] && (
+  process.argv[1].endsWith('server.ts') ||
+  process.argv[1].endsWith('server.js') ||
+  process.argv[1].endsWith('mcp') ||
+  process.argv[1].includes('src/mcp/server') ||
+  process.argv[1].includes('src\\mcp\\server')
+);
+
+if (isDirectCliExecution && process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
+  const mode = (process.env.TRANSPORT_MODE || 'stdio').toLowerCase();
+  const port = parseInt(process.env.PORT || '3001', 10);
+  const host = process.env.HOST || '0.0.0.0';
+  if (mode === 'sse' || mode === 'http' || mode === 'streamable-http') {
+    runHttp(port, host);
   } else {
     runStdio();
   }
 }
+
+

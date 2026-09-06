@@ -12,7 +12,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "server": "tsx src/server/app.ts",
-    "mcp": "tsx src/mcp/server.ts"
+    "mcp": "tsx src/mcp/server.ts",
+    "mcp:remote": "tsx src/mcp/server.ts",
+    "test:mcp": "tsx tests/universal-mcp-server.test.ts && tsx tests/universal-mcp-remote-transport.test.ts"
   },
   "keywords": [
     "ai-governance",

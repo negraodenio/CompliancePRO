@@ -10,6 +10,7 @@ import { webhookRouter } from './routes/webhook';
 import { agenticRouter } from './routes/agentic';
 import { aiRouter } from './routes/ai';
 import { IdentityProvider } from './security/identity-provider';
+import { createMcpHttpRouter } from '../mcp/server';
 
 export function createServerApp() {
   const app = express();
@@ -71,6 +72,9 @@ export function createServerApp() {
   app.use('/api/v1/webhook', webhookRouter);
   app.use('/api/v1/agentic', requireApiKey, agenticRouter);
   app.use('/api/v1/ai', requireApiKey, aiRouter);
+  
+  // Universal Remote MCP Endpoints (Streamable HTTP on /mcp, SSE on /sse, /mcp/health)
+  app.use(createMcpHttpRouter());
 
   return app;
 }

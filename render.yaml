@@ -1,0 +1,25 @@
+services:
+  # ==============================================================================
+  # COMPLYPRO UNIVERSAL MCP - DEDICATED REMOTE MCP SERVER (RENDER BLUEPRINT)
+  # Native Model Context Protocol (MCP) Remote Server
+  # Transports: Streamable HTTP (MCP 2025/2026 spec) on /mcp + SSE on /sse
+  # ==============================================================================
+  - type: web
+    name: compliancepro-mcp
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install
+    startCommand: npm run mcp:remote
+    healthCheckPath: /mcp/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRANSPORT_MODE
+        value: http
+      - key: PORT
+        value: 10000
+      - key: CGAG_MCP_DEV_MODE
+        value: "false"
+      - key: CGAG_MCP_AUTH_TOKEN
+        generateValue: true
