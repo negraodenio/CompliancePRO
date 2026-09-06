@@ -141,9 +141,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           is_owner: data.is_owner,
           is_master: data.is_master
         });
-      } else {
-        // Clear invalid token
+      } else if (res.status === 401) {
+        // Only clear session on explicit 401 Unauthorized (token is genuinely invalid)
+        // Other errors (403, 404, 500, backend offline) must NOT evict the user
         logout();
+      } else {
+        // Backend returned non-401 error (e.g. 500, 403, network issue).
+        // Preserve existing local session — do NOT logout.
+        console.warn(`[AuthContext] /auth/me returned ${res.status} — keeping local session intact`);
       }
     } catch (err) {
       console.warn('Backend offline or unreachable, using local session state:', err);
