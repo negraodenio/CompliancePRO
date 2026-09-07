@@ -11,3 +11,17 @@ dist-ssr
 supabase/.temp/
 __pycache__/
 *.pyc
+
+# Test artifacts and reports
+playwright-report/
+test-results/
+blob-report/
+*.zip
+*.webm
+*.trace
+
+# Environment and credentials
+.env.*
+storageState.json
+auth.json
+credentials.json
