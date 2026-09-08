@@ -300,7 +300,7 @@ export const AgentInventory: React.FC<AgentInventoryProps> = ({ result }) => {
             <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">ComplyPRO Enterprise Governance Suite</h4>
           </div>
           <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
-            Deseja orquestrar esteiras de aprovação de deploy, monitoramento de deriva de modelo (Drift) e inventário ativo de agentes em tempo real com auditoria ISO 42001?
+            Deseja implementar esteiras CI/CD com portões de conformidade, inventário formal de agentes e relatórios consolidados de auditoria ISO 42001 e EU AI Act para sua organização?
           </p>
         </div>
 

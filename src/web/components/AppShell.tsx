@@ -270,10 +270,10 @@ export const AppShell: React.FC<AppShellProps> = ({
             </div>
             <div>
               <div className="flex items-center space-x-1.5">
-                <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">CG-AG</span>
-                <span className="text-[10px] font-mono font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 px-1.5 py-0.2 rounded border border-sky-200 dark:border-sky-800">OS v1.2</span>
+                <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">ComplyPRO</span>
+                <span className="text-[10px] font-mono font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 px-1.5 py-0.2 rounded border border-sky-200 dark:border-sky-800">Enterprise</span>
               </div>
-              <p className="text-[9px] text-slate-400 font-medium tracking-wide uppercase">Governance Control Plane</p>
+              <p className="text-[9px] text-slate-400 font-medium tracking-wide">Powered by CG-AG Framework</p>
             </div>
           </div>
         </div>

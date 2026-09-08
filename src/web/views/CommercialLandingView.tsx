@@ -45,6 +45,7 @@ interface CommercialLandingViewProps {
   onResetScan: () => void;
   onOpenAuth: (mode?: 'login' | 'signup') => void;
   onEnterApp: () => void;
+  onGovernFindings?: () => void;
 }
 
 export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
@@ -58,6 +59,7 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
   onResetScan,
   onOpenAuth,
   onEnterApp,
+  onGovernFindings,
 }) => {
   const [activeScanTab, setActiveScanTab] = useState<'github' | 'demo' | 'zip' | 'folder'>('github');
   const [gitUrl, setGitUrl] = useState('https://github.com/negraodenio/CompliancePRO');
@@ -65,6 +67,8 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
   
   // Enterprise Briefing Modal State
   const [isBriefingModalOpen, setIsBriefingModalOpen] = useState(false);
+  const [briefingLoading, setBriefingLoading] = useState(false);
+  const [briefingError, setBriefingError] = useState<string | null>(null);
   const [briefingForm, setBriefingForm] = useState({
     fullName: '',
     email: '',
@@ -96,11 +100,41 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
     FunnelAnalytics.track('enterprise_cta_click');
     setIsBriefingModalOpen(true);
     setBriefingSubmitted(false);
+    setBriefingError(null);
   };
 
-  const handleBriefingSubmit = (e: React.FormEvent) => {
+  const handleBriefingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setBriefingSubmitted(true);
+    setBriefingLoading(true);
+    setBriefingError(null);
+
+    const apiBase = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
+    try {
+      const response = await fetch(`${apiBase}/api/v1/leads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: briefingForm.fullName.trim(),
+          email: briefingForm.email.trim(),
+          company: briefingForm.company.trim(),
+          role: briefingForm.role || 'CISO',
+          interest: '15_min_briefing',
+          source: 'commercial_landing_briefing',
+          notes: briefingForm.notes.trim() || undefined
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Não foi possível registrar seu agendamento no momento. Por favor, tente novamente.');
+      }
+
+      setBriefingSubmitted(true);
+    } catch (err: any) {
+      setBriefingError(err.message || 'Erro ao registrar solicitação. Verifique sua conexão e tente novamente.');
+    } finally {
+      setBriefingLoading(false);
+    }
   };
 
   const handleGitSubmit = (e: React.FormEvent) => {
@@ -604,7 +638,11 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
                   onGovernFindings={() => {
                     FunnelAnalytics.track('free_scan_governance_cta');
                     FunnelAnalytics.track('workspace_signup_started');
-                    onOpenAuth('signup');
+                    if (onGovernFindings) {
+                      onGovernFindings();
+                    } else {
+                      onOpenAuth('signup');
+                    }
                   }}
                   onExploreGovernanceOs={() => {
                     FunnelAnalytics.track('GOVERNANCE_ENTERED');
@@ -1225,6 +1263,19 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
                   </p>
                 </div>
 
+                {briefingError && (
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between">
+                    <span>{briefingError}</span>
+                    <button
+                      type="button"
+                      onClick={() => setBriefingError(null)}
+                      className="text-rose-400 hover:text-white font-bold ml-2 cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
                 <form onSubmit={handleBriefingSubmit} className="space-y-3.5 pt-1">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-slate-300 block">Full Name</label>
@@ -1293,9 +1344,10 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
 
                   <button
                     type="submit"
-                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg transition cursor-pointer"
+                    disabled={briefingLoading}
+                    className={`w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg transition cursor-pointer ${briefingLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
                   >
-                    Request Briefing
+                    {briefingLoading ? 'Submitting...' : 'Request Briefing'}
                   </button>
                 </form>
               </>

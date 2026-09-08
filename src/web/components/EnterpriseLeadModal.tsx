@@ -8,22 +8,49 @@ interface EnterpriseLeadModalProps {
 
 export const EnterpriseLeadModal: React.FC<EnterpriseLeadModalProps> = ({ onClose, featureContext }) => {
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    role: '',
+    role: 'CISO',
     company: '',
     email: '',
     phone: '',
     message: featureContext ? `Tenho interesse no recurso: ${featureContext}` : '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simula captura de lead corporativo e armazena localmente
-    const leads = JSON.parse(localStorage.getItem('complypro_leads') || '[]');
-    leads.push({ ...formData, timestamp: new Date().toISOString() });
-    localStorage.setItem('complypro_leads', JSON.stringify(leads));
-    setSubmitted(true);
+    setLoading(true);
+    setErrorMessage(null);
+
+    const apiBase = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
+    try {
+      const response = await fetch(`${apiBase}/api/v1/leads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: formData.name.trim(),
+          email: formData.email.trim(),
+          company: formData.company.trim(),
+          role: formData.role || 'CISO',
+          interest: featureContext || 'enterprise_suite',
+          source: 'enterprise_lead_modal',
+          notes: `${formData.phone ? 'Telefone: ' + formData.phone + ' | ' : ''}${formData.message}`.trim()
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Não foi possível registrar o contato no momento. Por favor, tente novamente.');
+      }
+
+      setSubmitted(true);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Erro de conexão ao enviar solicitação.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -43,7 +70,7 @@ export const EnterpriseLeadModal: React.FC<EnterpriseLeadModalProps> = ({ onClos
                   Enterprise
                 </span>
               </h3>
-              <p className="text-[11px] text-slate-500">Governança contínua, telemetria em tempo real e ciclo de vida de IA</p>
+              <p className="text-[11px] text-slate-500">Governança estrutural, portões CI/CD pré-deploy e auditoria de IA</p>
             </div>
           </div>
           <button
@@ -77,7 +104,7 @@ export const EnterpriseLeadModal: React.FC<EnterpriseLeadModalProps> = ({ onClos
             </div>
           ) : (
             <>
-              {/* Feature Highlights Grid */}
+              {/* Feature Highlights Grid - Defensible Capabilities */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
                 <span className="font-bold text-slate-900 block text-xs uppercase tracking-wider">
                   O que está incluído na Plataforma Enterprise:
@@ -85,7 +112,7 @@ export const EnterpriseLeadModal: React.FC<EnterpriseLeadModalProps> = ({ onClos
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-[11px]">
                   <div className="flex items-start space-x-2">
                     <span className="text-slate-700 font-bold">✦</span>
-                    <span><strong>Monitoramento de Drift em Produção:</strong> Telemetria contínua de alucinações, latência e custos FinOps.</span>
+                    <span><strong>Avaliação Arquitetural Pré-Deploy:</strong> Mapeamento de riscos, modelos de IA e controle de dependências.</span>
                   </div>
                   <div className="flex items-start space-x-2">
                     <span className="text-slate-700 font-bold">✦</span>
@@ -93,14 +120,27 @@ export const EnterpriseLeadModal: React.FC<EnterpriseLeadModalProps> = ({ onClos
                   </div>
                   <div className="flex items-start space-x-2">
                     <span className="text-slate-700 font-bold">✦</span>
-                    <span><strong>Gestão RACI de Donos de Agentes:</strong> Atribuição formal de Process Owners exigida pela ISO 42001.</span>
+                    <span><strong>Gestão RACI de Donos de Agentes:</strong> Atribuição formal de Process Owners e custódia técnica ISO 42001.</span>
                   </div>
                   <div className="flex items-start space-x-2">
                     <span className="text-slate-700 font-bold">✦</span>
-                    <span><strong>Notificação Automática ANPD / EU:</strong> Gestão e resposta a incidentes de segurança com IA em 72h.</span>
+                    <span><strong>Pacote de Evidências Regulatórias:</strong> Relatórios formais RIPD/DPIA e conformidade com EU AI Act & LGPD.</span>
                   </div>
                 </div>
               </div>
+
+              {errorMessage && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center justify-between">
+                  <span>{errorMessage}</span>
+                  <button
+                    type="button"
+                    onClick={() => setErrorMessage(null)}
+                    className="text-rose-500 hover:text-rose-800 font-bold text-xs ml-2 cursor-pointer"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              )}
 
               {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -189,9 +229,10 @@ export const EnterpriseLeadModal: React.FC<EnterpriseLeadModalProps> = ({ onClos
 
                   <button
                     type="submit"
-                    className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center space-x-2 shadow-xs cursor-pointer transition-all"
+                    disabled={loading}
+                    className={`px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center space-x-2 shadow-xs cursor-pointer transition-all ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
                   >
-                    <span>Solicitar Demonstração Executiva</span>
+                    <span>{loading ? 'Registrando...' : 'Solicitar Demonstração Executiva'}</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>

@@ -170,3 +170,23 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user_signup();
+
+-- ==============================================================================
+-- 8. ENTERPRISE LEADS (Persistência Remota Segura - Somente Service Role)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.enterprise_leads (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    company VARCHAR(255) NOT NULL,
+    role VARCHAR(100) DEFAULT 'CISO',
+    interest VARCHAR(100) DEFAULT 'enterprise_briefing',
+    source VARCHAR(100) DEFAULT 'website',
+    repository_context VARCHAR(500),
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.enterprise_leads ENABLE ROW LEVEL SECURITY;
+-- Fail-closed: Sem políticas de SELECT para anon ou authenticated.
+-- Apenas service_role possui acesso direto aos leads capturados.

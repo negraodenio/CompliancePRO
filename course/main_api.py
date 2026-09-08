@@ -147,6 +147,96 @@ class ScanDetailResponse(BaseModel):
     summary_report: Optional[str] = None
     created_at: str
 
+class EnterpriseLeadCreateRequest(BaseModel):
+    full_name: str
+    email: EmailStr
+    company: str
+    role: Optional[str] = "CISO"
+    interest: Optional[str] = "enterprise_briefing"
+    source: Optional[str] = "website"
+    repository_context: Optional[str] = None
+    notes: Optional[str] = None
+
+# --- ENTERPRISE LEAD PERSISTENCE (SUPABASE SOLE SOURCE OF TRUTH) ---
+
+@app.post("/api/v1/leads", status_code=201, summary="Captura de Lead Corporativo / Piloto Enterprise")
+def create_enterprise_lead(payload: EnterpriseLeadCreateRequest):
+    """
+    Persists an enterprise pilot inquiry directly into Supabase (enterprise_leads).
+    - Validation via Pydantic
+    - Supabase persistence is strictly required for HTTP 201
+    - Optional webhook is non-blocking (webhook failure does not invalidate saved lead)
+    - If Supabase fails, fail-closed: returns HTTP 503 (never 201)
+    """
+    full_name = payload.full_name.strip()[:255]
+    email = str(payload.email).strip()[:255]
+    company = payload.company.strip()[:255]
+    role = (payload.role or "CISO").strip()[:100]
+    interest = (payload.interest or "enterprise_briefing").strip()[:100]
+    source = (payload.source or "website").strip()[:100]
+    repository_context = (payload.repository_context.strip()[:500]) if payload.repository_context else None
+    notes = (payload.notes.strip()[:2000]) if payload.notes else None
+
+    if not full_name or not company:
+        raise HTTPException(
+            status_code=422,
+            detail="Nome completo e empresa são campos obrigatórios."
+        )
+
+    try:
+        admin = get_admin_client()
+        record = {
+            "full_name": full_name,
+            "email": email,
+            "company": company,
+            "role": role,
+            "interest": interest,
+            "source": source,
+            "repository_context": repository_context,
+            "notes": notes,
+        }
+        res = admin.table("enterprise_leads").insert(record).execute()
+        if not res.data or len(res.data) == 0:
+            raise RuntimeError("Supabase returned empty data on enterprise lead insert.")
+        lead_id = res.data[0].get("id")
+    except Exception as e:
+        # FAIL-CLOSED: Return sanitized error without 201
+        print(f"[LEAD_PERSISTENCE_ERROR] Failed to persist enterprise lead to Supabase: {type(e).__name__}")
+        raise HTTPException(
+            status_code=503,
+            detail="Não foi possível salvar o contato no momento. Por favor, tente novamente em instantes."
+        )
+
+    # Optional non-blocking webhook
+    webhook_url = os.getenv("LEADS_WEBHOOK_URL")
+    if webhook_url:
+        try:
+            import httpx
+            httpx.post(
+                webhook_url,
+                json={
+                    "event": "lead_created",
+                    "lead_id": lead_id,
+                    "lead": {
+                        "full_name": full_name,
+                        "email": email,
+                        "company": company,
+                        "role": role,
+                        "interest": interest,
+                        "source": source
+                    }
+                },
+                timeout=3.0
+            )
+        except Exception as wh_err:
+            print(f"[LEAD_WEBHOOK_WARNING] Webhook delivery failed, lead remains saved: {type(wh_err).__name__}")
+
+    return {
+        "status": "created",
+        "lead_id": lead_id,
+        "message": "Solicitação de contato corporativo registrada com sucesso."
+    }
+
 # --- AUTHENTICATION ENDPOINTS ---
 
 @app.post("/api/v1/auth/signup", response_model=AuthResponse, summary="Cadastrar novo usuário e organização")

@@ -24,6 +24,10 @@ interface AuthModalProps {
   onSuccess?: () => void;
   initialTab?: 'login' | 'signup' | 'invite';
   inviteToken?: string;
+  contextBanner?: {
+    title: string;
+    description: string;
+  };
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -31,7 +35,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   onSuccess,
   initialTab = 'login',
-  inviteToken = ''
+  inviteToken = '',
+  contextBanner
 }) => {
   const { login, signup, token: currentToken } = useAuth();
 
@@ -143,20 +148,33 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
             <div>
               <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                CG-AG Governance OS
+                ComplyPRO
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Enterprise Multi-Tenant Control Plane
+                Enterprise AI Governance Control Plane
               </p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Optional Context Banner */}
+        {contextBanner && (
+          <div className="mx-4 mt-4 p-3.5 rounded-2xl bg-sky-50 dark:bg-sky-950/50 border border-sky-200 dark:border-sky-800 text-sky-900 dark:text-sky-200 text-xs space-y-1">
+            <div className="flex items-center gap-1.5 font-bold text-sky-800 dark:text-sky-300">
+              <Sparkles className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+              <span>{contextBanner.title}</span>
+            </div>
+            <p className="text-[11px] text-sky-700 dark:text-sky-300/90 leading-relaxed">
+              {contextBanner.description}
+            </p>
+          </div>
+        )}
 
         {/* Tab Navigation */}
         <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-900/60 p-1 m-4 rounded-2xl">
