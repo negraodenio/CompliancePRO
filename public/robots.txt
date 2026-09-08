@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+Allow: /ai-governance
+Allow: /ai-governance-platform
+Allow: /ai-governance-assessment
+Allow: /ai-agent-governance
+Allow: /ai-agent-security
+Allow: /ai-capability-discovery
+Allow: /ai-governance-framework
+Allow: /mcp-governance
+Allow: /free-ai-governance-scan
+
+# Disallow private and authenticated application areas
+Disallow: /app
+Disallow: /dashboard
+Disallow: /workspace
+Disallow: /api/
+Disallow: /auth
+
+Sitemap: https://www.complypro.pt/sitemap.xml

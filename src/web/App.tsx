@@ -39,6 +39,8 @@ import { ReportExportModal } from './components/ReportExportModal';
 import { SettingsModal } from './components/SettingsModal';
 import { AcademyModal } from './components/AcademyModal';
 import { CommercialLandingView } from './views/CommercialLandingView';
+import { SeoPageView } from './views/SeoPageView';
+import { SEO_PAGES } from './data/seo-pages';
 import { AuthModal } from './components/AuthModal';
 
 import { fetchGitHubRepo } from './services/github-fetcher';
@@ -77,6 +79,12 @@ const AppInner: React.FC = () => {
   const { isAuthenticated, activeOrganization, user } = useAuth();
   const [pageMode, setPageMode] = useState<'landing' | 'app'>('landing');
   const [activeView, setActiveView] = useState<ActiveNavView>('overview-center');
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.pathname.replace(/\/$/, '') || '/';
+    }
+    return '/';
+  });
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup' | null>(null);
   const [authContextBanner, setAuthContextBanner] = useState<{ title: string; description: string } | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -86,6 +94,22 @@ const AppInner: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showAcademy, setShowAcademy] = useState(false);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const p = window.location.pathname.replace(/\/$/, '') || '/';
+      setCurrentPath(p);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const handleNavigate = (path: string) => {
+    window.history.pushState({}, '', path);
+    const normalized = path.replace(/\/$/, '') || '/';
+    setCurrentPath(normalized);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   useEffect(() => {
     if (DEMO_PROJECTS && DEMO_PROJECTS.length > 0 && !scanResult) {
@@ -300,19 +324,41 @@ const AppInner: React.FC = () => {
       >
         {pageMode === 'landing' ? (
           <>
-            <CommercialLandingView
-              onScanGitHub={handleScanGitHub}
-              onScanZip={handleScanZip}
-              onScanFolder={handleScanFolder}
-              onSelectDemo={handleSelectDemo}
-              isScanning={isScanning}
-              scanProgress={scanProgress}
-              scanResult={scanResult}
-              onResetScan={() => setScanResult(null)}
-              onOpenAuth={handleOpenAuth}
-              onEnterApp={handleEnterApp}
-              onGovernFindings={handleGovernFindings}
-            />
+            {SEO_PAGES[currentPath] ? (
+              <SeoPageView
+                page={SEO_PAGES[currentPath]}
+                onNavigate={handleNavigate}
+                onLaunchScan={() => {
+                  handleNavigate('/');
+                  setTimeout(() => {
+                    const el = document.getElementById('scanner-sensor') || document.getElementById('free-scan');
+                    el?.scrollIntoView({ behavior: 'smooth' });
+                  }, 100);
+                }}
+                onOpenBriefing={() => {
+                  setAuthContextBanner({
+                    title: 'Book an AI Governance Briefing',
+                    description: 'Schedule a dedicated 15-minute architecture briefing with our governance specialists.'
+                  });
+                  setAuthModalMode('login');
+                }}
+              />
+            ) : (
+              <CommercialLandingView
+                onScanGitHub={handleScanGitHub}
+                onScanZip={handleScanZip}
+                onScanFolder={handleScanFolder}
+                onSelectDemo={handleSelectDemo}
+                isScanning={isScanning}
+                scanProgress={scanProgress}
+                scanResult={scanResult}
+                onResetScan={() => setScanResult(null)}
+                onOpenAuth={handleOpenAuth}
+                onEnterApp={handleEnterApp}
+                onGovernFindings={handleGovernFindings}
+                onNavigate={handleNavigate}
+              />
+            )}
 
             {authModalMode && (
               <AuthModal

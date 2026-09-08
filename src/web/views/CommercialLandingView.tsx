@@ -46,6 +46,7 @@ interface CommercialLandingViewProps {
   onOpenAuth: (mode?: 'login' | 'signup') => void;
   onEnterApp: () => void;
   onGovernFindings?: () => void;
+  onNavigate?: (path: string) => void;
 }
 
 export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
@@ -60,6 +61,7 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
   onOpenAuth,
   onEnterApp,
   onGovernFindings,
+  onNavigate,
 }) => {
   const [activeScanTab, setActiveScanTab] = useState<'github' | 'demo' | 'zip' | 'folder'>('github');
   const [gitUrl, setGitUrl] = useState('https://github.com/negraodenio/CompliancePRO');
@@ -1229,14 +1231,168 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-slate-400 font-bold">
-            <Shield className="w-4 h-4 text-sky-400" />
-            <span>ComplyPRO</span>
-            <span className="text-slate-600 font-normal">| AI Governance Platform · Built on CG-AG</span>
+      <footer className="border-t border-slate-800 bg-slate-950 py-12 px-4 sm:px-6 lg:px-8 text-xs text-slate-400">
+        <div className="max-w-7xl mx-auto space-y-10">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 text-left">
+            <div className="space-y-3">
+              <span className="text-xs font-bold text-white font-mono uppercase tracking-wider block">
+                Platform
+              </span>
+              <ul className="space-y-2 text-xs">
+                <li>
+                  <a 
+                    href="/" 
+                    onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/'); } }}
+                    className="hover:text-sky-400 cursor-pointer transition"
+                  >
+                    Commercial Overview
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="/ai-governance-platform" 
+                    onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/ai-governance-platform'); } }}
+                    className="hover:text-sky-400 cursor-pointer transition"
+                  >
+                    Platform Architecture
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="/free-ai-governance-scan" 
+                    onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/free-ai-governance-scan'); } }}
+                    className="hover:text-sky-400 cursor-pointer transition"
+                  >
+                    Free AI Scan
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="/mcp-governance" 
+                    onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/mcp-governance'); } }}
+                    className="hover:text-sky-400 cursor-pointer transition"
+                  >
+                    Universal MCP
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-3">
+              <span className="text-xs font-bold text-white font-mono uppercase tracking-wider block">
+                Framework & Controls
+              </span>
+              <ul className="space-y-2 text-xs">
+                <li>
+                  <a 
+                    href="/ai-governance" 
+                    onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/ai-governance'); } }}
+                    className="hover:text-sky-400 cursor-pointer transition"
+                  >
+                    Enterprise AI Governance
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="/ai-governance-framework" 
+                    onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/ai-governance-framework'); } }}
+                    className="hover:text-sky-400 cursor-pointer transition"
+                  >
+                    CG-AG Framework (12 Controls)
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="/ai-governance-assessment" 
+                    onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/ai-governance-assessment'); } }}
+                    className="hover:text-sky-400 cursor-pointer transition"
+                  >
+                    Governance Assessment
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="/ai-capability-discovery" 
+                    onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/ai-capability-discovery'); } }}
+                    className="hover:text-sky-400 cursor-pointer transition"
+                  >
+                    Capability Discovery
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-3">
+              <span className="text-xs font-bold text-white font-mono uppercase tracking-wider block">
+                Agent Security
+              </span>
+              <ul className="space-y-2 text-xs">
+                <li>
+                  <a 
+                    href="/ai-agent-governance" 
+                    onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/ai-agent-governance'); } }}
+                    className="hover:text-sky-400 cursor-pointer transition"
+                  >
+                    AI Agent Governance
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="/ai-agent-security" 
+                    onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/ai-agent-security'); } }}
+                    className="hover:text-sky-400 cursor-pointer transition"
+                  >
+                    AI Agent Security
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="/ai-capability-discovery" 
+                    onClick={(e) => { if (onNavigate) { e.preventDefault(); onNavigate('/ai-capability-discovery'); } }}
+                    className="hover:text-sky-400 cursor-pointer transition"
+                  >
+                    5-State Epistemic Model
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-3">
+              <span className="text-xs font-bold text-white font-mono uppercase tracking-wider block">
+                Enterprise & Trust
+              </span>
+              <ul className="space-y-2 text-xs">
+                <li>
+                  <button 
+                    onClick={openBriefingModal}
+                    className="hover:text-sky-400 cursor-pointer transition text-left"
+                  >
+                    15-Minute Briefing
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={openBriefingModal}
+                    className="hover:text-sky-400 cursor-pointer transition text-left"
+                  >
+                    Private POD Deployment
+                  </button>
+                </li>
+                <li className="pt-2 text-[11px] text-slate-400 font-mono">
+                  Zero Code Storage • Client-Side AST
+                </li>
+              </ul>
+            </div>
           </div>
-          <p>© 2026 ComplyPRO. All rights reserved. Zero code storage. Air-Gapped Ready.</p>
+
+          <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-400">
+            <div className="flex items-center gap-2 font-bold text-slate-300">
+              <Shield className="w-4 h-4 text-sky-400" />
+              <span>ComplyPRO</span>
+              <span className="font-normal text-slate-400">| Know What Your AI Can Do. Govern What It Is Allowed to Do.</span>
+            </div>
+            <p>© 2026 ComplyPRO. All rights reserved. Built on CG-AG Architecture.</p>
+          </div>
         </div>
       </footer>
 

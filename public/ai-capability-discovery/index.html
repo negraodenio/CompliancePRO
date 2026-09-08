@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Technical SEO -->
+    <title>AI Capability Discovery: Capability ≠ Authorization | ComplyPRO</title>
+    <meta name="description" content="Discover what your AI code can actually do vs. what was intended. ComplyPRO uses static AST analysis and a 5-state epistemic model to uncover hidden agent capabilities." />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="ComplyPRO" />
+    <link rel="canonical" href="https://www.complypro.pt/ai-capability-discovery" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="ComplyPRO" />
+    <meta property="og:title" content="AI Capability Discovery: Capability ≠ Authorization | ComplyPRO" />
+    <meta property="og:description" content="Discover what your AI code can actually do vs. what was intended. ComplyPRO uses static AST analysis and a 5-state epistemic model to uncover hidden agent capabilities." />
+    <meta property="og:url" content="https://www.complypro.pt/ai-capability-discovery" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="AI Capability Discovery: Capability ≠ Authorization | ComplyPRO" />
+    <meta name="twitter:description" content="Discover what your AI code can actually do vs. what was intended. ComplyPRO uses static AST analysis and a 5-state epistemic model to uncover hidden agent capabilities." />
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://www.complypro.pt/#organization",
+      "name": "ComplyPRO",
+      "url": "https://www.complypro.pt/",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://www.complypro.pt/favicon.svg"
+      }
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://www.complypro.pt/ai-capability-discovery#webpage",
+      "url": "https://www.complypro.pt/ai-capability-discovery",
+      "name": "AI Capability Discovery: Capability ≠ Authorization | ComplyPRO",
+      "description": "Discover what your AI code can actually do vs. what was intended. ComplyPRO uses static AST analysis and a 5-state epistemic model to uncover hidden agent capabilities.",
+      "isPartOf": {
+        "@id": "https://www.complypro.pt/#website"
+      }
+    },
+    {
+      "@type": "Article",
+      "@id": "https://www.complypro.pt/ai-capability-discovery#article",
+      "headline": "AI Capability Discovery: Capability Does Not Equal Authorization",
+      "description": "Discover what your AI code can actually do vs. what was intended. ComplyPRO uses static AST analysis and a 5-state epistemic model to uncover hidden agent capabilities.",
+      "mainEntityOfPage": "https://www.complypro.pt/ai-capability-discovery",
+      "publisher": {
+        "@id": "https://www.complypro.pt/#organization"
+      },
+      "author": {
+        "@type": "Organization",
+        "name": "ComplyPRO Research & Governance Team"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://www.complypro.pt/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "AI Governance",
+          "item": "https://www.complypro.pt/ai-governance"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "AI Capability Discovery: Capability Does Not Equal Authorization",
+          "item": "https://www.complypro.pt/ai-capability-discovery"
+        }
+      ]
+    }
+  ]
+}
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-[#090d16] text-slate-100 min-h-screen font-sans antialiased selection:bg-cyan-500 selection:text-black">
+    <div id="root">
+      <header class="border-b border-slate-800 bg-slate-950/90 py-4 px-6">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+          <a href="/" class="font-extrabold text-lg text-white">ComplyPRO <span class="text-sky-400 text-xs font-mono">CG-AG</span></a>
+          <a href="/free-ai-governance-scan" class="px-4 py-2 rounded-xl bg-sky-500 text-slate-950 font-bold text-xs">Run Free Scan</a>
+        </div>
+      </header>
+      <main class="max-w-4xl mx-auto px-6 py-12">
+        <article>
+          <header class="mb-8">
+            <span class="text-xs font-mono font-bold text-sky-400 uppercase tracking-widest">CORE EPISTEMIC THESIS</span>
+            <h1 class="text-4xl font-extrabold text-white mt-2 mb-4">AI Capability Discovery: Capability Does Not Equal Authorization</h1>
+            <p class="text-slate-300 text-base leading-relaxed">The foundational intellectual principle of modern AI governance: an AI agent can execute operations that nobody in the organization explicitly authorized.</p>
+          </header>
+          <div class="content">
+            
+        <section class="mb-10">
+          <h2 class="text-2xl font-bold text-white mb-3">The Foundational Thesis: Capability vs. Authorization</h2>
+          
+          <p class="text-slate-300 text-sm leading-relaxed mb-4">In traditional software, features are carefully engineered, tested, and granted specific role permissions. In modern generative and agentic systems, capabilities frequently outpace governance.</p>
+<p class="text-slate-300 text-sm leading-relaxed mb-4">An engineer imports a multi-agent framework and grants an agent access to a "utilities" module. That module contains helper functions for database queries, file writing, and HTTP requests. Although the system prompt instructs the agent to "only summarize customer feedback," the technical capability to write to the production database exists in the code.</p>
+<p class="text-slate-300 text-sm leading-relaxed mb-4">This establishes the central thesis of ComplyPRO: Capability is an empirical fact encoded in the repository. Authorization is an explicit, verified governance decision. When capability exists without verified authorization, governance risk is guaranteed.</p>
+          
+          
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 my-4 text-xs text-slate-300">
+              <strong class="text-sky-400 block mb-1 uppercase tracking-wider">The First Law of AI Governance</strong>
+              <span>Know What Your AI Can Do. Govern What It Is Allowed to Do. Never assume that prompt instructions restrict technical code capabilities.</span>
+            </div>
+          
+        </section>
+  
+
+        <section class="mb-10">
+          <h2 class="text-2xl font-bold text-white mb-3">The 5-State Epistemic Model</h2>
+          
+          <p class="text-slate-300 text-sm leading-relaxed mb-4">To represent governance realities truthfully without false dichotomies, ComplyPRO models all discovered capabilities across five distinct epistemic states:</p>
+          
+            <ul class="space-y-2 mb-4 pl-4 list-disc text-slate-300 text-sm">
+              <li>1. VERIFIED_SAFE: Discovered capability has documented business purpose, explicit authorization record, and valid structural safeguards.</li>
+<li>2. OBSERVED_WITHOUT_VERIFIED_AUTH: Technical code capability detected by AST analysis (e.g. tool execution, database write) without corresponding verified authorization record.</li>
+<li>3. ATTESTED_WITHOUT_AST_EVIDENCE: Capability declared in documentation or policy questionnaires but not confirmed by static code inspection.</li>
+<li>4. HEURISTICALLY_DERIVED: Capability inferred through naming conventions or import contexts, requiring manual verification.</li>
+<li>5. INSUFFICIENT_EVIDENCE: Ambiguous code pattern where AST data is incomplete to confirm or deny the capability.</li>
+            </ul>
+          
+          
+        </section>
+  
+
+        <section class="mb-10">
+          <h2 class="text-2xl font-bold text-white mb-3">How Static AST Analysis Uncovers Hidden Capabilities</h2>
+          
+          <p class="text-slate-300 text-sm leading-relaxed mb-4">ComplyPRO parses the repository’s Abstract Syntax Tree (AST) client-side in browser memory. It identifies class instantiations, function decorators (e.g., `@tool`), argument type annotations, and module imports.</p>
+<p class="text-slate-300 text-sm leading-relaxed mb-4">Because this analysis happens at the syntax tree level, it is immune to string-obfuscation and requires zero code execution, zero container spins, and zero source code upload to external servers.</p>
+          
+          
+        </section>
+  
+          </div>
+          
+        <section class="mt-12 pt-8 border-t border-slate-800">
+          <h2 class="text-2xl font-bold text-white mb-4">Frequently Asked Questions</h2>
+          <div class="space-y-4">
+            
+              <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-sm">
+                <h3 class="font-bold text-white mb-2">Why not simply test agent capabilities dynamically in a sandbox?</h3>
+                <p class="text-slate-300 leading-relaxed">Dynamic sandboxes can only test scenarios the tester conceives. An agent may only invoke a dangerous tool under specific multi-turn conditions. Static AST analysis reveals all registered tools and execution paths regardless of runtime prompt sequences.</p>
+              </div>
+            
+
+              <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-sm">
+                <h3 class="font-bold text-white mb-2">What is an example of an "Observed Without Verified Auth" finding?</h3>
+                <p class="text-slate-300 leading-relaxed">An agent equipped with a `send_wire_transfer` tool function that has no recorded CISO sign-off gate, financial ceiling limit, or human-in-the-loop approval mechanism.</p>
+              </div>
+            
+          </div>
+        </section>
+  
+          
+        <nav class="mt-12 pt-8 border-t border-slate-800" aria-label="Related Topics">
+          <h3 class="text-lg font-bold text-white mb-4">Related AI Governance Briefings</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            
+              <a href="/ai-governance" class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 block transition">
+                <span class="text-[10px] font-mono font-bold text-sky-400 block mb-1 uppercase">Methodological Application</span>
+                <span class="text-xs font-bold text-white block">Enterprise AI Governance</span>
+              </a>
+            
+
+              <a href="/ai-agent-security" class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 block transition">
+                <span class="text-[10px] font-mono font-bold text-sky-400 block mb-1 uppercase">Security Implications</span>
+                <span class="text-xs font-bold text-white block">AI Agent Security</span>
+              </a>
+            
+
+              <a href="/free-ai-governance-scan" class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 block transition">
+                <span class="text-[10px] font-mono font-bold text-sky-400 block mb-1 uppercase">Live Demonstration</span>
+                <span class="text-xs font-bold text-white block">Free AI Governance Scan</span>
+              </a>
+            
+          </div>
+        </nav>
+  
+          <div class="mt-12 p-8 rounded-3xl bg-slate-900 border border-sky-500/30 text-center">
+            <h3 class="text-2xl font-bold text-white mb-2">Discover What Your AI Can Do</h3>
+            <p class="text-sm text-slate-300 mb-4">Run the Free AI Governance Scan in your browser. Zero code upload.</p>
+            <a href="/free-ai-governance-scan" class="inline-block px-6 py-3 rounded-xl bg-sky-500 text-slate-950 font-bold text-xs">Launch Free Scan</a>
+          </div>
+        </article>
+      </main>
+      <footer class="border-t border-slate-800 bg-slate-950 py-8 px-6 text-center text-xs text-slate-500">
+        <p>© 2026 ComplyPRO. All rights reserved. Zero code storage. Built on CG-AG.</p>
+      </footer>
+    </div>
+    <script type="module" src="/src/web/main.tsx"></script>
+  </body>
+</html>
