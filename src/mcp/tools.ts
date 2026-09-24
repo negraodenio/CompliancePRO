@@ -23,6 +23,7 @@ import { EvidenceStore } from '../web/services/evidence-store';
 import { getAgentBusinessAndSipoc, extractSystemBusinessXRay } from '../web/services/agent-sipoc-mapper';
 import { AuthorizationEngine } from '../server/security/authorization-engine';
 import { IdentityProvider } from '../server/security/identity-provider';
+import { GuardianService, GuardianEvaluationInput } from '../core/guardian-service';
 import { UserSession, EnterprisePermission, ActionCriticality } from '../server/security/identity-types';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -619,6 +620,49 @@ export async function executeMcpTool(
             ]
           },
           metadata: { ...baseMetadata, riskClassification: 'READ', epistemicState: 'SYSTEM_METADATA' }
+        };
+      }
+
+      // ============================================================
+      // 5. RUNTIME GUARDIAN ENFORCEMENT
+      // ============================================================
+      case 'evaluate_agent_action': {
+        const auth = checkAuthorization(session, 'VIEW_FINDING', 'LOW');
+        if (!auth.allowed) return { ok: false, error: { code: 'FORBIDDEN', message: auth.reason }, metadata: { ...baseMetadata, riskClassification: 'EXECUTE' } };
+
+        const evalInput: GuardianEvaluationInput = {
+          agent: args.agent || { id: args.agentId || 'AGENT-DEFAULT', name: args.agentName || 'Default Agent' },
+          passport: args.passport || {
+            passportId: args.passportId || 'PASSPORT-DEFAULT',
+            passportFingerprint: args.passportFingerprint || 'SIG-DEFAULT-FINGERPRINT',
+            complianceProfileChecksum: args.complianceProfileChecksum || args.complianceProfile?.checksum || '',
+            declaredTools: args.declaredTools || [args.toolCall?.toolName || args.toolName]
+          },
+          passportFingerprint: args.passportFingerprint,
+          complianceProfile: args.complianceProfile,
+          toolCall: args.toolCall || {
+            toolName: args.toolName,
+            actionType: args.actionType || 'READ',
+            payload: args.payload || {}
+          },
+          actionType: args.actionType,
+          payload: args.payload,
+          context: {
+            ...args.context,
+            tenantId: session.tenantId,
+            callerId: session.userId
+          }
+        };
+
+        const verdict = GuardianService.evaluate(evalInput);
+        return {
+          ok: true,
+          data: verdict,
+          metadata: {
+            ...baseMetadata,
+            riskClassification: verdict.verdict === 'ALLOW' ? 'READ' : 'EXECUTE',
+            epistemicState: 'GUARDIAN_EVALUATED'
+          }
         };
       }
 

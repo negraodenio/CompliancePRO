@@ -18,3 +18,6 @@ export * from './agentic-lifecycle';
 export * from './agent-passport';
 export * from './agentic-light';
 export * from './governance-control-plane';
+export * from './compliance-contract';
+export * from './compliance-compiler';
+export * from './guardian-service';
