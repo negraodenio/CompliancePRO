@@ -349,19 +349,38 @@ export class ScanGovernanceBridge {
     const derivedGates: HITLApprovalRequest[] = [];
     for (const f of extractedFindings) {
       if (f.severity === 'CRITICAL' || f.severity === 'HIGH') {
+        const gateId = 'GATE-SCAN-' + f.id.replace('FIND-SCAN-', '');
+        const actionTitle = 'Human Authorization Required for ' + f.category + ' Risk in ' + f.sourceTarget;
+        const requestedActionType = f.finding.substring(0, 40);
+        const triggerReason = f.recommendedAction || 'High-risk capability execution requires human sign-off';
+        const riskTier = f.severity === 'CRITICAL' ? 'CRITICAL' : 'HIGH';
+
         derivedGates.push({
-          id: 'GATE-SCAN-' + f.id.replace('FIND-SCAN-', ''),
+          id: gateId,
+          gateId: gateId,
           findingId: f.id,
-          title: 'Human Authorization Required for ' + f.category + ' Risk in ' + f.sourceTarget,
+          title: actionTitle,
+          actionTitle: actionTitle,
           systemId: f.systemId,
+          systemName: f.systemId || 'AI Operational System',
           agentId: f.agentId || 'SYSTEM_AGENT',
-          actionType: f.finding.substring(0, 40),
+          agentName: f.agentName || f.agentId || 'Governed Agent',
+          actionType: requestedActionType,
+          requestedActionType: requestedActionType,
           actionPayload: { finding: f.finding, target: f.sourceTarget, severity: f.severity },
-          riskLevel: f.severity === 'CRITICAL' ? 'CRITICAL' : 'HIGH',
-          reason: f.recommendedAction,
+          riskLevel: riskTier,
+          riskTier: riskTier,
+          reason: triggerReason,
+          triggerReason: triggerReason,
+          policyId: 'POL-CG-AG-03-01',
+          policyName: 'Autonomous Agent Human Oversight Policy',
+          controlId: 'CG-AG-03',
+          controlName: 'Human-in-the-Loop Oversight',
+          thresholdApplied: 'Mandatory Human Gate on High/Critical Risk',
           status: 'PENDING_APPROVAL',
           requestedBy: 'AST Scan Governance Ingestion',
           requestedAt: timestamp,
+          slaDeadline: new Date(Date.now() + 2 * 3600000).toISOString(),
           escalationTimeoutMinutes: 120,
           sourceType: 'REAL_SCAN',
           scanId,

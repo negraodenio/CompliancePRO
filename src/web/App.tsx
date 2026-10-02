@@ -8,6 +8,8 @@ import { IndustryProvider } from './context/IndustryContext';
 import { RoleLensProvider } from './context/RoleLensContext';
 import { AppShell, ActiveNavView } from './components/AppShell';
 import { GovernanceCenter } from './views/GovernanceCenter';
+import { AgentStudioView } from './views/AgentStudioView';
+import { GovernanceCockpitView } from './views/GovernanceCockpitView';
 import { AiInventoryView } from './views/AiInventoryView';
 import { AgentsTeamsView } from './views/AgentsTeamsView';
 import { AssessmentsView } from './views/AssessmentsView';
@@ -384,6 +386,14 @@ const AppInner: React.FC = () => {
               setActiveView('overview-center');
             }}
           >
+                {activeView === 'studio-builder' && (
+                  <AgentStudioView />
+                )}
+
+                {activeView === 'cockpit-control' && (
+                  <GovernanceCockpitView />
+                )}
+
                 {activeView === 'overview-center' && (
                   <GovernanceCenter 
                     onNavigateToScanner={() => setActiveView('tools-scanner')}
@@ -642,7 +652,7 @@ const AppInner: React.FC = () => {
                   </div>
                 )}
 
-                {!['overview-center', 'discover-inventory', 'discover-agents', 'discover-passports', 'discover-assessments', 'govern-risk', 'govern-policies', 'govern-compliance', 'operate-decisions', 'operate-approvals', 'operate-actions', 'tools-scanner', 'govern-controls', 'assure-simulator', 'assure-reports', 'assure-audit', 'assure-evidence', 'operate-runtime', 'operate-incidents', 'manage-team', 'learn-academy', 'tools-operations', 'tools-deployment', 'assure-readiness', 'tools-integrations', 'settings'].includes(activeView) && (
+                {!['overview-center', 'discover-inventory', 'discover-agents', 'discover-passports', 'discover-assessments', 'govern-risk', 'govern-policies', 'govern-compliance', 'operate-decisions', 'operate-approvals', 'operate-actions', 'tools-scanner', 'govern-controls', 'assure-simulator', 'assure-reports', 'assure-audit', 'assure-evidence', 'operate-runtime', 'operate-incidents', 'manage-team', 'learn-academy', 'tools-operations', 'tools-deployment', 'assure-readiness', 'tools-integrations', 'settings', 'studio-builder', 'cockpit-control'].includes(activeView) && (
                   <div className="p-12 text-center bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-slate-800 elevation-card space-y-4">
                     <div className="w-12 h-12 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center mx-auto">
                       <Lock className="w-6 h-6" />

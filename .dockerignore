@@ -1,0 +1,53 @@
+# ==============================================================================
+# COMPLYPRO.PT — DOCKER IGNORE
+# Strictly prevents sensitive files, dependencies, and artifacts from leaking into
+# the Docker build context.
+# ==============================================================================
+
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Build artifacts
+dist/
+dist-server/
+dist-ssr/
+
+# Security & Secrets (CRITICAL: Never copy into Docker context)
+.env
+.env.*
+*.local
+storageState.json
+auth.json
+credentials.json
+*.pem
+*.key
+
+# Git and CI/CD
+.git/
+.github/
+.vercel/
+
+# Logs and temp files
+*.log
+logs/
+scratch/
+course/
+.DS_Store
+Thumbs.db
+
+# Test reports & traces
+tests/
+playwright-report/
+test-results/
+blob-report/
+coverage/
+*.webm
+*.trace
+*.zip
+
+# Documentation and reports (not needed inside runtime image)
+docs/
+release/
+S7-*.md
+S8-*.md

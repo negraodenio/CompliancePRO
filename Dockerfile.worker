@@ -1,0 +1,45 @@
+# ==============================================================================
+# COMPLYPRO.PT — ISOLATED WORKER SANDBOX DOCKERFILE (SPRINT 8-4)
+# "Build with your framework. Govern with ComplyPRO."
+# ==============================================================================
+# Security Invariants:
+# - Minimal Alpine Linux base (node:20-alpine)
+# - Non-root unprivileged execution (USER node, UID 1001)
+# - No Control Plane database credentials or service role keys baked into image
+# - Isolated ephemeral filesystem mount at /tmp/sandbox
+# - No Docker socket (/var/run/docker.sock) access
+# ==============================================================================
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV COMPLYPRO_SANDBOX=true
+
+# Create unprivileged sandbox user and group if not present
+RUN addgroup -g 1001 -S nodejs 2>/dev/null || true \
+    && adduser -S node -u 1001 -G nodejs 2>/dev/null || true
+
+# Prepare isolated ephemeral scratch directory
+RUN mkdir -p /tmp/sandbox && chown -R 1001:1001 /tmp/sandbox && chmod 700 /tmp/sandbox
+
+# Install production dependencies for the worker runner
+COPY package*.json tsconfig.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+# Copy only compiled worker runtime code (Control Plane server routes are excluded)
+COPY dist-server/sandbox/ ./dist-server/sandbox/
+
+# Enforce file ownership
+RUN chown -R 1001:1001 /app
+
+# Switch to unprivileged non-root user
+USER node
+
+# Healthcheck verifying worker process responsiveness
+HEALTHCHECK --interval=15s --timeout=3s --retries=2 \
+  CMD test -d /tmp/sandbox || exit 1
+
+# Execute isolated worker runner with pure Node.js
+ENTRYPOINT ["node", "dist-server/sandbox/worker-runner.js"]

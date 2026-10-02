@@ -112,6 +112,28 @@ export interface ComplianceProfile {
   checksum: string; // Deterministic SHA-256 of canonical payload
 }
 
+export interface AgentPassport {
+  passportId: string;
+  passportFingerprint: string;
+  complianceProfileChecksum: string;
+  declaredTools: string[];
+  governedCapabilities?: Array<{
+    capability: string;
+    channel: string;
+    riskTier?: string;
+    requiresHitl?: boolean;
+  }>;
+  runtime?: {
+    framework: string;
+    frameworkVersion?: string;
+    runtimeVersion?: string;
+  };
+  toolManifestHash?: string;
+  riskTier?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  status: 'GOVERNED';
+  tenantId?: string;
+}
+
 // --------------------------------------------------------------------------
 // Deterministic Canonicalization & Checksumming
 // --------------------------------------------------------------------------

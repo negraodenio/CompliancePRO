@@ -1,0 +1,88 @@
+name: CI/CD & Container Verification
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-and-tests:
+    name: Typecheck, Test & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: TypeScript Typecheck
+        run: npx tsc --noEmit
+
+      - name: Run Full Governance Test Suite (253 Tests)
+        run: npm test
+        env:
+          NODE_ENV: test
+
+      - name: Production Vite Build
+        run: npm run build
+
+  container-build-and-smoke-test:
+    name: Docker Build & Security Smoke Test
+    needs: quality-and-tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Multi-Stage Production Docker Image
+        run: docker build -t complypro-server:ci .
+
+      - name: Run Containerized ComplyPRO Instance
+        run: |
+          docker run -d \
+            --name complypro-smoke-test \
+            -p 3000:3000 \
+            -e NODE_ENV=production \
+            -e PORT=3000 \
+            complypro-server:ci
+
+      - name: Verify Health and Readiness Endpoints
+        run: |
+          sleep 6
+          echo "Checking Liveness Probe (/health)..."
+          curl --fail --retry 5 --retry-connrefused http://127.0.0.1:3000/health
+          echo -e "\nChecking Readiness Probe (/ready)..."
+          curl --fail --retry 5 --retry-connrefused http://127.0.0.1:3000/ready
+          echo -e "\nHealthcheck verified successfully."
+
+      - name: Verify Non-Root User Execution
+        run: |
+          USER_ID=$(docker exec complypro-smoke-test id -u)
+          USER_NAME=$(docker exec complypro-smoke-test id -un)
+          echo "Container User: $USER_NAME (UID: $USER_ID)"
+          if [ "$USER_ID" = "0" ]; then
+            echo "SECURITY ERROR: Container must not run as root!"
+            exit 1
+          fi
+          echo "PASS: Non-root user verified ($USER_NAME / UID $USER_ID)"
+
+      - name: Teardown Test Container
+        if: always()
+        run: docker stop complypro-smoke-test && docker rm complypro-smoke-test

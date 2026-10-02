@@ -1,15 +1,55 @@
 version: '3.8'
 
+# ==============================================================================
+# COMPLYPRO.PT — DOCKER COMPOSE CONFIGURATION
+# "Build with your framework. Govern with ComplyPRO."
+# ==============================================================================
+
 services:
-  complypro-scanner:
-    build: .
-    container_name: complypro-light-scanner
+  complypro-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: complypro-governed-os
+    restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:3000"
     environment:
       - PORT=3000
-      - TRANSPORT_MODE=stdio
-      - CODEGUARD_SAFE_ROOT=/workspace
-    volumes:
-      - .:/workspace:ro
-    restart: unless-stopped
+      - NODE_ENV=production
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
+      - DATABASE_URL=${DATABASE_URL:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - COMPLYPRO_API_KEY=${COMPLYPRO_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  complypro-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: complypro-worker-sandbox
+    restart: "no"
+    user: "1001:1001"
+    read_only: true
+    tmpfs:
+      - /tmp/sandbox:size=256M,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 32
+    mem_limit: 512m
+    cpus: 1.0
+    environment:
+      - NODE_ENV=production
+      - COMPLYPRO_SANDBOX=true
+      - COMPLYPRO_CONTROL_PLANE_URL=http://complypro-server:3000
+    depends_on:
+      - complypro-server

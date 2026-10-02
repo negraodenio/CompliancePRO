@@ -29,8 +29,13 @@ import { DecisionStore } from '../web/services/decision-store';
 import { IncidentStore, AIIncident } from '../web/services/incident-store';
 import { PersistenceAdapter } from '../web/services/persistence-adapter';
 import { ProtectedEvidenceRecord } from './governance-control-plane';
+import { EvidenceLedger } from './evidence-ledger';
+import { ActiveGovernanceBus, ActiveRuntimeEvent } from './active-governance-bus';
+import { ContinuousRiskDetector, AgentRiskProfile, ActiveRiskResponse } from './continuous-risk-detector';
 
 export type GuardianVerdict = 'ALLOW' | 'BLOCK' | 'REQUIRE_HITL' | 'CIRCUIT_BREAK';
+
+export type GovernanceChannel = 'TOOL' | 'MODEL' | 'DATA';
 
 export interface GuardianAgentIdentity {
   id: string;
@@ -39,13 +44,30 @@ export interface GuardianAgentIdentity {
   environment?: 'production' | 'staging' | 'sandbox' | 'development';
 }
 
+export interface GovernedCapabilityDeclaration {
+  capability: string;
+  channel: GovernanceChannel;
+  riskTier?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  requiresHitl?: boolean;
+}
+
 export interface GuardianPassportInput {
   passportId: string;
   passportFingerprint: string;
   complianceProfileChecksum: string;
   declaredTools: string[];
+  governedCapabilities?: GovernedCapabilityDeclaration[];
+  runtime?: {
+    framework: string;
+    frameworkVersion?: string;
+    runtimeVersion?: string;
+  };
+  toolManifestHash?: string;
   riskTier?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   autonomyLevel?: string;
+  tenantId?: string;
+  declaredModels?: string[];
+  declaredDataScopes?: string[];
 }
 
 export interface GuardianToolCall {
@@ -62,6 +84,19 @@ export interface GuardianRuntimeContext {
   maxTokensPerMinute?: number;
   maxCallsPerMinute?: number;
   environment?: string;
+  dataClassification?: string;
+}
+
+export interface GovernedCapabilityRequest {
+  agent: GuardianAgentIdentity;
+  passport: GuardianPassportInput;
+  passportFingerprint?: string;
+  complianceProfile: ComplianceProfile;
+  channel: GovernanceChannel;
+  capability: string;
+  actionType: 'READ' | 'WRITE' | 'EXECUTE' | 'DELETE' | 'ADMIN';
+  payload?: Record<string, any>;
+  context?: GuardianRuntimeContext;
 }
 
 export interface GuardianEvaluationInput {
@@ -69,7 +104,9 @@ export interface GuardianEvaluationInput {
   passport: GuardianPassportInput;
   passportFingerprint?: string; // Optional top-level override / verification
   complianceProfile: ComplianceProfile;
-  toolCall: GuardianToolCall;
+  toolCall?: GuardianToolCall;
+  channel?: GovernanceChannel;
+  capability?: string;
   actionType?: 'READ' | 'WRITE' | 'EXECUTE' | 'DELETE' | 'ADMIN';
   payload?: Record<string, any>;
   context?: GuardianRuntimeContext;
@@ -83,6 +120,8 @@ export interface GuardianResponse {
   policyVersion?: string;
   controlId?: CgAgControlId | string;
   passportFingerprint: string;
+  channel?: GovernanceChannel;
+  capability?: string;
   decisionLatencyMs: number;
   gateId?: string;
   incidentId?: string;
@@ -195,21 +234,26 @@ export class GuardianService {
       });
     }
 
+    const targetCapability = input.capability || toolName;
+    const channel = input.channel || 'TOOL';
+
     // ----------------------------------------------------------------------
     // STEP 3: Immediate Forbidden Action Check (< 2ms fast-path)
     // ----------------------------------------------------------------------
     const forbiddenList = input.complianceProfile.forbiddenActions || [];
     const isForbidden = forbiddenList.some(f => 
       f === toolName || 
+      f === targetCapability ||
       f === normalizedActionType ||
       toolName.toUpperCase().includes(f.toUpperCase()) ||
-      (f.includes(':') && f.split(':')[0] === toolName)
+      targetCapability.toUpperCase().includes(f.toUpperCase()) ||
+      (f.includes(':') && (f.split(':')[0] === toolName || f.split(':')[0] === targetCapability))
     );
 
     if (isForbidden) {
       return this.finalizeResponse({
         verdict: 'BLOCK',
-        reason: `Action [${toolName}] (${normalizedActionType}) is explicitly prohibited by ComplianceProfile [${profileId}].`,
+        reason: `Action [${targetCapability}] (${normalizedActionType}) is explicitly prohibited by ComplianceProfile [${profileId}].`,
         profileId,
         passportFingerprint: verifiedFingerprint,
         controlId: 'CG-AG-02',
@@ -220,15 +264,21 @@ export class GuardianService {
     }
 
     // ----------------------------------------------------------------------
-    // STEP 4: Declared Tool Scope Check
+    // STEP 4: Declared Capability / Tool Scope Check
     // ----------------------------------------------------------------------
     const declaredTools = input.passport.declaredTools || [];
-    const isDeclared = declaredTools.includes(toolName) || declaredTools.includes('*');
+    const declaredCapabilities = (input.passport.governedCapabilities || []).map(c => c.capability);
+    const isDeclared = 
+      declaredTools.includes(toolName) || 
+      declaredTools.includes(targetCapability) ||
+      declaredTools.includes('*') ||
+      declaredCapabilities.includes(targetCapability) ||
+      declaredCapabilities.includes('*');
 
     if (!isDeclared) {
       return this.finalizeResponse({
         verdict: 'BLOCK',
-        reason: `Tool [${toolName}] is not declared in Agent Passport [${input.passport.passportId}]. Least-privilege violation.`,
+        reason: `Capability/Tool [${targetCapability}] is not declared in Agent Passport [${input.passport.passportId}]. Least-privilege violation.`,
         profileId,
         passportFingerprint: verifiedFingerprint,
         controlId: 'CG-AG-02',
@@ -326,29 +376,41 @@ export class GuardianService {
     // STEP 6: HITL Requirement Evaluation
     // ----------------------------------------------------------------------
     const hitlList = input.complianceProfile.requireHumanApproval || [];
-    const requiresHitl = hitlList.some(h => 
-      h === toolName || 
-      h === normalizedActionType ||
-      toolName.toLowerCase().includes(h.toLowerCase())
-    ) || (matchedPolicy && matchedPolicy.verdict === 'REQUIRE_HITL');
+    const capabilityDecl = (input.passport.governedCapabilities || []).find(c => c.capability === targetCapability);
+    const requiresHitl = 
+      hitlList.some(h => 
+        h === toolName || 
+        h === targetCapability ||
+        h === normalizedActionType ||
+        toolName.toLowerCase().includes(h.toLowerCase()) ||
+        targetCapability.toLowerCase().includes(h.toLowerCase())
+      ) || 
+      (capabilityDecl && capabilityDecl.requiresHitl) ||
+      (matchedPolicy && matchedPolicy.verdict === 'REQUIRE_HITL');
 
     if (requiresHitl) {
       const gateId = `GATE-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-      const hitlReason = matchedPolicy?.reasonTemplate || `Tool [${toolName}] requires Human-in-the-Loop authorization under ComplianceProfile [${profileId}].`;
+      const hitlReason = matchedPolicy?.reasonTemplate || `Capability/Tool [${targetCapability}] requires Human-in-the-Loop authorization under ComplianceProfile [${profileId}].`;
       const policyId = matchedPolicy?.policyId || 'POL-GENERIC-HITL';
       const policyVersion = matchedPolicy?.policyVersion || '1.0.0';
       const controlId = matchedPolicy?.controlId || 'CG-AG-03';
+
+      const actionTitle = channel === 'TOOL'
+        ? `Runtime Tool Invocation: ${targetCapability}`
+        : channel === 'MODEL'
+          ? `Runtime Model Invocation: ${targetCapability}`
+          : `Runtime Data Access: ${targetCapability}`;
 
       // Record live gate in existing HitlStore
       const gateRequest: HITLApprovalRequest = {
         sourceType: 'REAL_SCAN',
         gateId,
-        actionTitle: `Runtime Tool Invocaton: ${toolName}`,
+        actionTitle,
         agentId: input.agent.id,
         agentName: input.agent.name,
         systemId: 'SYS-GUARDIAN-RUNTIME',
         systemName: 'Guardian Control Plane',
-        requestedActionType: toolName,
+        requestedActionType: targetCapability,
         actionPayload: sanitizePayloadForEvidence(normalizedPayload),
         policyId,
         policyName: 'Mandatory Human Approval Gate',
@@ -356,7 +418,7 @@ export class GuardianService {
         controlName: 'Human-in-the-Loop Oversight',
         riskTier: input.passport.riskTier || 'HIGH',
         triggerReason: hitlReason,
-        thresholdApplied: `ComplianceProfile requireHumanApproval rule for ${toolName}`,
+        thresholdApplied: `ComplianceProfile requireHumanApproval rule for ${targetCapability}`,
         requestedAt: timestamp,
         slaDeadline: new Date(Date.now() + 3600000).toISOString(), // 1 hour SLA default
         status: 'PENDING_REVIEW'
@@ -517,13 +579,35 @@ export class GuardianService {
           : 'TOOL_INVOCATION',
       timestamp: params.timestamp,
       tamperEvidentSignature: `DIGEST-GUARD-${signatureDigest}-SHA256`,
-      payloadSummary: `Guardian [${params.verdict}] on ${params.input.agent.name} tool [${params.input.toolCall?.toolName || 'tool'}] (${decisionLatencyMs}ms)`,
+      payloadSummary: `Guardian [${params.verdict}] on ${params.input.agent.name} ${params.input.channel || 'TOOL'}:${params.input.capability || params.input.toolCall?.toolName || 'action'} (${decisionLatencyMs}ms)`,
       retentionDays: 1825
     };
 
     try {
       const currentLedger = DecisionStore.getEvidenceLedger(params.input.context?.tenantId);
       PersistenceAdapter.write('evidence_ledger', [evidence, ...currentLedger].slice(0, 50), 'cg_ag_unified_evidence_v2');
+    } catch (err) {
+      // Fallback safely
+    }
+
+    // Append to tamper-evident cryptographic Evidence Ledger (Sprint 2)
+    try {
+      EvidenceLedger.append({
+        evidenceId,
+        timestamp: params.timestamp,
+        eventType: 'GUARDIAN_DECISION',
+        agentId: params.input.agent.id,
+        passportFingerprint: params.passportFingerprint,
+        complianceProfileId: params.profileId,
+        complianceProfileChecksum: params.input.complianceProfile?.checksum || '',
+        policyId: params.policyId,
+        policyVersion: params.policyVersion,
+        controlId: (params.controlId as string) || 'CG-AG-07',
+        channel: params.input.channel || 'TOOL',
+        capability: params.input.capability || params.input.toolCall?.toolName,
+        action: params.input.actionType || params.input.toolCall?.actionType || 'EXECUTE',
+        verdict: params.verdict
+      }, params.input.context?.tenantId);
     } catch (err) {
       // Fallback safely
     }
@@ -536,11 +620,390 @@ export class GuardianService {
       policyVersion: params.policyVersion,
       controlId: params.controlId,
       passportFingerprint: params.passportFingerprint,
+      channel: params.input.channel || 'TOOL',
+      capability: params.input.capability || params.input.toolCall?.toolName,
       decisionLatencyMs,
       gateId: params.gateId,
       incidentId: params.incidentId,
       evidenceId,
       timestamp: params.timestamp
     };
+  }
+
+  // --------------------------------------------------------------------------
+  // Governed Gateway Evaluation Endpoints (Active Runtime Architecture)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Gateway entrypoint for evaluating any Governed Capability across TOOL, MODEL, or DATA channels.
+   */
+  static evaluateCapability(req: GovernedCapabilityRequest): GuardianResponse {
+    return this.evaluate({
+      agent: req.agent,
+      passport: req.passport,
+      passportFingerprint: req.passportFingerprint,
+      complianceProfile: req.complianceProfile,
+      channel: req.channel,
+      capability: req.capability,
+      toolCall: {
+        toolName: req.capability,
+        actionType: req.actionType,
+        payload: req.payload
+      },
+      actionType: req.actionType,
+      payload: req.payload,
+      context: req.context
+    });
+  }
+
+  /**
+   * Tool Gateway: Evaluates tool/MCP execution requests against policies and declared permissions.
+   */
+  static evaluateToolExecution(params: {
+    agent: GuardianAgentIdentity;
+    passport: GuardianPassportInput;
+    complianceProfile: ComplianceProfile;
+    toolName: string;
+    actionType: 'READ' | 'WRITE' | 'EXECUTE' | 'DELETE' | 'ADMIN';
+    payload?: Record<string, any>;
+    context?: GuardianRuntimeContext;
+  }): GuardianResponse {
+    return this.evaluateCapability({
+      ...params,
+      channel: 'TOOL',
+      capability: params.toolName
+    });
+  }
+
+  /**
+   * Model Gateway: Evaluates LLM inference requests against model policies, budgets, and tokens.
+   */
+  static evaluateModelInvocation(params: {
+    agent: GuardianAgentIdentity;
+    passport: GuardianPassportInput;
+    complianceProfile: ComplianceProfile;
+    modelName: string;
+    promptTokens?: number;
+    payload?: Record<string, any>;
+    context?: GuardianRuntimeContext;
+  }): GuardianResponse {
+    return this.evaluateCapability({
+      ...params,
+      channel: 'MODEL',
+      capability: params.modelName,
+      actionType: 'EXECUTE',
+      payload: {
+        model: params.modelName,
+        promptTokens: params.promptTokens,
+        ...(params.payload || {})
+      }
+    });
+  }
+
+  /**
+   * Data Gateway: Evaluates data access/egress, PII restrictions, and storage operations.
+   */
+  static evaluateDataEgress(params: {
+    agent: GuardianAgentIdentity;
+    passport: GuardianPassportInput;
+    complianceProfile: ComplianceProfile;
+    resource: string;
+    actionType: 'READ' | 'WRITE' | 'EXECUTE' | 'DELETE' | 'ADMIN';
+    dataClassification?: string;
+    payload?: Record<string, any>;
+    context?: GuardianRuntimeContext;
+  }): GuardianResponse {
+    return this.evaluateCapability({
+      ...params,
+      channel: 'DATA',
+      capability: params.resource,
+      actionType: params.actionType,
+      context: {
+        ...params.context,
+        dataClassification: params.dataClassification
+      }
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // S8-5 Continuous Guardian & Active Passport Enforcement
+  // --------------------------------------------------------------------------
+
+  /**
+   * Active Passport Enforcement: Checks whether an agent's requested action conforms
+   * to its declared Passport (tool, model, data scope, capability, and tenant).
+   */
+  static verifyPassportCompliance(params: {
+    passport: GuardianPassportInput;
+    channel: GovernanceChannel;
+    capability: string;
+    runtimeTenantId?: string;
+    requestedModel?: string;
+    requestedDataScope?: string;
+    agentId?: string;
+  }): {
+    compliant: boolean;
+    verdict: GuardianVerdict;
+    violationType?: 'TENANT_MISMATCH' | 'UNDECLARED_TOOL' | 'UNDECLARED_MODEL' | 'UNDECLARED_DATA_SCOPE' | 'UNDECLARED_CAPABILITY' | 'INVALID_PASSPORT';
+    reason: string;
+  } {
+    // 1. Tenant binding check
+    if (params.passport.tenantId && params.runtimeTenantId && params.passport.tenantId !== params.runtimeTenantId) {
+      const reason = `Tenant isolation violation: runtime tenant [${params.runtimeTenantId}] does not match passport binding [${params.passport.tenantId}].`;
+      return {
+        compliant: false,
+        verdict: 'BLOCK',
+        violationType: 'TENANT_MISMATCH',
+        reason
+      };
+    }
+
+    // 2. Channel & Capability declaration check
+    const declaredTools = params.passport.declaredTools || [];
+    const declaredCaps = (params.passport.governedCapabilities || []).map(c => c.capability);
+    const declaredModels = params.passport.declaredModels || [];
+    const declaredDataScopes = params.passport.declaredDataScopes || [];
+
+    if (params.channel === 'TOOL') {
+      const isToolDeclared = declaredTools.includes(params.capability) || declaredTools.includes('*') || declaredCaps.includes(params.capability);
+      if (!isToolDeclared) {
+        return {
+          compliant: false,
+          verdict: 'BLOCK',
+          violationType: 'UNDECLARED_TOOL',
+          reason: `Tool [${params.capability}] is not declared in Agent Passport [${params.passport.passportId}]. Least-privilege violation.`
+        };
+      }
+    } else if (params.channel === 'MODEL') {
+      const model = params.requestedModel || params.capability;
+      const isModelDeclared = declaredModels.length === 0 || declaredModels.includes(model) || declaredModels.includes('*') || declaredCaps.includes(model);
+      if (!isModelDeclared) {
+        return {
+          compliant: false,
+          verdict: 'BLOCK',
+          violationType: 'UNDECLARED_MODEL',
+          reason: `Model [${model}] is not authorized in Agent Passport [${params.passport.passportId}].`
+        };
+      }
+    } else if (params.channel === 'DATA') {
+      const scope = params.requestedDataScope || params.capability;
+      const isScopeDeclared = declaredDataScopes.length === 0 || declaredDataScopes.includes(scope) || declaredDataScopes.includes('*') || declaredCaps.includes(scope);
+      if (!isScopeDeclared) {
+        return {
+          compliant: false,
+          verdict: 'BLOCK',
+          violationType: 'UNDECLARED_DATA_SCOPE',
+          reason: `Data scope [${scope}] is not authorized in Agent Passport [${params.passport.passportId}].`
+        };
+      }
+    }
+
+    return {
+      compliant: true,
+      verdict: 'ALLOW',
+      reason: `Passport [${params.passport.passportId}] fully compliant for ${params.channel}:${params.capability}.`
+    };
+  }
+
+  /**
+   * Continuous Guardian Interception: Evaluates capability requests with active event emission,
+   * anomaly scoring, and dynamic suspension support.
+   */
+  static evaluateActiveCapability(req: GovernedCapabilityRequest): GuardianResponse {
+    const tenantId = req.context?.tenantId || req.passport.tenantId || 'TENANT-DEFAULT';
+    const agentId = req.agent.id;
+
+    // 1. Check if agent is suspended by Continuous Risk Detector
+    const riskProfile = ContinuousRiskDetector.getProfile(tenantId, agentId);
+    if (riskProfile.isSuspended) {
+      const timestamp = new Date().toISOString();
+      const blockResponse: GuardianResponse = {
+        verdict: 'BLOCK',
+        reason: `Agent [${req.agent.name}] is SUSPENDED by Continuous Guardian: ${riskProfile.suspensionReason || 'Risk ceiling exceeded.'}`,
+        complianceProfileId: req.complianceProfile.profileId,
+        passportFingerprint: req.passport.passportFingerprint,
+        channel: req.channel,
+        capability: req.capability,
+        decisionLatencyMs: 0.5,
+        evidenceId: `EV-SUSP-${Date.now().toString(36).toUpperCase()}`,
+        timestamp
+      };
+
+      ActiveGovernanceBus.publish({
+        eventType: req.channel === 'TOOL' ? 'TOOL_BLOCKED' : req.channel === 'MODEL' ? 'MODEL_BLOCKED' : 'DATA_BLOCKED',
+        tenantId,
+        agentId,
+        passportId: req.passport.passportId,
+        passportFingerprint: req.passport.passportFingerprint,
+        channel: req.channel,
+        capability: req.capability,
+        verdict: 'BLOCK',
+        reason: blockResponse.reason
+      });
+
+      return blockResponse;
+    }
+
+    // 2. Active Passport Verification
+    const passportCheck = this.verifyPassportCompliance({
+      passport: req.passport,
+      channel: req.channel,
+      capability: req.capability,
+      runtimeTenantId: req.context?.tenantId,
+      requestedModel: req.channel === 'MODEL' ? req.capability : undefined,
+      requestedDataScope: req.channel === 'DATA' ? req.capability : undefined,
+      agentId
+    });
+
+    if (!passportCheck.compliant) {
+      const timestamp = new Date().toISOString();
+      const violationType = passportCheck.violationType === 'TENANT_MISMATCH' ? 'TENANT_VIOLATION' : 'PASSPORT_VIOLATION';
+
+      // Publish violation event
+      const publishedEvent = ActiveGovernanceBus.publish({
+        eventType: violationType,
+        tenantId,
+        agentId,
+        passportId: req.passport.passportId,
+        passportFingerprint: req.passport.passportFingerprint,
+        channel: req.channel,
+        capability: req.capability,
+        verdict: 'BLOCK',
+        reason: passportCheck.reason
+      });
+
+      // Update Continuous Risk Detector
+      ContinuousRiskDetector.recordEvent(publishedEvent);
+
+      return {
+        verdict: 'BLOCK',
+        reason: passportCheck.reason,
+        complianceProfileId: req.complianceProfile.profileId,
+        passportFingerprint: req.passport.passportFingerprint,
+        channel: req.channel,
+        capability: req.capability,
+        decisionLatencyMs: 1.0,
+        evidenceId: publishedEvent.eventId,
+        timestamp
+      };
+    }
+
+    // 3. Publish request event
+    ActiveGovernanceBus.publish({
+      eventType: req.channel === 'TOOL' ? 'TOOL_REQUESTED' : req.channel === 'MODEL' ? 'MODEL_REQUESTED' : 'DATA_REQUESTED',
+      tenantId,
+      agentId,
+      passportId: req.passport.passportId,
+      passportFingerprint: req.passport.passportFingerprint,
+      channel: req.channel,
+      capability: req.capability,
+      action: req.actionType,
+      payload: req.payload
+    });
+
+    // 4. Evaluate via base Guardian engine
+    const response = this.evaluateCapability(req);
+
+    // 5. Map verdict to active outcome event
+    let outcomeEvent: any;
+    if (response.verdict === 'ALLOW') {
+      outcomeEvent = req.channel === 'TOOL' ? 'TOOL_ALLOWED' : req.channel === 'MODEL' ? 'MODEL_ALLOWED' : 'DATA_ALLOWED';
+    } else if (response.verdict === 'REQUIRE_HITL') {
+      outcomeEvent = 'HITL_REQUIRED';
+    } else {
+      outcomeEvent = req.channel === 'TOOL' ? 'TOOL_BLOCKED' : req.channel === 'MODEL' ? 'MODEL_BLOCKED' : 'DATA_BLOCKED';
+    }
+
+    const recordedEvent = ActiveGovernanceBus.publish({
+      eventType: outcomeEvent,
+      tenantId,
+      agentId,
+      passportId: req.passport.passportId,
+      passportFingerprint: req.passport.passportFingerprint,
+      channel: req.channel,
+      capability: req.capability,
+      action: req.actionType,
+      verdict: response.verdict,
+      reason: response.reason,
+      metadata: {
+        gateId: response.gateId,
+        complianceProfileId: response.complianceProfileId,
+        decisionLatencyMs: response.decisionLatencyMs
+      }
+    });
+
+    // 6. Feed result to Continuous Risk Detector
+    ContinuousRiskDetector.recordEvent(recordedEvent);
+
+    return response;
+  }
+
+  /**
+   * Evaluates an active runtime event against a ComplianceProfile (for event-driven streams).
+   */
+  static evaluateRuntimeEvent(event: ActiveRuntimeEvent, profile: ComplianceProfile): GuardianResponse {
+    return this.finalizeResponse({
+      verdict: event.verdict || 'ALLOW',
+      reason: event.reason || `Runtime event [${event.eventType}] evaluated by Continuous Guardian.`,
+      profileId: profile.profileId,
+      passportFingerprint: event.passportFingerprint || 'FINGERPRINT_ACTIVE',
+      startTime: performance.now(),
+      timestamp: event.timestamp || new Date().toISOString(),
+      input: {
+        agent: { id: event.agentId, name: `Agent-${event.agentId}` },
+        passport: {
+          passportId: event.passportId || 'PASSPORT_GENERIC',
+          passportFingerprint: event.passportFingerprint || 'FINGERPRINT_ACTIVE',
+          complianceProfileChecksum: profile.checksum,
+          declaredTools: ['*']
+        },
+        complianceProfile: profile,
+        channel: event.channel || 'TOOL',
+        capability: event.capability,
+        context: { tenantId: event.tenantId }
+      }
+    });
+  }
+
+  /**
+   * Suspends an agent runtime on demand.
+   */
+  static suspendAgent(tenantId: string, agentId: string, reason: string): void {
+    const profile = ContinuousRiskDetector.getProfile(tenantId, agentId);
+    profile.isSuspended = true;
+    profile.suspensionReason = reason;
+
+    ActiveGovernanceBus.publish({
+      eventType: 'RUNTIME_REVOKED',
+      tenantId,
+      agentId,
+      verdict: 'BLOCK',
+      reason: `Agent manually suspended: ${reason}`
+    });
+  }
+
+  /**
+   * Reinstates a suspended agent runtime.
+   */
+  static reinstateAgent(tenantId: string, agentId: string): void {
+    const profile = ContinuousRiskDetector.getProfile(tenantId, agentId);
+    profile.isSuspended = false;
+    profile.suspensionReason = undefined;
+    profile.anomalyScore = 0;
+    profile.violationCount = 0;
+    profile.unauthorizedToolAttempts = 0;
+    profile.unauthorizedModelAttempts = 0;
+    profile.unauthorizedDataAttempts = 0;
+    profile.passportViolations = 0;
+    profile.tenantViolations = 0;
+    profile.hitlRequests = 0;
+    profile.riskTier = 'LOW';
+  }
+
+  /**
+   * Retrieves current agent risk profile.
+   */
+  static getActiveRiskProfile(tenantId: string, agentId: string): AgentRiskProfile {
+    return ContinuousRiskDetector.getProfile(tenantId, agentId);
   }
 }

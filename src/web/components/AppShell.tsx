@@ -50,6 +50,8 @@ import { IncidentStore } from '../services/incident-store';
 import { AuthModal } from './AuthModal';
 
 export type ActiveNavView = 
+  | 'studio-builder'
+  | 'cockpit-control'
   | 'overview-center'
   | 'discover-inventory'
   | 'discover-agents'
@@ -149,6 +151,8 @@ export const AppShell: React.FC<AppShellProps> = ({
 
   // Fixed Top-Level Destinations (Always visible at top of sidebar)
   const topLevelItems = [
+    { id: 'studio-builder', label: 'Agent Studio', icon: Bot, badge: 'Core' },
+    { id: 'cockpit-control', label: 'Governance Cockpit', icon: Activity, badge: 'Live' },
     { id: 'overview-center', label: 'Governance Center', icon: LayoutDashboard, badge: null },
     { id: 'operate-decisions', label: 'Attention Queue', icon: AlertCircle, badge: pendingDecisionsCount > 0 ? `${pendingDecisionsCount} Action` : null }
   ];

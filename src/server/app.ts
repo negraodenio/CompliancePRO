@@ -12,9 +12,26 @@ import { aiRouter } from './routes/ai';
 import { IdentityProvider } from './security/identity-provider';
 import { createMcpHttpRouter } from '../mcp/server';
 import { guardianRouter } from './routes/guardian';
+import { agentProvisioningRouter } from './routes/agent-provisioning';
+import { runtimeRouter } from './routes/runtime';
+import { executionRouter } from './routes/execution';
+import { metadataRouter } from './routes/metadata';
+import { modelRouter } from './routes/models';
+import { toolRouter } from './routes/tools';
+import { dataRouter } from './routes/data';
+import {
+  authenticateTokenOrKey,
+  enforceTenantContext,
+  applySecurityHeaders,
+  requireRoles,
+  defaultRateLimiter
+} from './security/auth-middleware';
 
 export function createServerApp() {
   const app = express();
+
+  // SEC-P8-01: Apply Standard Security Headers
+  app.use(applySecurityHeaders);
 
   // SEC-P2-01: Configurable CORS policy (disallows wildcard * in production)
   const isProd = process.env.NODE_ENV === 'production';
@@ -37,12 +54,12 @@ export function createServerApp() {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'x-session-id']
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'x-session-id', 'x-tenant-id', 'idempotency-key']
   }));
 
   app.use(express.json({ limit: '50mb' }));
 
-  // Health check endpoint
+  // Health check endpoint (Public Liveness)
   app.get('/health', (req, res) => {
     res.status(200).json({
       status: 'operational',
@@ -51,6 +68,19 @@ export function createServerApp() {
       airGapped: true,
       principle: 'Every Agent Action Must Be Governable and Evidenced.',
       timestamp: new Date().toISOString()
+    });
+  });
+
+  // Readiness check endpoint (Public Readiness for Container Orchestrators)
+  app.get('/ready', (req, res) => {
+    res.status(200).json({
+      status: 'ready',
+      timestamp: new Date().toISOString(),
+      services: {
+        guardian: 'ready',
+        gateways: 'ready',
+        persistence: 'ready'
+      }
     });
   });
 
@@ -64,7 +94,7 @@ export function createServerApp() {
     return res.status(200).json({ ok: true, message: 'Sessão revogada com sucesso no servidor.' });
   });
 
-  // REST API Endpoints with authentication
+  // Legacy scanner REST API Endpoints with API Key authentication
   app.use('/api/v1/scan', requireApiKey, scanRouter);
   app.use('/api/v1/standard', standardRouter);
   app.use('/api/v1/report', requireApiKey, reportRouter);
@@ -73,7 +103,18 @@ export function createServerApp() {
   app.use('/api/v1/webhook', webhookRouter);
   app.use('/api/v1/agentic', requireApiKey, agenticRouter);
   app.use('/api/v1/ai', requireApiKey, aiRouter);
+
+  // Sprint 8-1: Governed Agent Operating System Protected Endpoints
+  // All Execution, Agent, Runtime, and Gateway endpoints require authenticated identity & tenant scoping
+  app.use('/api/v1/guardian/evaluate', authenticateTokenOrKey, enforceTenantContext, requireRoles('developer'), defaultRateLimiter.middleware());
   app.use('/api/v1/guardian', guardianRouter);
+  app.use('/api/v1/agents', authenticateTokenOrKey, enforceTenantContext, agentProvisioningRouter);
+  app.use('/api/v1/runtimes', authenticateTokenOrKey, enforceTenantContext, runtimeRouter);
+  app.use('/api/v1/executions', authenticateTokenOrKey, enforceTenantContext, executionRouter);
+  app.use('/api/v1/models', authenticateTokenOrKey, enforceTenantContext, modelRouter);
+  app.use('/api/v1/tools', authenticateTokenOrKey, enforceTenantContext, toolRouter);
+  app.use('/api/v1/data', authenticateTokenOrKey, enforceTenantContext, dataRouter);
+  app.use('/api/v1', authenticateTokenOrKey, enforceTenantContext, metadataRouter);
   
   // Universal Remote MCP Endpoints (Streamable HTTP on /mcp, SSE on /sse, /mcp/health)
   app.use(createMcpHttpRouter());

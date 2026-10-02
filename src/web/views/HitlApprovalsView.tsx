@@ -62,8 +62,9 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
   const handleAction = (decision: 'APPROVE' | 'REJECT') => {
     if (!selectedGate || !approvalRationale) return;
 
+    const targetId = selectedGate.gateId || (selectedGate as any).id;
     const res = HitlStore.executeHumanApproval(
-      selectedGate.gateId,
+      targetId,
       decision,
       approvalRationale,
       approverName
@@ -71,7 +72,7 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
 
     setApprovalRationale('');
     setFeedback({
-      message: `Runtime Human Gate [${decision}] executed on ${selectedGate.gateId}. ${res.gate.approvalOutcome?.executionState === 'AUTHORIZATION_GRANTED' ? 'Execution Authorization Granted' : 'Execution Formally Blocked'}.`,
+      message: `Runtime Human Gate [${decision}] executed on ${targetId}. ${res.gate.approvalOutcome?.executionState === 'AUTHORIZATION_GRANTED' ? 'Execution Authorization Granted' : 'Execution Formally Blocked'}.`,
       gateId: res.gate.gateId,
       digest: res.evidence.tamperEvidentSignature
     });
@@ -80,20 +81,28 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
 
   const filteredGates = useMemo(() => {
     return gates.filter((g) => {
-      const matchSearch = g.actionTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          g.gateId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          g.agentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          g.systemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          g.triggerReason.toLowerCase().includes(searchTerm.toLowerCase());
+      const actionTitle = g.actionTitle || (g as any).title || '';
+      const gateId = g.gateId || (g as any).id || '';
+      const agentName = g.agentName || g.agentId || '';
+      const systemName = g.systemName || g.systemId || '';
+      const triggerReason = g.triggerReason || (g as any).reason || '';
 
-      const matchStatus = filterStatus === 'ALL' || g.status === filterStatus;
-      const matchRisk = filterRiskTier === 'ALL' || g.riskTier === filterRiskTier;
+      const matchSearch = actionTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          gateId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          agentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          systemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          triggerReason.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const isPending = g.status === 'PENDING_REVIEW' || (g.status as string) === 'PENDING_APPROVAL';
+      const matchStatus = filterStatus === 'ALL' || (filterStatus === 'PENDING_REVIEW' ? isPending : g.status === filterStatus);
+      const riskTier = g.riskTier || (g as any).riskLevel || 'HIGH';
+      const matchRisk = filterRiskTier === 'ALL' || riskTier === filterRiskTier;
 
       return matchSearch && matchStatus && matchRisk;
     });
   }, [gates, searchTerm, filterStatus, filterRiskTier]);
 
-  const pendingCount = gates.filter(g => g.status === 'PENDING_REVIEW').length;
+  const pendingCount = gates.filter(g => g.status === 'PENDING_REVIEW' || (g.status as string) === 'PENDING_APPROVAL').length;
   const blockedCount = gates.filter(g => g.status === 'REJECTED' || g.status === 'EXPIRED_BLOCKED').length;
   const approvedTodayCount = gates.filter(g => g.status === 'APPROVED').length;
 
@@ -240,13 +249,21 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
               {filteredGates.map((gate) => {
-                const isPending = gate.status === 'PENDING_REVIEW';
+                const gId = gate.gateId || (gate as any).id || 'GATE-UNKNOWN';
+                const gTitle = gate.actionTitle || (gate as any).title || 'Approval Request';
+                const gActionType = gate.requestedActionType || (gate as any).actionType || 'EXECUTE';
+                const gAgentName = gate.agentName || 'Compliance Scanner';
+                const gAgentId = gate.agentId || 'AGENT-AUTO';
+                const gTrigger = gate.triggerReason || (gate as any).reason || 'Policy Threshold Triggered';
+                const gThreshold = gate.thresholdApplied || 'Critical Severity Threshold';
+                const gRiskTier = gate.riskTier || (gate as any).riskLevel || 'HIGH';
+                const isPending = gate.status === 'PENDING_REVIEW' || gate.status === 'PENDING_APPROVAL';
                 const isApproved = gate.status === 'APPROVED';
-                const isCritical = gate.riskTier === 'CRITICAL';
+                const isCritical = gRiskTier === 'CRITICAL';
 
                 return (
                   <tr
-                    key={gate.gateId}
+                    key={gId}
                     onClick={() => setSelectedGate(gate)}
                     className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition cursor-pointer group"
                   >
@@ -254,23 +271,23 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
                     <td className="py-3.5 px-4">
                       <div className="font-bold text-slate-900 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors flex items-center gap-1.5">
                         <LockKeyhole className={`w-3.5 h-3.5 shrink-0 ${isPending ? 'text-rose-500' : (isApproved ? 'text-emerald-500' : 'text-slate-400')}`} />
-                        <span>{gate.actionTitle}</span>
+                        <span>{gTitle}</span>
                       </div>
-                      <div className="text-[11px] text-slate-500 font-mono-code mt-0.5">{gate.gateId} · {gate.requestedActionType}</div>
+                      <div className="text-[11px] text-slate-500 font-mono-code mt-0.5">{gId} · {gActionType}</div>
                     </td>
 
                     {/* Agent */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="font-medium text-slate-800 dark:text-slate-200">{gate.agentName}</div>
-                      <div className="text-[10px] text-slate-400 font-mono-code">{gate.agentId}</div>
+                      <div className="font-medium text-slate-800 dark:text-slate-200">{gAgentName}</div>
+                      <div className="text-[10px] text-slate-400 font-mono-code">{gAgentId}</div>
                     </td>
 
                     {/* Trigger Reason */}
                     <td className="py-3.5 px-4">
                       <div className="text-[11px] text-slate-700 dark:text-slate-300 leading-snug line-clamp-2 max-w-xs">
-                        {gate.triggerReason}
+                        {gTrigger}
                       </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5 font-mono-code">{gate.thresholdApplied}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 font-mono-code">{gThreshold}</div>
                     </td>
 
                     {/* Risk Tier */}
@@ -280,13 +297,13 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
                           ? 'bg-rose-50 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
                           : 'bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
                       }`}>
-                        {gate.riskTier}
+                        {gRiskTier}
                       </span>
                     </td>
 
                     {/* SLA Deadline */}
                     <td className="py-3.5 px-4 whitespace-nowrap font-mono-code text-[11px] text-slate-500">
-                      {new Date(gate.slaDeadline).toLocaleTimeString()}
+                      {gate.slaDeadline ? new Date(gate.slaDeadline).toLocaleTimeString() : 'N/A'}
                     </td>
 
                     {/* Gate Status */}
@@ -299,7 +316,7 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
                             : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300')
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${isPending ? 'bg-rose-500' : (isApproved ? 'bg-emerald-500' : 'bg-slate-400')}`} />
-                        {gate.status.replace(/_/g, ' ')}
+                        {gate.status ? gate.status.replace(/_/g, ' ') : 'PENDING'}
                       </span>
                     </td>
 
@@ -333,20 +350,20 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
                 <div>
                   <div className="flex items-center space-x-2">
                     <span className="font-mono-code text-xs font-bold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950 px-2 py-0.5 rounded border border-sky-200 dark:border-sky-800">
-                      {selectedGate.gateId}
+                      {selectedGate.gateId || (selectedGate as any).id}
                     </span>
                     <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                      {selectedGate.agentName}
+                      {selectedGate.agentName || 'Compliance Scanner'}
                     </span>
                     <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300">
-                      {selectedGate.riskTier}
+                      {selectedGate.riskTier || (selectedGate as any).riskLevel || 'HIGH'}
                     </span>
                   </div>
                   <h2 className="text-lg font-bold text-slate-900 dark:text-white mt-2">
-                    {selectedGate.actionTitle}
+                    {selectedGate.actionTitle || (selectedGate as any).title || 'Approval Request'}
                   </h2>
                   <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                    Target Method: <code className="font-mono-code text-slate-800 dark:text-slate-200">{selectedGate.requestedActionType}</code>
+                    Target Method: <code className="font-mono-code text-slate-800 dark:text-slate-200">{selectedGate.requestedActionType || (selectedGate as any).actionType || 'EXECUTE'}</code>
                   </p>
                 </div>
                 <button
@@ -382,19 +399,19 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
                     <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 text-slate-700 dark:text-slate-300">
                       <div className="flex justify-between">
                         <span className="text-slate-400">Autonomous Agent:</span>
-                        <span className="font-bold text-sky-600 dark:text-sky-400">{selectedGate.agentName} ({selectedGate.agentId})</span>
+                        <span className="font-bold text-sky-600 dark:text-sky-400">{selectedGate.agentName || 'Compliance Scanner'} ({selectedGate.agentId || 'AGENT-AUTO'})</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Parent AI System:</span>
-                        <span className="font-semibold">{selectedGate.systemName}</span>
+                        <span className="font-semibold">{selectedGate.systemName || 'ComplyPRO Governance'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Trigger Reason:</span>
-                        <span className="text-rose-600 dark:text-rose-400 font-semibold">{selectedGate.triggerReason}</span>
+                        <span className="text-rose-600 dark:text-rose-400 font-semibold">{selectedGate.triggerReason || (selectedGate as any).reason || 'Policy Threshold Triggered'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Threshold Boundary:</span>
-                        <span className="font-mono-code font-bold">{selectedGate.thresholdApplied}</span>
+                        <span className="font-mono-code font-bold">{selectedGate.thresholdApplied || 'Critical Severity Threshold'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Execution State:</span>
@@ -407,7 +424,7 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
                 {/* 2. LIVE APPROVAL GATE */}
                 {activeDrawerTab === 'gate' && (
                   <div className="space-y-4">
-                    {selectedGate.status === 'PENDING_REVIEW' ? (
+                    {(selectedGate.status === 'PENDING_REVIEW' || selectedGate.status === 'PENDING_APPROVAL') ? (
                       <div className="space-y-4">
                         <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-amber-900 dark:text-amber-200 leading-relaxed text-[11px]">
                           ⚠️ <strong>Action Execution Intercepted:</strong> The agent cannot continue until an authorized human grants or rejects the tool execution request.
@@ -475,12 +492,12 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
                     <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 text-slate-700 dark:text-slate-300">
                       <div className="font-bold text-slate-800 dark:text-slate-200">Enforced Governance Rule</div>
                       <div className="p-2.5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-lg">
-                        <span className="font-mono-code font-bold text-sky-600 dark:text-sky-400">{selectedGate.policyId}</span>
-                        <div className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{selectedGate.policyName}</div>
+                        <span className="font-mono-code font-bold text-sky-600 dark:text-sky-400">{selectedGate.policyId || 'POL-DEFAULT'}</span>
+                        <div className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">{selectedGate.policyName || 'Automated Compliance Policy'}</div>
                       </div>
                       <div className="flex justify-between pt-1">
                         <span className="text-slate-400">Supported Control:</span>
-                        <span className="font-mono-code font-bold text-sky-600 dark:text-sky-400">{selectedGate.controlId} {selectedGate.controlName}</span>
+                        <span className="font-mono-code font-bold text-sky-600 dark:text-sky-400">{selectedGate.controlId || 'CTL-01'} {selectedGate.controlName || 'Risk Mitigation Control'}</span>
                       </div>
                     </div>
                   </div>
@@ -492,7 +509,7 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
                     <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
                       <div className="font-bold text-slate-800 dark:text-slate-200">Intercepted Tool Invocation Payload</div>
                       <pre className="p-3 bg-slate-900 text-slate-200 font-mono-code text-[11px] rounded-lg overflow-x-auto">
-                        {JSON.stringify(selectedGate.actionPayload, null, 2)}
+                        {JSON.stringify(selectedGate.actionPayload || {}, null, 2)}
                       </pre>
                     </div>
                   </div>
@@ -520,7 +537,7 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
 
             {/* Drawer Footer */}
             <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex items-center justify-between">
-              <span className="text-[11px] text-slate-400 font-mono-code">Gate ID: {selectedGate.gateId}</span>
+              <span className="text-[11px] text-slate-400 font-mono-code">Gate ID: {selectedGate.gateId || (selectedGate as any).id}</span>
               <button
                 onClick={() => setSelectedGate(null)}
                 className="px-4 py-1.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-semibold transition"

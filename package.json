@@ -7,13 +7,18 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build:client": "vite build",
+    "build:server": "vite build --ssr src/server/app.ts --outDir dist-server && vite build --ssr src/core/sandbox/worker-runner.ts --outDir dist-server/sandbox",
+    "build": "vite build && vite build --ssr src/server/app.ts --outDir dist-server && vite build --ssr src/core/sandbox/worker-runner.ts --outDir dist-server/sandbox",
+    "start": "node dist-server/app.js",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "server": "tsx src/server/app.ts",
     "mcp": "tsx src/mcp/server.ts",
     "mcp:remote": "tsx src/mcp/server.ts",
+    "db:migrate": "tsx src/server/db/migrate.ts",
+    "test": "tsx tests/compliance-compiler.test.ts && tsx tests/guardian-evaluation.test.ts && tsx tests/governed-capability-gateway.test.ts && tsx tests/evidence-ledger.test.ts && tsx tests/agent-provisioning.test.ts && tsx tests/isolated-runtime.test.ts && tsx tests/crewai-runtime-adapter.test.ts && tsx tests/agent-studio-api.test.ts && tsx tests/governance-cockpit.test.ts && tsx tests/model-gateway.test.ts && tsx tests/tool-gateway.test.ts && tsx tests/data-gateway.test.ts && tsx tests/end-to-end-governed-agent.test.ts && tsx tests/model-gateway-real-provider.test.ts && tsx tests/s8-1-security.test.ts && tsx tests/s8-2-persistence.test.ts && tsx tests/s8-2-real-restart.test.ts && tsx tests/s8-2b-rls-real.test.ts && tsx tests/s8-3-container-audit.test.ts && tsx tests/s8-4-worker-sandbox.test.ts && tsx tests/s8-5-active-governance.test.ts",
     "test:mcp": "tsx tests/universal-mcp-server.test.ts && tsx tests/universal-mcp-remote-transport.test.ts"
   },
   "keywords": [

@@ -670,6 +670,10 @@ export class ComplianceProfileRegistry {
     return Array.from(this.profiles.values());
   }
 
+  static getAllProfiles(): ComplianceProfile[] {
+    return this.listProfiles();
+  }
+
   static verifyProfileIntegrity(profile: ComplianceProfile): boolean {
     return verifyProfileChecksum(profile);
   }

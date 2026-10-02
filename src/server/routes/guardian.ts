@@ -2,8 +2,8 @@
  * REST Router for Guardian Runtime Enforcement Engine
  * 
  * Endpoints:
- * - POST /api/v1/guardian/evaluate: Synchronous sub-10ms evaluation of agent tool calls.
- * - GET  /api/v1/guardian/health: Lightweight health and operational readiness status.
+ * - POST /api/v1/guardian/evaluate: Synchronous evaluation of agent tool calls.
+ * - GET  /api/v1/guardian/health: Lightweight health and operational readiness status (Intentionally Public).
  */
 
 import { Router, Request, Response } from 'express';
@@ -11,8 +11,8 @@ import { GuardianService, GuardianEvaluationInput } from '../../core/guardian-se
 
 export const guardianRouter = Router();
 
-// GET /api/v1/guardian/health
-guardianRouter.get('/health', (req: Request, res: Response) => {
+// GET /api/v1/guardian/health (Public health check)
+guardianRouter.get('/health', (_req: Request, res: Response) => {
   return res.status(200).json({
     status: 'operational',
     service: 'CodeGuard Guardian Runtime Enforcement Engine',

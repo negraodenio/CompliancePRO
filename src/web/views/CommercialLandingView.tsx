@@ -32,6 +32,7 @@ import {
 import { FunnelAnalytics } from '../services/funnel-analytics';
 import { DEMO_PROJECTS, DemoProject } from '../services/demo-projects';
 import { FreeScanSnapshotView } from '../components/FreeScanSnapshotView';
+import { GovernedAgentProofSurface } from '../components/GovernedAgentProofSurface';
 import type { ScannerResult } from '../../core/types';
 
 interface CommercialLandingViewProps {
@@ -246,33 +247,33 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
           {/* Main Headline */}
           <div className="max-w-4xl mx-auto space-y-4">
             <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.1]">
-              Know What Your AI Can Do. <br />
+              Build with your framework. <br />
               <span className="bg-gradient-to-r from-sky-400 via-indigo-300 to-cyan-400 bg-clip-text text-transparent">
-                Govern What It Is Allowed to Do.
+                Govern with ComplyPRO.
               </span>
             </h1>
             
             <p className="text-base sm:text-xl text-slate-300 max-w-3xl mx-auto font-normal leading-relaxed">
-              ComplyPRO discovers AI agents, capabilities and governance gaps — then turns technical findings into structured governance evidence.
+              Run AI agents inside an isolated execution environment where every capability can be allowed, blocked or escalated to a human — and every decision becomes verifiable evidence.
             </p>
 
             {/* Central Thesis Box */}
             <div className="pt-2 max-w-2xl mx-auto">
               <div className="p-4 rounded-2xl bg-gradient-to-r from-sky-950/60 via-indigo-950/40 to-slate-950/80 border border-sky-500/30 text-center space-y-1.5 backdrop-blur-sm">
                 <div className="font-mono text-xs sm:text-sm font-bold text-sky-400 tracking-wider">
-                  CODED CAPABILITY ≠ AUTHORIZED CAPABILITY
+                  GOVERNANCE THAT ACTS — NOT JUST REPORTS
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed max-w-xl mx-auto">
-                  Just because an AI system can perform an action doesn't mean it should be authorized to perform it.
+                  Isolated execution with zero-secret and zero-direct-network enforcement, backed by tamper-evident cryptographic evidence.
                 </p>
                 <div className="flex items-center justify-center gap-2 pt-1 text-[11px] font-mono text-slate-400">
-                  <span className="text-sky-300">CAPABILITY</span>
+                  <span className="text-sky-300">INTERCEPT</span>
                   <span>→</span>
-                  <span className="text-indigo-300">AUTHORIZATION</span>
+                  <span className="text-amber-300">INTERVENE (HITL)</span>
                   <span>→</span>
-                  <span className="text-cyan-300">GOVERNANCE</span>
+                  <span className="text-cyan-300">ENFORCE</span>
                   <span>→</span>
-                  <span className="text-emerald-300">EVIDENCE</span>
+                  <span className="text-emerald-300">PROVE</span>
                 </div>
               </div>
             </div>
@@ -282,11 +283,14 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
           <div className="space-y-3 pt-2">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <button
-                onClick={scrollToScanner}
+                onClick={() => {
+                  const el = document.getElementById('governed-agent-proof');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
                 className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-sky-500 via-indigo-600 to-cyan-500 hover:from-sky-400 hover:to-cyan-400 text-white font-extrabold text-sm shadow-xl shadow-sky-500/25 flex items-center justify-center gap-2 transition transform hover:-translate-y-0.5 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 text-sky-200" />
-                <span>Run Free AI Governance Scan</span>
+                <span>Run the Governed Agent Demo</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
@@ -299,8 +303,21 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
               </button>
             </div>
             <p className="text-xs text-slate-400 font-mono">
-              No code upload · Runs in your browser · Instant report
+              Deterministic runtime proof · 77/77 tests verified · Pure enforcement
             </p>
+          </div>
+
+          {/* S5.5 Live Governed Agent Proof Surface */}
+          <div id="governed-agent-proof" className="pt-8">
+            <div className="text-center space-y-1 mb-4">
+              <span className="text-xs font-mono font-bold tracking-widest text-sky-400 uppercase">
+                CRUCIBLE TEST · LIVE RUNTIME PROOF
+              </span>
+              <h2 className="text-xl sm:text-2xl font-extrabold text-white">
+                Watch an agent get governed in real time
+              </h2>
+            </div>
+            <GovernedAgentProofSurface />
           </div>
         </section>
 

@@ -89,3 +89,103 @@ const complianceReport = evaluateCompliance(sourceAnalysis, {
 console.log('Score Geral:', complianceReport.overallScore);
 console.log('Violações Detectadas:', complianceReport.violations);
 ```
+
+---
+
+## 🐳 Containerização & Produção (Sprint 8-3)
+
+O ComplyPRO possui imagem Docker oficial multi-stage, segura e otimizada para produção:
+
+- **Base**: `node:20-alpine` (mínima e auditada)
+- **Multi-Stage**: Build isolado no stage `builder`, imagem final enxuta no stage `runner`
+- **Segurança**: Usuário não-privilegiado (`USER node`), zero secrets embutidas
+- **Probes Nativas**: `HEALTHCHECK` configurado no endpoint `/health`
+- **Configuração**: 100% via variáveis de ambiente (`process.env`)
+
+### 1. Build Local da Imagem
+
+```bash
+docker build -t complypro-server:latest .
+```
+
+### 2. Execução do Container
+
+```bash
+docker run -d \
+  --name complypro-production \
+  -p 3000:3000 \
+  -e PORT=3000 \
+  -e COMPLYPRO_ENV=production \
+  -e COMPLYPRO_API_KEYS="{\"sec_corp_key_001\":{\"tenantId\":\"tenant_corp_alpha\",\"role\":\"compliance_officer\"}}" \
+  -e SUPABASE_URL="https://your-project.supabase.co" \
+  -e SUPABASE_SERVICE_ROLE_KEY="your-service-role-key" \
+  complypro-server:latest
+```
+
+### 3. Execução via Docker Compose
+
+Para orquestração local sem conflito de banco (utilizando Supabase Gerenciado):
+
+```bash
+docker compose up -d
+docker compose ps
+docker compose logs -f complypro-server
+```
+
+---
+
+## 🩺 Endpoints de Health & Readiness
+
+| Endpoint | Tipo | Autenticação | Descrição |
+| :--- | :--- | :--- | :--- |
+| `GET /health` | Liveness | Pública | Verifica disponibilidade do servidor HTTP e timestamp |
+| `GET /ready` | Readiness | Pública | Valida prontidão dos subsistemas: Guardian, Gateways, Persistência |
+| `GET /guardian/health`| Subsystem | Pública | Retorna integridade da política e cache do Guardian |
+
+*Nota de Segurança*: Nenhum endpoint expõe chaves, tokens, strings de conexão ou dados sensíveis.
+
+---
+
+## 🔄 Estratégia de Migração de Banco de Dados
+
+As migrações SQL são versionadas e idempotentes no diretório `src/server/db/migrations/`:
+
+- `001_initial_schema.sql`: Tabelas fundamentais de governança, evidências e audit log
+- `002_durable_runtime_and_rls.sql`: Tabelas de runtime durável (`complypro_agents`, `complypro_runtimes`, `complypro_executions`, `complypro_hitl_gates`) e Row Level Security (RLS) nativa
+
+### Executando Migrações
+
+Via script automatizado:
+```bash
+npm run db:migrate
+```
+
+*Nota*: Se conectado via connection string direta PostgreSQL (`DATABASE_URL`), as migrações são aplicadas sequencialmente em transação segura. No Supabase Cloud com PostgREST, as migrações podem ser aplicadas diretamente via Supabase CLI (`supabase db push`) ou Dashboard SQL Editor. **Nenhum comando DROP destrutivo é permitido em produção.**
+
+---
+
+## 🧪 Suíte de Testes & CI/CD
+
+Pipeline automatizado no GitHub Actions (`.github/workflows/ci.yml`):
+
+1. **Static Analysis & Typecheck**: `npx tsc --noEmit`
+2. **Quality & Regression Tests**: `npm test` (18 suítes completas, 284 testes unitários, de integração, container e sandbox)
+3. **Production Bundle Build**: `npm run build`
+4. **Container Build & Smoke Test**:
+   - `docker build` com multi-stage caching
+   - Container startup com verificação de `USER node` (non-root)
+   - Probes ativas de `/health` e `/ready` com validação de status HTTP 200
+
+---
+
+## 🔒 Containerized Worker Sandbox (Sprint 8-4)
+
+O ComplyPRO implementa uma fronteira formal de isolamento entre o **Control Plane** e os **Worker Runtimes**:
+
+- **Isolamento de Processo & Container**: `Dockerfile.worker` dedicado, base `node:20-alpine`, executando como `USER node` (UID 1001).
+- **Zero Secrets**: Ambientes de worker são completamente expurgados de `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL` e credenciais de nuvem.
+- **Filesystem Efêmero**: Cada sandbox recebe um diretório scratchpad isolado (`/tmp/complypro-sandboxes/<sandboxId>`) com verificação contra path traversal. Arquivos são apagados no encerramento.
+- **Limites de Recursos**: CPU, Memória, PID limits (prevenção contra fork bombs) e timeout obrigatório via watchdog timer.
+- **Mediação Total via Gateways**: Nenhuma chamada externa é permitida diretamente pelo worker; toda requisição passa pelo Guardian para avaliação de política e emissão de evidência criptográfica.
+
+

@@ -7,31 +7,39 @@ import { DecisionStore } from './decision-store';
 import { PersistenceAdapter } from './persistence-adapter';
 import { ProtectedEvidenceRecord } from '../../core/governance-control-plane';
 
-export type GateStatus = 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'EXPIRED_BLOCKED';
+export type GateStatus = 'PENDING_REVIEW' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'EXPIRED_BLOCKED';
 
 export interface HITLApprovalRequest {
   sourceType?: 'REAL_SCAN' | 'CANONICAL_BASELINE' | 'SIMULATION';
   scanId?: string;
   sourceRepository?: string;
   createdFromScan?: boolean;
+  id?: string;
   gateId: string;
+  title?: string;
   actionTitle: string;
   agentId: string;
   agentName: string;
   systemId: string;
   systemName: string;
+  actionType?: string;
   requestedActionType: string;
   actionPayload: Record<string, any>;
   policyId: string;
   policyName: string;
   controlId: string;
   controlName: string;
+  riskLevel?: string;
   riskTier: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  reason?: string;
   triggerReason: string;
   thresholdApplied: string;
+  requestedBy?: string;
   requestedAt: string;
   slaDeadline: string;
   status: GateStatus;
+  findingId?: string;
+  escalationTimeoutMinutes?: number;
   approvalOutcome?: {
     decidedBy: string;
     role: string;
@@ -152,16 +160,54 @@ export class HitlStore {
       PersistenceAdapter.setContext({ tenantId });
     }
     const saved = PersistenceAdapter.read<HITLApprovalRequest[]>('hitl_gates', STORAGE_KEY_HITL);
-    if (saved && Array.isArray(saved) && saved.length > 0) {
-      return saved;
-    }
-    if (this.scanGatesOverride && (!tenantId || PersistenceAdapter.getContext().tenantId === 'TENANT-DEFAULT')) {
-      return JSON.parse(JSON.stringify(this.scanGatesOverride));
-    }
-    return JSON.parse(JSON.stringify(BASELINE_GATES));
+    const rawList: HITLApprovalRequest[] = (saved && Array.isArray(saved) && saved.length > 0)
+      ? saved
+      : (this.scanGatesOverride && (!tenantId || PersistenceAdapter.getContext().tenantId === 'TENANT-DEFAULT')
+          ? JSON.parse(JSON.stringify(this.scanGatesOverride))
+          : JSON.parse(JSON.stringify(BASELINE_GATES)));
+
+    return rawList.map(g => {
+      const gateId = g.gateId || (g as any).id || 'GATE-UNKNOWN';
+      const actionTitle = g.actionTitle || (g as any).title || 'Human Authorization Gate';
+      const agentId = g.agentId || 'SYSTEM_AGENT';
+      const agentName = g.agentName || agentId;
+      const systemId = g.systemId || 'SYS-DEFAULT';
+      const systemName = g.systemName || systemId;
+      const requestedActionType = g.requestedActionType || (g as any).actionType || 'executeAction';
+      const riskTier = g.riskTier || (g as any).riskLevel || 'HIGH';
+      const triggerReason = g.triggerReason || (g as any).reason || 'Action requires human approval';
+      const thresholdApplied = g.thresholdApplied || 'Mandatory HITL Verification';
+      const slaDeadline = g.slaDeadline || new Date(Date.now() + 3600000).toISOString();
+      const status = (g.status as string) === 'PENDING_APPROVAL' ? 'PENDING_APPROVAL' : (g.status || 'PENDING_REVIEW');
+
+      return {
+        ...g,
+        id: (g as any).id || gateId,
+        gateId,
+        title: (g as any).title || actionTitle,
+        actionTitle,
+        agentId,
+        agentName,
+        systemId,
+        systemName,
+        actionType: (g as any).actionType || requestedActionType,
+        requestedActionType,
+        riskLevel: (g as any).riskLevel || riskTier,
+        riskTier,
+        reason: (g as any).reason || triggerReason,
+        triggerReason,
+        thresholdApplied,
+        policyId: g.policyId || 'POL-CG-AG-03-01',
+        policyName: g.policyName || 'Human-in-the-Loop Oversight Policy',
+        controlId: g.controlId || 'CG-AG-03',
+        controlName: g.controlName || 'Human-in-the-Loop Oversight',
+        slaDeadline,
+        status: status as any
+      };
+    });
   }
 
-    private static scanGatesOverride: HITLApprovalRequest[] | null = null;
+  private static scanGatesOverride: HITLApprovalRequest[] | null = null;
 
   static ingestGates(gates: HITLApprovalRequest[], tenantId?: string) {
     this.scanGatesOverride = gates;
@@ -181,7 +227,7 @@ export class HitlStore {
     this.notify();
   }
 
-static executeHumanApproval(
+  static executeHumanApproval(
     gateId: string,
     decision: 'APPROVE' | 'REJECT',
     rationale: string,
@@ -193,7 +239,7 @@ static executeHumanApproval(
       PersistenceAdapter.setContext({ tenantId });
     }
     const gates = this.getGates(tenantId);
-    const index = gates.findIndex(g => g.gateId === gateId);
+    const index = gates.findIndex(g => g.gateId === gateId || (g as any).id === gateId);
     if (index === -1) {
       throw new Error(`Gate ${gateId} not found`);
     }
