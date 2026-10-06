@@ -110,6 +110,7 @@ async function runS85ActiveGovernanceSuite() {
   const passportAlpha = provisionedAlpha.passport;
   passportAlpha.declaredModels = ['openai/gpt-4o-mini', 'anthropic/claude-3-haiku'];
   passportAlpha.declaredDataScopes = ['customer.read', 'market.data'];
+  AgentProvisioner.signPassport(passportAlpha, provisionedAlpha.agentId);
 
   // Register runtime instance in RuntimeManager and DurableStore
   RuntimeManager.createRuntime(provisionedAlpha.runtimeSpec, passportAlpha, tenantAlpha);
@@ -547,6 +548,7 @@ async function runS85ActiveGovernanceSuite() {
     passportId: 'pass_crucible_e',
     declaredTools: ['credit.approve']
   };
+  AgentProvisioner.signPassport(crucibleEPassport, provisionedAlpha.agentId);
 
   const crucibleEInvocation = await ToolGateway.invokeTool({
     agentId: provisionedAlpha.agentId,

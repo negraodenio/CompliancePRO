@@ -32,6 +32,7 @@ import { ProtectedEvidenceRecord } from './governance-control-plane';
 import { EvidenceLedger } from './evidence-ledger';
 import { ActiveGovernanceBus, ActiveRuntimeEvent } from './active-governance-bus';
 import { ContinuousRiskDetector, AgentRiskProfile, ActiveRiskResponse } from './continuous-risk-detector';
+import { PassportSigner } from './passport-signer';
 
 export type GuardianVerdict = 'ALLOW' | 'BLOCK' | 'REQUIRE_HITL' | 'CIRCUIT_BREAK';
 
@@ -46,8 +47,8 @@ export interface GuardianAgentIdentity {
 
 export interface GovernedCapabilityDeclaration {
   capability: string;
-  channel: GovernanceChannel;
-  riskTier?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  channel?: GovernanceChannel | string;
+  riskTier?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | string;
   requiresHitl?: boolean;
 }
 
@@ -68,6 +69,7 @@ export interface GuardianPassportInput {
   tenantId?: string;
   declaredModels?: string[];
   declaredDataScopes?: string[];
+  status?: string;
 }
 
 export interface GuardianToolCall {
@@ -181,12 +183,12 @@ export class GuardianService {
 
     const normalizedActionType = input.toolCall?.actionType || input.actionType || 'READ';
     const normalizedPayload = input.toolCall?.payload || input.payload || {};
-    const toolName = input.toolCall?.toolName || 'unknown_tool';
+    const toolName = input.toolCall?.toolName || (input as any).toolName || (input as any).capability || 'unknown_tool';
     const verifiedFingerprint = input.passportFingerprint || input.passport?.passportFingerprint || '';
     const profileId = input.complianceProfile?.profileId || 'UNKNOWN_PROFILE';
 
     // ----------------------------------------------------------------------
-    // STEP 1: Passport Authenticity & Integrity Validation
+    // STEP 1: Passport Authenticity & Integrity Validation (Cryptographic HMAC)
     // ----------------------------------------------------------------------
     if (!input.passport || !input.passport.passportId || !verifiedFingerprint) {
       return this.finalizeResponse({
@@ -201,11 +203,45 @@ export class GuardianService {
       });
     }
 
-    // Validate fingerprint format (must be a valid SIG- or SHA256 string, min 8 chars)
-    if (verifiedFingerprint.length < 8 || verifiedFingerprint === 'INVALID_FINGERPRINT' || verifiedFingerprint.includes('MALICIOUS')) {
+    // Cryptographic HMAC-SHA256 signature verification
+    const verification = PassportSigner.verify(verifiedFingerprint, {
+      passportId: input.passport.passportId,
+      agentId: input.agent.id,
+      tenantId: input.context?.tenantId || input.passport.tenantId,
+      framework: input.passport.runtime?.framework,
+      frameworkVersion: input.passport.runtime?.frameworkVersion,
+      runtimeVersion: input.passport.runtime?.runtimeVersion,
+      toolManifestHash: input.passport.toolManifestHash,
+      complianceProfileChecksum: input.passport.complianceProfileChecksum,
+      policyVersion: input.complianceProfile?.version,
+      capabilities: (input.passport.governedCapabilities || input.passport.declaredTools || []).map((c: any) => 
+        typeof c === 'string' ? { capability: c } : { capability: c.capability || c.id, channel: c.channel, riskTier: c.riskTier, requiresHitl: c.requiresHitl }
+      ),
+      declaredTools: input.passport.declaredTools,
+      declaredModels: (input.passport as any).declaredModels || [],
+      declaredDataScopes: (input.passport as any).declaredDataScopes || [],
+      riskTier: input.passport.riskTier,
+      status: input.passport.status
+    });
+
+    if (!verification.valid) {
       return this.finalizeResponse({
         verdict: 'BLOCK',
-        reason: `Passport verification failed: invalid cryptographic fingerprint "${verifiedFingerprint}".`,
+        reason: `Passport verification failed: ${verification.reason || 'Cryptographic signature mismatch'}.`,
+        profileId,
+        passportFingerprint: verifiedFingerprint,
+        controlId: 'CG-AG-01',
+        startTime,
+        timestamp,
+        input
+      });
+    }
+
+    // Tenant binding validation
+    if (input.passport.tenantId && input.context?.tenantId && input.passport.tenantId !== input.context.tenantId) {
+      return this.finalizeResponse({
+        verdict: 'BLOCK',
+        reason: `Tenant isolation violation: runtime tenant [${input.context.tenantId}] does not match passport binding [${input.passport.tenantId}].`,
         profileId,
         passportFingerprint: verifiedFingerprint,
         controlId: 'CG-AG-01',
@@ -668,7 +704,7 @@ export class GuardianService {
     payload?: Record<string, any>;
     context?: GuardianRuntimeContext;
   }): GuardianResponse {
-    return this.evaluateCapability({
+    return this.evaluateActiveCapability({
       ...params,
       channel: 'TOOL',
       capability: params.toolName
@@ -687,7 +723,7 @@ export class GuardianService {
     payload?: Record<string, any>;
     context?: GuardianRuntimeContext;
   }): GuardianResponse {
-    return this.evaluateCapability({
+    return this.evaluateActiveCapability({
       ...params,
       channel: 'MODEL',
       capability: params.modelName,
@@ -713,7 +749,7 @@ export class GuardianService {
     payload?: Record<string, any>;
     context?: GuardianRuntimeContext;
   }): GuardianResponse {
-    return this.evaluateCapability({
+    return this.evaluateActiveCapability({
       ...params,
       channel: 'DATA',
       capability: params.resource,
@@ -813,6 +849,9 @@ export class GuardianService {
     const tenantId = req.context?.tenantId || req.passport.tenantId || 'TENANT-DEFAULT';
     const agentId = req.agent.id;
 
+    const profileChecksum = req.complianceProfile.checksum || req.passport.complianceProfileChecksum;
+    const profileId = req.complianceProfile.profileId;
+
     // 1. Check if agent is suspended by Continuous Risk Detector
     const riskProfile = ContinuousRiskDetector.getProfile(tenantId, agentId);
     if (riskProfile.isSuspended) {
@@ -820,10 +859,11 @@ export class GuardianService {
       const blockResponse: GuardianResponse = {
         verdict: 'BLOCK',
         reason: `Agent [${req.agent.name}] is SUSPENDED by Continuous Guardian: ${riskProfile.suspensionReason || 'Risk ceiling exceeded.'}`,
-        complianceProfileId: req.complianceProfile.profileId,
+        complianceProfileId: profileId,
         passportFingerprint: req.passport.passportFingerprint,
         channel: req.channel,
         capability: req.capability,
+        controlId: 'CG-CRD-01',
         decisionLatencyMs: 0.5,
         evidenceId: `EV-SUSP-${Date.now().toString(36).toUpperCase()}`,
         timestamp
@@ -838,13 +878,59 @@ export class GuardianService {
         channel: req.channel,
         capability: req.capability,
         verdict: 'BLOCK',
-        reason: blockResponse.reason
+        reason: blockResponse.reason,
+        metadata: {
+          complianceProfileId: profileId,
+          complianceProfileChecksum: profileChecksum
+        }
       });
 
       return blockResponse;
     }
 
-    // 2. Active Passport Verification
+    // 2. Immediate Forbidden Action Check
+    const forbiddenList = req.complianceProfile.forbiddenActions || [];
+    const isForbidden = forbiddenList.some(f => 
+      f === req.capability || 
+      f === req.actionType ||
+      req.capability.toUpperCase().includes(f.toUpperCase()) ||
+      (f.includes(':') && f.split(':')[0] === req.capability)
+    );
+
+    if (isForbidden) {
+      const reason = `Action [${req.capability}] (${req.actionType || 'EXECUTE'}) is explicitly prohibited by ComplianceProfile [${profileId}].`;
+      const timestamp = new Date().toISOString();
+      const publishedEvent = ActiveGovernanceBus.publish({
+        eventType: req.channel === 'TOOL' ? 'TOOL_BLOCKED' : req.channel === 'MODEL' ? 'MODEL_BLOCKED' : 'DATA_BLOCKED',
+        tenantId,
+        agentId,
+        passportId: req.passport.passportId,
+        passportFingerprint: req.passport.passportFingerprint,
+        channel: req.channel,
+        capability: req.capability,
+        verdict: 'BLOCK',
+        reason,
+        metadata: {
+          complianceProfileId: profileId,
+          complianceProfileChecksum: profileChecksum
+        }
+      });
+      ContinuousRiskDetector.recordEvent(publishedEvent);
+      return {
+        verdict: 'BLOCK',
+        reason,
+        complianceProfileId: profileId,
+        passportFingerprint: req.passport.passportFingerprint,
+        channel: req.channel,
+        capability: req.capability,
+        controlId: 'CG-AG-02',
+        decisionLatencyMs: 0.5,
+        evidenceId: publishedEvent.eventId,
+        timestamp
+      };
+    }
+
+    // 3. Active Passport Channel Declarations & Tenant Check
     const passportCheck = this.verifyPassportCompliance({
       passport: req.passport,
       channel: req.channel,
@@ -859,7 +945,6 @@ export class GuardianService {
       const timestamp = new Date().toISOString();
       const violationType = passportCheck.violationType === 'TENANT_MISMATCH' ? 'TENANT_VIOLATION' : 'PASSPORT_VIOLATION';
 
-      // Publish violation event
       const publishedEvent = ActiveGovernanceBus.publish({
         eventType: violationType,
         tenantId,
@@ -869,19 +954,23 @@ export class GuardianService {
         channel: req.channel,
         capability: req.capability,
         verdict: 'BLOCK',
-        reason: passportCheck.reason
+        reason: passportCheck.reason,
+        metadata: {
+          complianceProfileId: profileId,
+          complianceProfileChecksum: profileChecksum
+        }
       });
 
-      // Update Continuous Risk Detector
       ContinuousRiskDetector.recordEvent(publishedEvent);
 
       return {
         verdict: 'BLOCK',
         reason: passportCheck.reason,
-        complianceProfileId: req.complianceProfile.profileId,
+        complianceProfileId: profileId,
         passportFingerprint: req.passport.passportFingerprint,
         channel: req.channel,
         capability: req.capability,
+        controlId: 'CG-AG-02',
         decisionLatencyMs: 1.0,
         evidenceId: publishedEvent.eventId,
         timestamp
@@ -898,10 +987,14 @@ export class GuardianService {
       channel: req.channel,
       capability: req.capability,
       action: req.actionType,
-      payload: req.payload
+      payload: req.payload,
+      metadata: {
+        complianceProfileId: profileId,
+        complianceProfileChecksum: profileChecksum
+      }
     });
 
-    // 4. Evaluate via base Guardian engine
+    // 4. Evaluate via base Guardian engine (Preserves all policy, HITL, circuit breaker & control checks)
     const response = this.evaluateCapability(req);
 
     // 5. Map verdict to active outcome event
@@ -927,7 +1020,8 @@ export class GuardianService {
       reason: response.reason,
       metadata: {
         gateId: response.gateId,
-        complianceProfileId: response.complianceProfileId,
+        complianceProfileId: response.complianceProfileId || profileId,
+        complianceProfileChecksum: profileChecksum,
         decisionLatencyMs: response.decisionLatencyMs
       }
     });

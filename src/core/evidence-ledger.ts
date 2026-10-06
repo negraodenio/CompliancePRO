@@ -140,49 +140,72 @@ export function calculateEventHash(entry: Omit<EvidenceLedgerEntry, 'eventHash'>
 }
 
 export class EvidenceLedger {
-  private static inMemoryChain: EvidenceLedgerEntry[] = [];
-  private static isInitialized = false;
+  private static inMemoryChains: Map<string, EvidenceLedgerEntry[]> = new Map();
+  private static initializedTenants: Set<string> = new Set();
+  public static readonly DEFAULT_TENANT = 'TENANT-DEFAULT';
+
+  private static resolveTenant(tenantId?: string): string {
+    const ctx = PersistenceAdapter.getContext();
+    return tenantId || ctx.tenantId || this.DEFAULT_TENANT;
+  }
+
+  private static getChain(tenantId: string): EvidenceLedgerEntry[] {
+    if (!this.inMemoryChains.has(tenantId)) {
+      this.inMemoryChains.set(tenantId, []);
+    }
+    return this.inMemoryChains.get(tenantId)!;
+  }
 
   private static ensureInitialized(tenantId?: string) {
-    if (!this.isInitialized) {
-      if (tenantId) {
-        PersistenceAdapter.setContext({ tenantId });
-      }
+    const resolvedTenant = this.resolveTenant(tenantId);
+    if (!this.initializedTenants.has(resolvedTenant)) {
+      PersistenceAdapter.setContext({ tenantId: resolvedTenant });
       try {
         const persisted = PersistenceAdapter.read<EvidenceLedgerEntry[]>('evidence_chain', 'cg_ag_evidence_chain_v1');
         if (persisted && Array.isArray(persisted) && persisted.length > 0) {
-          this.inMemoryChain = [...persisted];
+          this.inMemoryChains.set(resolvedTenant, [...persisted]);
         }
       } catch (err) {
         // Fallback to memory
       }
-      this.isInitialized = true;
+      this.initializedTenants.add(resolvedTenant);
     }
   }
 
   public static reset(tenantId?: string) {
-    this.inMemoryChain = [];
-    this.isInitialized = true;
     if (tenantId) {
+      this.inMemoryChains.set(tenantId, []);
+      this.initializedTenants.add(tenantId);
       PersistenceAdapter.setContext({ tenantId });
-    }
-    try {
-      PersistenceAdapter.write('evidence_chain', [], 'cg_ag_evidence_chain_v1');
-    } catch {
-      // Ignored
+      try {
+        PersistenceAdapter.write('evidence_chain', [], 'cg_ag_evidence_chain_v1');
+      } catch {
+        // Ignored
+      }
+    } else {
+      this.inMemoryChains.clear();
+      this.initializedTenants.clear();
+      this.inMemoryChains.set(this.DEFAULT_TENANT, []);
+      this.initializedTenants.add(this.DEFAULT_TENANT);
+      PersistenceAdapter.setContext({ tenantId: this.DEFAULT_TENANT });
+      try {
+        PersistenceAdapter.write('evidence_chain', [], 'cg_ag_evidence_chain_v1');
+      } catch {
+        // Ignored
+      }
     }
   }
 
   public static append(input: CreateEvidenceEntryInput, tenantId?: string): EvidenceLedgerEntry {
-    this.ensureInitialized(tenantId);
-    if (tenantId) {
-      PersistenceAdapter.setContext({ tenantId });
-    }
+    const resolvedTenant = this.resolveTenant(tenantId);
+    this.ensureInitialized(resolvedTenant);
+    PersistenceAdapter.setContext({ tenantId: resolvedTenant });
 
-    const sequence = this.inMemoryChain.length + 1;
+    const chain = this.getChain(resolvedTenant);
+    const sequence = chain.length + 1;
     const previousHash = sequence === 1 
       ? GENESIS_PREVIOUS_HASH 
-      : this.inMemoryChain[this.inMemoryChain.length - 1].eventHash;
+      : chain[chain.length - 1].eventHash;
 
     const draft: Omit<EvidenceLedgerEntry, 'eventHash'> = {
       ...input,
@@ -196,10 +219,10 @@ export class EvidenceLedger {
       eventHash
     };
 
-    this.inMemoryChain.push(entry);
+    chain.push(entry);
 
     try {
-      PersistenceAdapter.write('evidence_chain', this.inMemoryChain, 'cg_ag_evidence_chain_v1');
+      PersistenceAdapter.write('evidence_chain', chain, 'cg_ag_evidence_chain_v1');
     } catch {
       // Memory fallback safe
     }
@@ -208,25 +231,51 @@ export class EvidenceLedger {
   }
 
   public static getEntries(agentId?: string, tenantId?: string): EvidenceLedgerEntry[] {
-    this.ensureInitialized(tenantId);
+    const resolvedTenant = this.resolveTenant(tenantId);
+    this.ensureInitialized(resolvedTenant);
+    const chain = this.getChain(resolvedTenant);
     if (agentId) {
-      return this.inMemoryChain.filter(e => e.agentId === agentId);
+      return chain.filter(e => e.agentId === agentId);
     }
-    return [...this.inMemoryChain];
+    return [...chain];
   }
 
   public static getEntryById(evidenceId: string, tenantId?: string): EvidenceLedgerEntry | undefined {
-    this.ensureInitialized(tenantId);
-    return this.inMemoryChain.find(e => e.evidenceId === evidenceId);
+    if (tenantId) {
+      const resolvedTenant = this.resolveTenant(tenantId);
+      this.ensureInitialized(resolvedTenant);
+      return this.getChain(resolvedTenant).find(e => e.evidenceId === evidenceId);
+    }
+    const currentTenant = this.resolveTenant();
+    this.ensureInitialized(currentTenant);
+    const found = this.getChain(currentTenant).find(e => e.evidenceId === evidenceId);
+    if (found) return found;
+
+    for (const chain of this.inMemoryChains.values()) {
+      const e = chain.find(item => item.evidenceId === evidenceId);
+      if (e) return e;
+    }
+    return undefined;
   }
 
-  public static verifyChain(entriesToVerify?: EvidenceLedgerEntry[]): {
+  public static verifyChain(entriesToVerify?: EvidenceLedgerEntry[] | string, tenantId?: string): {
     valid: boolean;
     totalEntries: number;
     error?: string;
     brokenSequence?: number;
   } {
-    const chain = entriesToVerify || this.inMemoryChain;
+    let entries: EvidenceLedgerEntry[] | undefined;
+    let effectiveTenant: string | undefined = tenantId;
+    if (typeof entriesToVerify === 'string') {
+      effectiveTenant = entriesToVerify;
+      entries = undefined;
+    } else {
+      entries = entriesToVerify;
+    }
+
+    const resolvedTenant = this.resolveTenant(effectiveTenant);
+    this.ensureInitialized(resolvedTenant);
+    const chain = entries || this.getChain(resolvedTenant);
 
     if (chain.length === 0) {
       return { valid: true, totalEntries: 0 };
@@ -284,46 +333,52 @@ export class EvidenceLedger {
   }
 
   public static getMerkleRoot(tenantId?: string): string {
-    this.ensureInitialized(tenantId);
-    if (this.inMemoryChain.length === 0) {
+    const resolvedTenant = this.resolveTenant(tenantId);
+    this.ensureInitialized(resolvedTenant);
+    const chain = this.getChain(resolvedTenant);
+    if (chain.length === 0) {
       return GENESIS_PREVIOUS_HASH;
     }
-    const tree = new MerkleTree(this.inMemoryChain.map(e => e.eventHash));
+    const tree = new MerkleTree(chain.map(e => e.eventHash));
     return tree.getRoot();
   }
 
   public static generateMerkleProof(sequenceOrId: number | string, tenantId?: string): MerkleInclusionProof {
-    this.ensureInitialized(tenantId);
-    if (this.inMemoryChain.length === 0) {
+    const resolvedTenant = this.resolveTenant(tenantId);
+    this.ensureInitialized(resolvedTenant);
+    const chain = this.getChain(resolvedTenant);
+    if (chain.length === 0) {
       throw new Error('Ledger is empty; cannot generate Merkle proof');
     }
 
     const index = typeof sequenceOrId === 'number'
       ? sequenceOrId - 1
-      : this.inMemoryChain.findIndex(e => e.evidenceId === sequenceOrId);
+      : chain.findIndex(e => e.evidenceId === sequenceOrId);
 
-    if (index < 0 || index >= this.inMemoryChain.length) {
+    if (index < 0 || index >= chain.length) {
       throw new Error(`Entry ${sequenceOrId} not found in evidence ledger`);
     }
 
-    const tree = new MerkleTree(this.inMemoryChain.map(e => e.eventHash));
+    const tree = new MerkleTree(chain.map(e => e.eventHash));
     return tree.generateProof(index);
   }
 
   public static buildAuditPack(targetEvidenceId: string, tenantId?: string): AuditPack {
-    this.ensureInitialized(tenantId);
+    const resolvedTenant = this.resolveTenant(tenantId);
+    this.ensureInitialized(resolvedTenant);
+    const chain = this.getChain(resolvedTenant);
 
-    const targetIndex = this.inMemoryChain.findIndex(e => e.evidenceId === targetEvidenceId);
+    const targetIndex = chain.findIndex(e => e.evidenceId === targetEvidenceId);
     if (targetIndex < 0) {
       throw new Error(`Target evidence ID "${targetEvidenceId}" not found in ledger`);
     }
 
-    const target = this.inMemoryChain[targetIndex];
-    const tree = new MerkleTree(this.inMemoryChain.map(e => e.eventHash));
+    const target = chain[targetIndex];
+    const tree = new MerkleTree(chain.map(e => e.eventHash));
     const merkleProof = tree.generateProof(targetIndex);
     const merkleRoot = tree.getRoot();
 
-    const correlatedChain = this.inMemoryChain.filter(e => 
+    const correlatedChain = chain.filter(e => 
       e.agentId === target.agentId && e.sequence <= target.sequence
     );
 

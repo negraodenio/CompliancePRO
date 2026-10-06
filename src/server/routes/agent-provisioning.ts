@@ -61,6 +61,70 @@ agentProvisioningRouter.post('/provision', requireRoles('developer'), defaultRat
   }
 });
 
+// GET /api/v1/agents/metrics - Scoped to caller tenant
+agentProvisioningRouter.get('/metrics', requireRoles('developer', 'compliance_officer', 'auditor'), async (req: Request, res: Response) => {
+  const callerTenant = req.tenantId || req.principal?.tenantId || 'TENANT-DEFAULT';
+  const allAgents = AgentProvisioner.listAgents();
+  const agents = allAgents.filter(a => (a.tenantId || a.passport?.tenantId || 'TENANT-DEFAULT') === callerTenant);
+
+  const total = agents.length;
+  const governed = agents.filter(a => a.status === 'PROVISIONED' || a.passport?.status === 'GOVERNED').length;
+  const unknown = agents.filter(a => !a.passport || !a.passport.passportFingerprint).length;
+  const needAttention = total - governed;
+  const highRisk = agents.filter(a => a.passport?.riskTier === 'HIGH' || a.passport?.riskTier === 'CRITICAL').length;
+
+  // Real blocked actions from EvidenceLedger for this tenant
+  let blockedActions = 0;
+  try {
+    const { EvidenceLedger } = await import('../../core/evidence-ledger');
+    const tenantEntries = EvidenceLedger.getEntries(undefined, callerTenant);
+    blockedActions = tenantEntries.filter(e => 
+      e.verdict === 'BLOCK' || 
+      e.eventType === 'AGENT_EXECUTION_BLOCKED' || 
+      e.eventType === 'TOOL_BLOCKED' ||
+      e.eventType === 'MODEL_BLOCKED' ||
+      e.eventType === 'DATA_BLOCKED' ||
+      e.executionResult === 'BLOCKED'
+    ).length;
+  } catch {
+    blockedActions = 0;
+  }
+
+  // Real pending HITL requests from DurableStore / memory for this tenant
+  let hitlPending = 0;
+  try {
+    const { DurableStore } = await import('../db/durable-store');
+    const executions = DurableStore.listExecutionSessions(callerTenant);
+    hitlPending = executions.filter(e => e.status === 'PAUSED').length;
+  } catch {
+    hitlPending = 0;
+  }
+
+  return res.status(200).json({
+    totalAgents: total,
+    governedAgents: governed,
+    needAttentionAgents: needAttention,
+    unknownAgents: unknown,
+    highRiskAgents: highRisk,
+    blockedActions,
+    hitlPending
+  });
+});
+
+// GET /api/v1/agents - Scoped to caller tenant
+agentProvisioningRouter.get('/', requireRoles('developer', 'compliance_officer', 'auditor'), (req: Request, res: Response) => {
+  const callerTenant = req.tenantId || req.principal?.tenantId;
+  const allAgents = AgentProvisioner.listAgents();
+  const agents = callerTenant 
+    ? allAgents.filter(a => (a.tenantId || a.passport?.tenantId || 'TENANT-DEFAULT') === callerTenant)
+    : allAgents;
+
+  return res.status(200).json({
+    total: agents.length,
+    agents
+  });
+});
+
 // GET /api/v1/agents/:agentId - Scoped to owner tenant
 agentProvisioningRouter.get('/:agentId', requireRoles('developer', 'compliance_officer', 'auditor'), (req: Request, res: Response) => {
   const agent = AgentProvisioner.getAgent(req.params.agentId);
@@ -88,18 +152,4 @@ agentProvisioningRouter.get('/:agentId', requireRoles('developer', 'compliance_o
   }
 
   return res.status(200).json(agent);
-});
-
-// GET /api/v1/agents - Scoped to caller tenant
-agentProvisioningRouter.get('/', requireRoles('developer', 'compliance_officer', 'auditor'), (req: Request, res: Response) => {
-  const callerTenant = req.tenantId || req.principal?.tenantId;
-  const allAgents = AgentProvisioner.listAgents();
-  const agents = callerTenant 
-    ? allAgents.filter(a => (a.tenantId || a.passport?.tenantId || 'TENANT-DEFAULT') === callerTenant)
-    : allAgents;
-
-  return res.status(200).json({
-    total: agents.length,
-    agents
-  });
 });

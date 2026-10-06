@@ -14,6 +14,7 @@ import { ComplianceProfileRegistry } from './compliance-compiler';
 import { AgentPassport, ComplianceProfile } from './compliance-contract';
 import { CapabilityRegistry, GovernedCapability } from './capability-registry';
 import { EvidenceLedger, canonicalizeJson } from './evidence-ledger';
+import { PassportSigner } from './passport-signer';
 import { PersistenceAdapter } from '../web/services/persistence-adapter';
 import { DurableStore } from '../server/db/durable-store';
 
@@ -189,29 +190,52 @@ export class AgentProvisioner {
     // 7. Calculate Tool Manifest Hash
     const toolManifestHash = this.calculateToolManifestHash(resolvedCapabilities);
 
-    // 8. Construct Agent Passport
-    const passportFingerprint = crypto.createHash('sha256')
-      .update(`${agentId}:${passportId}:${profile.checksum}:${toolManifestHash}`)
-      .digest('hex');
+    // 8. Construct Agent Passport with Cryptographic HMAC Signature
+    const governedCapabilities = resolvedCapabilities.map(c => ({
+      capability: c.id,
+      channel: c.channel,
+      riskTier: c.riskLevel,
+      requiresHitl: c.hitl?.required || false
+    }));
+
+    const riskTier = profile.mandatoryControls.includes('CG-AG-03') ? 'HIGH' : 'MEDIUM';
+    const declaredTools = resolvedCapabilities.map(c => c.id);
+    const declaredModels = (definition as any).declaredModels || [];
+    const declaredDataScopes = (definition as any).declaredDataScopes || [];
+
+    const passportFingerprint = PassportSigner.sign({
+      passportId,
+      agentId,
+      tenantId,
+      framework: definition.framework.name,
+      frameworkVersion: definition.framework.version,
+      runtimeVersion: 'complypro-runtime-v1.0',
+      toolManifestHash,
+      complianceProfileChecksum: profile.checksum,
+      policyVersion: profile.version || '1.0.0',
+      capabilities: governedCapabilities,
+      declaredTools,
+      declaredModels,
+      declaredDataScopes,
+      riskTier,
+      status: 'GOVERNED'
+    });
 
     const passport: AgentPassport = {
       passportId,
-      passportFingerprint: `SIG-SHA256-${passportFingerprint.substring(0, 16).toUpperCase()}`,
+      passportFingerprint,
       complianceProfileChecksum: profile.checksum,
-      declaredTools: resolvedCapabilities.map(c => c.id),
-      governedCapabilities: resolvedCapabilities.map(c => ({
-        capability: c.id,
-        channel: c.channel,
-        riskTier: c.riskLevel,
-        requiresHitl: c.hitl?.required || false
-      })),
+      declaredTools,
+      governedCapabilities,
+      declaredModels: declaredModels.length > 0 ? declaredModels : undefined,
+      declaredDataScopes: declaredDataScopes.length > 0 ? declaredDataScopes : undefined,
       runtime: {
         framework: definition.framework.name,
         frameworkVersion: definition.framework.version,
         runtimeVersion: 'complypro-runtime-v1.0'
       },
       toolManifestHash,
-      riskTier: profile.mandatoryControls.includes('CG-AG-03') ? 'HIGH' : 'MEDIUM',
+      riskTier,
       status: 'GOVERNED',
       tenantId
     };
@@ -295,6 +319,32 @@ export class AgentProvisioner {
     }
 
     return response;
+  }
+
+  public static signPassport(passport: AgentPassport, agentId?: string): string {
+    const effectiveAgentId = agentId || passport.passportId.replace('pass_', 'agt_');
+    const profile = ComplianceProfileRegistry.getAllProfiles().find(
+      p => p.checksum === passport.complianceProfileChecksum
+    );
+    const fingerprint = PassportSigner.sign({
+      passportId: passport.passportId,
+      agentId: effectiveAgentId,
+      tenantId: passport.tenantId,
+      framework: passport.runtime?.framework,
+      frameworkVersion: passport.runtime?.frameworkVersion,
+      runtimeVersion: passport.runtime?.runtimeVersion,
+      toolManifestHash: passport.toolManifestHash,
+      complianceProfileChecksum: passport.complianceProfileChecksum,
+      policyVersion: profile?.version || '1.0.0',
+      capabilities: passport.governedCapabilities || passport.declaredTools,
+      declaredTools: passport.declaredTools,
+      declaredModels: (passport as any).declaredModels || [],
+      declaredDataScopes: (passport as any).declaredDataScopes || [],
+      riskTier: passport.riskTier,
+      status: passport.status
+    });
+    passport.passportFingerprint = fingerprint;
+    return fingerprint;
   }
 
   public static injectProvisionedAgent(agent: AgentProvisioningResponse): void {

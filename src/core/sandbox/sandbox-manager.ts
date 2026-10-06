@@ -262,27 +262,25 @@ export class SandboxManager {
       };
     }
 
-    // 3. Evaluate through Guardian
-    const guardianVerdict = GuardianService.evaluateCapability({
+    // 3. Evaluate through Guardian (Active Governance Perimeter)
+    const guardianVerdict = GuardianService.evaluateActiveCapability({
       agent: {
         id: sandbox.config.identity.agentId,
         name: `${sandbox.passport.runtime?.framework || 'governed'}-worker`,
         version: sandbox.passport.runtime?.frameworkVersion
       },
       passport: {
-        passportId: sandbox.passport.passportId,
-        passportFingerprint: sandbox.passport.passportFingerprint,
-        complianceProfileChecksum: sandbox.passport.complianceProfileChecksum,
-        declaredTools: sandbox.passport.declaredTools,
-        governedCapabilities: sandbox.passport.governedCapabilities as any,
-        toolManifestHash: sandbox.passport.toolManifestHash,
-        riskTier: sandbox.passport.riskTier
+        ...sandbox.passport,
+        tenantId: sandbox.passport.tenantId
       },
       complianceProfile: profile,
       channel: capability.channel,
       capability: capability.id,
       actionType: request.action,
-      payload: request.payload
+      payload: request.payload,
+      context: {
+        tenantId: sandbox.passport.tenantId
+      }
     });
 
     const durationMs = Date.now() - startHr;

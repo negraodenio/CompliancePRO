@@ -199,7 +199,7 @@ async function runS8_3_Tests() {
   const testPort = 3099;
   const child = spawn(process.execPath, [compiledServerPath], {
     cwd: rootDir,
-    env: { ...process.env, PORT: String(testPort), NODE_ENV: 'production' },
+    env: { ...process.env, PORT: String(testPort), NODE_ENV: 'production', COMPLYPRO_PASSPORT_SECRET: process.env.COMPLYPRO_PASSPORT_SECRET || 'a-very-secure-production-secret-for-testing-1234' },
     stdio: 'pipe'
   });
 

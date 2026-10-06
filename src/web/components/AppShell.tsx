@@ -50,6 +50,7 @@ import { IncidentStore } from '../services/incident-store';
 import { AuthModal } from './AuthModal';
 
 export type ActiveNavView = 
+  | 'ai-agents'
   | 'studio-builder'
   | 'cockpit-control'
   | 'overview-center'
@@ -149,63 +150,30 @@ export const AppShell: React.FC<AppShellProps> = ({
     };
   }, []);
 
-  // Fixed Top-Level Destinations (Always visible at top of sidebar)
+  // Simplified Enterprise Navigation: Core Destinations
   const topLevelItems = [
-    { id: 'studio-builder', label: 'Agent Studio', icon: Bot, badge: 'Core' },
-    { id: 'cockpit-control', label: 'Governance Cockpit', icon: Activity, badge: 'Live' },
-    { id: 'overview-center', label: 'Governance Center', icon: LayoutDashboard, badge: null },
-    { id: 'operate-decisions', label: 'Attention Queue', icon: AlertCircle, badge: pendingDecisionsCount > 0 ? `${pendingDecisionsCount} Action` : null }
+    { id: 'ai-agents' as ActiveNavView, label: 'AI Agents', icon: Bot, badge: null },
+    { id: 'tools-scanner' as ActiveNavView, label: 'Discover', icon: Terminal, badge: null },
+    { id: 'assure-evidence' as ActiveNavView, label: 'Evidence', icon: LockKeyhole, badge: null }
   ];
 
-  // 4 Conceptual Architecture Groups (Collapsible)
+  // Progressive Disclosure: Collapsible Advanced Engineering Workspaces
   const navGroups = [
     {
-      id: 'governance',
-      label: 'GOVERNANCE',
+      id: 'advanced-tools',
+      label: 'ADVANCED WORKSPACES',
       items: [
-        { id: 'govern-controls', label: '12 Controls', icon: CheckSquare, badge: '12/12' },
-        { id: 'discover-passports', label: 'Agent Passports', icon: FileBadge, badge: 'Verified' },
-        { id: 'govern-risk', label: 'Risk Engine', icon: AlertTriangle, badge: pendingDecisionsCount > 0 ? `${pendingDecisionsCount} Pending` : null },
-        { id: 'govern-policies', label: 'Policy Engine', icon: FileText, badge: null },
-        { id: 'govern-compliance', label: 'Compliance Frameworks', icon: Scale, badge: 'AI Act' }
-      ]
-    },
-    {
-      id: 'discovery',
-      label: 'DISCOVERY & ANALYSIS',
-      items: [
-        { id: 'discover-inventory', label: 'AI Inventory', icon: Layers, badge: '142' },
-        { id: 'discover-agents', label: 'Agents & Teams', icon: Bot, badge: String(totalAgentsCount) },
-        { id: 'discover-assessments', label: 'Assessments', icon: ClipboardCheck, badge: null },
-        { id: 'operate-runtime', label: 'Business X-Ray (SIPOC)', icon: Activity, badge: 'SIPOC' },
-        { id: 'tools-scanner', label: 'Codebase Scanner', icon: Terminal, badge: 'Sensor' }
-      ]
-    },
-    {
-      id: 'operate-assure',
-      label: 'OPERATE & ASSURE',
-      items: [
-        { id: 'operate-decisions', label: 'Decisions Pipeline', icon: Scale, badge: null },
-        { id: 'operate-approvals', label: 'HITL Approvals', icon: CheckCircle2, badge: pendingHitlCount > 0 ? `${pendingHitlCount} Action` : null },
-        { id: 'operate-actions', label: 'Remediations', icon: FolderCheck, badge: pendingRemedCount > 0 ? `${pendingRemedCount} Open` : null },
-        { id: 'operate-incidents', label: 'Incidents & Failsafe', icon: Zap, badge: activeIncidentsCount > 0 ? `${activeIncidentsCount} Active` : null },
-        { id: 'assure-evidence', label: 'Protected Evidence', icon: LockKeyhole, badge: 'RFC 8785' },
-        { id: 'assure-audit', label: 'Audit Ledger', icon: BookOpen, badge: 'Immutable' },
-        { id: 'assure-reports', label: 'Regulatory Dossiers', icon: FileDown, badge: 'Annex IV' },
-        { id: 'assure-simulator', label: 'Governance Simulator', icon: Crosshair, badge: '10 Attacks' },
-        { id: 'assure-readiness', label: 'System Readiness', icon: Award, badge: 'Production' }
-      ]
-    },
-    {
-      id: 'platform-system',
-      label: 'PLATFORM & SYSTEM',
-      items: [
-        { id: 'tools-operations', label: 'Operations Center', icon: Activity, badge: 'Live' },
-        { id: 'tools-integrations', label: 'Universal MCP', icon: Share2, badge: 'Stdio/SSE' },
-        { id: 'tools-deployment', label: 'Production Deployment', icon: Zap, badge: 'Preflight' },
-        { id: 'manage-team', label: 'Team & RBAC', icon: Users, badge: 'RBAC' },
-        { id: 'learn-academy', label: 'CG-AG Academy', icon: GraduationCap, badge: '18 Modules' },
-        { id: 'settings', label: 'Settings', icon: Lock, badge: null }
+        { id: 'studio-builder' as ActiveNavView, label: 'Agent Studio', icon: Bot, badge: null },
+        { id: 'cockpit-control' as ActiveNavView, label: 'Governance Cockpit', icon: Activity, badge: null },
+        { id: 'overview-center' as ActiveNavView, label: 'Governance Center', icon: Shield, badge: null },
+        { id: 'govern-controls' as ActiveNavView, label: '12 Controls Matrix', icon: CheckSquare, badge: null },
+        { id: 'govern-risk' as ActiveNavView, label: 'Risk Engine', icon: AlertTriangle, badge: pendingDecisionsCount > 0 ? `${pendingDecisionsCount}` : null },
+        { id: 'govern-policies' as ActiveNavView, label: 'Policy Engine', icon: FileText, badge: null },
+        { id: 'operate-approvals' as ActiveNavView, label: 'Human Approvals', icon: CheckCircle2, badge: pendingHitlCount > 0 ? `${pendingHitlCount}` : null },
+        { id: 'operate-incidents' as ActiveNavView, label: 'Failsafe & Incidents', icon: Zap, badge: activeIncidentsCount > 0 ? `${activeIncidentsCount}` : null },
+        { id: 'tools-integrations' as ActiveNavView, label: 'Universal MCP', icon: Share2, badge: null },
+        { id: 'manage-team' as ActiveNavView, label: 'Team & RBAC', icon: Users, badge: null },
+        { id: 'learn-academy' as ActiveNavView, label: 'Governance Academy', icon: GraduationCap, badge: null }
       ]
     }
   ];
@@ -242,6 +210,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   };
 
   const findNavItem = (id: ActiveNavView) => {
+    if (id === 'settings') return { id: 'settings' as ActiveNavView, label: 'Settings', icon: Lock, badge: null };
     for (const item of topLevelItems) {
       if (item.id === id) return item;
     }
@@ -267,17 +236,17 @@ export const AppShell: React.FC<AppShellProps> = ({
         <div className="flex items-center space-x-3">
           <div 
             className="flex items-center space-x-2.5 cursor-pointer" 
-            onClick={() => onNavigateToLanding ? onNavigateToLanding() : setActiveView('overview-center')}
+            onClick={() => onNavigateToLanding ? onNavigateToLanding() : setActiveView('ai-agents')}
           >
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-xs">
-              <Shield className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center shadow-xs">
+              <Shield className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center space-x-1.5">
                 <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">ComplyPRO</span>
-                <span className="text-[10px] font-mono font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 px-1.5 py-0.2 rounded border border-sky-200 dark:border-sky-800">Enterprise</span>
+                <span className="text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1.5 py-0.2 rounded border border-slate-200 dark:border-slate-700">Enterprise</span>
               </div>
-              <p className="text-[9px] text-slate-400 font-medium tracking-wide">Powered by CG-AG Framework</p>
+              <p className="text-[10px] text-slate-400 font-medium">AI Agent Governance</p>
             </div>
           </div>
         </div>
@@ -305,17 +274,13 @@ export const AppShell: React.FC<AppShellProps> = ({
                 setIsIndustryMenuOpen(false);
                 setIsUserMenuOpen(false);
               }}
-              className={`flex items-center space-x-2 px-3 py-1.5 rounded-xl border text-xs font-semibold transition cursor-pointer shadow-2xs ${
-                activeLens.id === 'all-modules'
-                  ? 'bg-slate-100 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300'
-                  : 'bg-gradient-to-r from-sky-500/10 via-indigo-500/10 to-transparent border-sky-500/30 text-sky-700 dark:text-sky-300'
-              }`}
+              className="flex items-center space-x-2 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold transition cursor-pointer shadow-2xs"
               title="Personalize sua perspectiva de trabalho por cargo/perfil corporativo"
             >
               <span className="text-sm">{activeLens.icon}</span>
               <div className="flex flex-col text-left">
                 <span className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-mono font-bold leading-none">Role Lens</span>
-                <span className="text-xs font-bold leading-tight truncate max-w-[110px] sm:max-w-[150px]">{activeLens.shortLabel}</span>
+                <span className="text-xs font-bold leading-tight truncate max-w-[110px] sm:max-w-[150px] text-slate-700 dark:text-slate-300">{activeLens.shortLabel}</span>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
             </button>
@@ -351,7 +316,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                           <span className="font-bold text-slate-900 dark:text-white">{lens.name}</span>
                           {activeLens.id === lens.id && (
                             <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-sky-500/20 text-sky-400 border border-sky-500/30">
-                              ATIVA
+                              ACTIVE
                             </span>
                           )}
                         </div>
@@ -446,7 +411,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                 className="flex items-center space-x-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs"
               >
                 <LogIn className="w-3.5 h-3.5" />
-                <span>Entrar</span>
+                <span>Sign In</span>
               </button>
             )}
 
@@ -469,7 +434,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                 {availableOrganizations.length > 1 && (
                   <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
                     <span className="text-[10px] font-bold text-slate-400 uppercase font-mono block mb-1">
-                      Alternar Organização
+                      Switch Organization
                     </span>
                     <div className="space-y-1">
                       {availableOrganizations.map((org) => (
@@ -502,7 +467,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                     className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl flex items-center space-x-2 transition cursor-pointer"
                   >
                     <Users className="w-4 h-4 text-slate-400" />
-                    <span>Gerenciar Equipe & Acessos</span>
+                    <span>Manage Team & Access</span>
                   </button>
 
                   <button
@@ -514,7 +479,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                     className="w-full text-left px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl flex items-center space-x-2 transition cursor-pointer"
                   >
                     <LogOut className="w-4 h-4 text-rose-500" />
-                    <span>Sair da Conta</span>
+                    <span>Sign Out</span>
                   </button>
                 </div>
               </div>
@@ -539,50 +504,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         <aside className="w-64 border-r border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#0f172a] flex flex-col justify-between overflow-y-auto shrink-0 select-none">
           <div className="p-3 space-y-4">
             
-            {/* LENS PRIORITIES SECTION (Elevated Top Workflow) */}
-            {isLensPrioritized && priorityNavItems.length > 0 && (
-              <div className="p-2.5 rounded-2xl bg-gradient-to-b from-sky-500/10 via-indigo-500/5 to-transparent border border-sky-500/20 space-y-2">
-                <div className="flex items-center justify-between px-1.5">
-                  <div className="flex items-center space-x-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-sky-500 animate-pulse" />
-                    <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 tracking-wider uppercase font-mono">
-                      {activeLens.shortLabel} Workflow
-                    </span>
-                  </div>
-                  <span className="text-[9px] font-mono text-slate-400">PRIORITY</span>
-                </div>
-
-                <div className="space-y-0.5">
-                  {priorityNavItems.map((item: any) => {
-                    const Icon = item.icon;
-                    const isActive = activeView === item.id;
-                    return (
-                      <button
-                        key={`priority-${item.id}`}
-                        onClick={() => setActiveView(item.id as ActiveNavView)}
-                        className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                          isActive
-                            ? 'bg-sky-600 text-white shadow-sm'
-                            : 'text-slate-800 dark:text-slate-200 bg-white/70 dark:bg-slate-900/70 hover:bg-white dark:hover:bg-slate-800 border border-slate-200/60 dark:border-slate-800'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2.5 truncate">
-                          <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-sky-500 dark:text-sky-400'}`} />
-                          <span className="truncate">{item.label}</span>
-                        </div>
-                        {item.badge && (
-                          <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono shrink-0 ${
-                            isActive ? 'bg-white/20 text-white' : 'bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300'
-                          }`}>
-                            {item.badge}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            {/* 4 Core Destinations */}
 
             {/* REDESIGNED NAVIGATION: FIXED TOP-LEVEL + 4 COLLAPSIBLE GROUPS */}
             <div className="space-y-3">
@@ -595,19 +517,19 @@ export const AppShell: React.FC<AppShellProps> = ({
                     <button
                       key={`top-${item.id}-${item.label}`}
                       onClick={() => setActiveView(item.id as ActiveNavView)}
-                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
                         isActive
-                          ? 'bg-sky-600 text-white shadow-xs'
-                          : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80'
+                          ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-200'
                       }`}
                     >
                       <div className="flex items-center space-x-2.5 truncate">
-                        <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-sky-500 dark:text-sky-400'}`} />
+                        <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`} />
                         <span className="truncate">{item.label}</span>
                       </div>
                       {item.badge && (
                         <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono shrink-0 ${
-                          isActive ? 'bg-white/20 text-white' : 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/20'
+                          isActive ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
                         }`}>
                           {item.badge}
                         </span>
@@ -617,7 +539,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                 })}
               </div>
 
-              {/* 4 Conceptual Architecture Groups */}
+              {/* Advanced Workspaces (Progressive Disclosure) */}
               <div className="space-y-2">
                 {navGroups.map((group) => {
                   const isOpen = !!openGroups[group.id];
@@ -631,8 +553,8 @@ export const AppShell: React.FC<AppShellProps> = ({
                         onClick={() => toggleGroup(group.id)}
                         className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[10px] font-bold tracking-wider uppercase transition cursor-pointer select-none ${
                           hasActiveItem
-                            ? 'text-sky-600 dark:text-sky-400 bg-sky-50/60 dark:bg-sky-950/30'
-                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
+                            ? 'text-slate-900 dark:text-slate-100 bg-slate-100/60 dark:bg-slate-800/40'
+                            : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100/50 dark:hover:bg-slate-800/40'
                         }`}
                       >
                         <span className="truncate">{group.label}</span>
@@ -659,24 +581,20 @@ export const AppShell: React.FC<AppShellProps> = ({
                                 onClick={() => setActiveView(item.id as ActiveNavView)}
                                 className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
                                   isActive
-                                    ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-semibold border border-sky-200/80 dark:border-sky-800/50'
+                                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
                                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
                                 }`}
                               >
                                 <div className="flex items-center space-x-2.5 truncate">
-                                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-sky-600 dark:text-sky-400' : 'text-slate-400'}`} />
+                                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`} />
                                   <span className="truncate">{item.label}</span>
                                 </div>
                                 {item.badge ? (
-                                  <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono shrink-0 ${
-                                    item.badge.includes('Active') || item.badge.includes('Pending') || item.badge.includes('Action')
-                                      ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
-                                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                                  }`}>
+                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono shrink-0 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                                     {item.badge}
                                   </span>
                                 ) : isPriority ? (
-                                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" title="Item prioritário para seu papel" />
+                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" title="Priority item" />
                                 ) : null}
                               </button>
                             );
@@ -689,6 +607,23 @@ export const AppShell: React.FC<AppShellProps> = ({
               </div>
             </div>
 
+          </div>
+
+          {/* Settings - Visually Separated */}
+          <div className="px-3 py-2 border-t border-slate-200/80 dark:border-slate-800/80">
+            <button
+              onClick={() => setActiveView('settings')}
+              className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
+                activeView === 'settings'
+                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <div className="flex items-center space-x-2.5 truncate">
+                <Lock className={`w-4 h-4 shrink-0 ${activeView === 'settings' ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`} />
+                <span className="truncate">Settings</span>
+              </div>
+            </button>
           </div>
 
           {/* Sidebar Footer */}

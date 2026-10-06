@@ -67,6 +67,34 @@ export class ContinuousRiskDetector {
   }
 
   /**
+   * Directly triggers dynamic suspension on an agent profile.
+   */
+  public static triggerSuspension(tenantId: string, agentId: string, reason: string): void {
+    const profile = this.getProfile(tenantId, agentId);
+    profile.isSuspended = true;
+    profile.suspensionReason = reason;
+  }
+
+  /**
+   * Checks whether an agent is dynamically suspended.
+   */
+  public static isAgentSuspended(tenantId: string, agentId: string): boolean {
+    return this.getProfile(tenantId, agentId).isSuspended;
+  }
+
+  /**
+   * Reinstates an agent, resetting suspension and anomaly counters.
+   */
+  public static reinstateAgent(tenantId: string, agentId: string): void {
+    const profile = this.getProfile(tenantId, agentId);
+    profile.isSuspended = false;
+    profile.suspensionReason = undefined;
+    profile.anomalyScore = 0;
+    profile.violationCount = 0;
+    profile.riskTier = 'LOW';
+  }
+
+  /**
    * Gets or initializes the risk profile for an agent.
    */
   public static getProfile(tenantId: string, agentId: string): AgentRiskProfile {

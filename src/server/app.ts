@@ -26,8 +26,14 @@ import {
   requireRoles,
   defaultRateLimiter
 } from './security/auth-middleware';
+import { PassportSigner } from '../core/passport-signer';
 
 export function createServerApp() {
+  // SEC-P1: Validate production secret configuration on application startup
+  if (process.env.NODE_ENV === 'production') {
+    PassportSigner.validateProductionConfig();
+  }
+
   const app = express();
 
   // SEC-P8-01: Apply Standard Security Headers

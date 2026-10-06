@@ -33,3 +33,7 @@ export * from './capability-registry';
 export * from './evidence-ledger';
 export * from './merkle-tree';
 export * from './isolated-worker';
+export * from './passport-signer';
+export * from './adapters/runtime-adapter';
+export * from './adapters/crewai-runtime-adapter';
+export * from './adapters/nat-runtime-adapter';

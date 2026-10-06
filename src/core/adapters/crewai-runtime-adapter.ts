@@ -32,6 +32,8 @@ import { IsolatedWorker } from '../isolated-worker';
 import { EvidenceLedger } from '../evidence-ledger';
 import { HitlStore } from '../../web/services/hitl-store';
 import { DurableStore } from '../../server/db/durable-store';
+import { RuntimeManager } from '../runtime-manager';
+import { ContinuousRiskDetector } from '../continuous-risk-detector';
 
 export class CrewAiRuntimeAdapter implements AgentRuntimeAdapter {
   private worker: IsolatedWorker;
@@ -286,11 +288,78 @@ export class CrewAiRuntimeAdapter implements AgentRuntimeAdapter {
       throw new Error(`UNKNOWN_EXECUTION_SESSION: Session ${session.executionId} not found`);
     }
 
+    // 1. Process-local early guard
     if (activeSession.status !== 'PAUSED') {
       throw new Error(`ILLEGAL_SESSION_STATE: Cannot resume session in state "${activeSession.status}". Must be PAUSED.`);
     }
 
+    const tenantId = activeSession.tenantId || this.worker.passport.tenantId || 'TENANT-DEFAULT';
+
+    // 2. Authoritative durable conditional claim (Multi-instance / Cluster atomic CAS)
+    const claim = await DurableStore.claimExecutionSessionConditional(session.executionId, tenantId);
+    if (!claim.success || claim.affectedRows === 0) {
+      activeSession.status = 'CLAIMED_FOR_EXECUTION';
+      throw new Error(`ILLEGAL_SESSION_STATE: Session "${session.executionId}" could not be claimed for execution (already claimed or not in PAUSED state)`);
+    }
+
+    activeSession.status = 'CLAIMED_FOR_EXECUTION';
+    activeSession.updatedAt = new Date().toISOString();
+
     const timestamp = new Date().toISOString();
+
+    // Mandatory Passport / Runtime Revocation Check
+    let isRevoked = false;
+    let revocationReason = '';
+
+    if ((this.worker.passport.status as string) === 'REVOKED') {
+      isRevoked = true;
+      revocationReason = 'Passport status is REVOKED';
+    }
+
+    if (!isRevoked && this.worker.runtimeId) {
+      try {
+        const instance = RuntimeManager.getInstance(this.worker.runtimeId);
+        if (instance && instance.status === 'REVOKED') {
+          isRevoked = true;
+          revocationReason = `Runtime [${this.worker.runtimeId}] has been REVOKED: ${instance.error || 'Revoked during pause'}`;
+        }
+      } catch {
+        // Fallback
+      }
+    }
+
+    if (!isRevoked) {
+      const riskProfile = ContinuousRiskDetector.getProfile(tenantId, this.worker.agentId);
+      if (riskProfile.isSuspended) {
+        isRevoked = true;
+        revocationReason = `Agent [${this.worker.agentId}] is SUSPENDED by Continuous Guardian`;
+      }
+    }
+
+    if (isRevoked) {
+      activeSession.status = 'BLOCKED';
+      activeSession.updatedAt = new Date().toISOString();
+
+      EvidenceLedger.append({
+        evidenceId: `ev_blk_${crypto.randomBytes(4).toString('hex')}`,
+        timestamp: new Date().toISOString(),
+        eventType: 'AGENT_EXECUTION_BLOCKED',
+        agentId: this.worker.agentId,
+        passportFingerprint: this.worker.passport.passportFingerprint,
+        complianceProfileId: this.worker.passport.complianceProfileChecksum,
+        complianceProfileChecksum: this.worker.passport.complianceProfileChecksum,
+        executionResult: 'BLOCKED',
+        payloadDigest: crypto.createHash('sha256').update(JSON.stringify({ reason: revocationReason })).digest('hex')
+      }, tenantId);
+
+      return {
+        executionId: session.executionId,
+        status: 'BLOCKED',
+        toolExecuted: false,
+        toolExecutionCount: this.executionCounters.get(session.executionId) || 0,
+        error: `EXECUTION_ABORTED_REVOKED: ${revocationReason}`
+      };
+    }
 
     // 1. Emit HITL_DECISION evidence
     EvidenceLedger.append({
@@ -304,7 +373,7 @@ export class CrewAiRuntimeAdapter implements AgentRuntimeAdapter {
       operatorId,
       operatorDecision,
       payloadDigest: crypto.createHash('sha256').update(JSON.stringify({ gateId: activeSession.gateId, decision: operatorDecision })).digest('hex')
-    });
+    }, tenantId);
 
     // If operator rejected:
     if (operatorDecision === 'REJECTED') {

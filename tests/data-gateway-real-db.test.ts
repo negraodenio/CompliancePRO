@@ -183,6 +183,11 @@ CapabilityRegistry.register({
   provider: 'supabase-postgresql'
 });
 provision.passport.declaredTools.push('supabase.scans.read');
+provision.passport.governedCapabilities = [
+  ...(provision.passport.governedCapabilities || []),
+  { capability: 'supabase.scans.read', channel: 'DATA', riskTier: 'LOW' }
+];
+AgentProvisioner.signPassport(provision.passport, provision.agentId);
 
 // Query with non-existent tenant/organization ID
 const isolatedTenantQuery = await worker.requestData(

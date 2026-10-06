@@ -493,10 +493,41 @@ export class DataGateway {
       }
     }
 
-    // 7. Resolve Compliance Profile
+    // 7. Resolve Compliance Profile (Fail Closed — Strict Verification)
     const profile = ComplianceProfileRegistry.getAllProfiles().find(
       p => p.checksum === context.passport.complianceProfileChecksum
-    ) || ComplianceProfileRegistry.getProfile('CP-EU-AI-ACT-HIGH-RISK-FINANCIAL')!;
+    );
+
+    if (!profile) {
+      const errorMsg = `UNRESOLVED_COMPLIANCE_PROFILE: Profile checksum "${context.passport.complianceProfileChecksum}" could not be matched`;
+      EvidenceLedger.append({
+        evidenceId: `ev_derr_${crypto.randomBytes(4).toString('hex')}`,
+        timestamp: new Date().toISOString(),
+        eventType: 'DATA_ERROR',
+        agentId: context.agentId,
+        passportFingerprint: context.passport.passportFingerprint,
+        complianceProfileId: 'UNKNOWN_PROFILE',
+        complianceProfileChecksum: context.passport.complianceProfileChecksum,
+        channel: 'DATA',
+        capability: context.capability,
+        action: context.action,
+        verdict: 'BLOCK',
+        executionResult: 'FAILED',
+        payloadDigest: crypto.createHash('sha256').update(errorMsg).digest('hex')
+      }, tenantId);
+
+      return {
+        status: 'FAILED',
+        verdict: 'BLOCK',
+        executionId,
+        capability: context.capability,
+        provider: 'unknown',
+        latencyMs: Date.now() - startTime,
+        decisionLatencyMs: 0,
+        providerCallCount: 0,
+        error: errorMsg
+      };
+    }
 
     // 8. Record DATA_REQUEST in Evidence Ledger (Zero raw secrets / zero raw PII)
     const requestDigest = crypto.createHash('sha256')
@@ -523,21 +554,16 @@ export class DataGateway {
       payloadDigest: requestDigest
     }, tenantId);
 
-    // 9. Guardian Evaluation
-    const guardianVerdict = GuardianService.evaluateCapability({
+    // 9. Active Guardian Evaluation (Continuous Runtime Governance)
+    const guardianVerdict = GuardianService.evaluateActiveCapability({
       agent: {
         id: context.agentId,
         name: context.passport.runtime?.framework ? `${context.passport.runtime.framework}-agent` : 'governed-agent',
         version: context.passport.runtime?.frameworkVersion
       },
       passport: {
-        passportId: context.passport.passportId,
-        passportFingerprint: context.passport.passportFingerprint,
-        complianceProfileChecksum: context.passport.complianceProfileChecksum,
-        declaredTools: context.passport.declaredTools,
-        governedCapabilities: context.passport.governedCapabilities as any,
-        toolManifestHash: context.passport.toolManifestHash,
-        riskTier: context.passport.riskTier
+        ...context.passport,
+        tenantId: context.passport.tenantId || tenantId
       },
       complianceProfile: profile,
       channel: 'DATA',
@@ -549,7 +575,7 @@ export class DataGateway {
         ...(context.parameters || {})
       },
       context: {
-        tenantId
+        tenantId: context.passport.tenantId || tenantId
       }
     });
 

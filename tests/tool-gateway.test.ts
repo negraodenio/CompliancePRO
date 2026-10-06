@@ -103,6 +103,7 @@ provision.passport.governedCapabilities = [
   ...(provision.passport.governedCapabilities || []),
   { capability: 'tracked.action', channel: 'TOOL', riskTier: 'LOW' }
 ];
+AgentProvisioner.signPassport(provision.passport, provision.agentId);
 
 const runtimeInstance = RuntimeManager.createRuntime(provision.runtimeSpec, provision.passport);
 const startedRuntime = RuntimeManager.startRuntime(runtimeInstance.runtimeId);
@@ -348,6 +349,11 @@ CapabilityRegistry.register({
 });
 
 provision.passport.declaredTools.push('flaky.tool');
+provision.passport.governedCapabilities = [
+  ...(provision.passport.governedCapabilities || []),
+  { capability: 'flaky.tool', channel: 'TOOL', riskTier: 'LOW' }
+];
+AgentProvisioner.signPassport(provision.passport, provision.agentId);
 const errorRes = await ToolGateway.invokeTool({
   agentId: provision.agentId,
   passportId: provision.passportId,

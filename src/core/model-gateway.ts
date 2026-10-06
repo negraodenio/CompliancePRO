@@ -39,6 +39,7 @@ export interface ModelInvocationRequest {
     redactPii?: boolean;
     storeFullPrompt?: boolean;
   };
+  tenantId?: string;
 }
 
 export interface ModelTokenUsage {
@@ -311,13 +312,8 @@ export class ModelGateway {
         version: request.passport.runtime?.frameworkVersion
       },
       passport: {
-        passportId: request.passport.passportId,
-        passportFingerprint: request.passport.passportFingerprint,
-        complianceProfileChecksum: request.passport.complianceProfileChecksum,
-        declaredTools: request.passport.declaredTools,
-        governedCapabilities: request.passport.governedCapabilities as any,
-        toolManifestHash: request.passport.toolManifestHash,
-        riskTier: request.passport.riskTier
+        ...request.passport,
+        tenantId: request.passport.tenantId || request.tenantId
       },
       complianceProfile: profile,
       modelName: request.model,
@@ -327,6 +323,9 @@ export class ModelGateway {
         model: request.model,
         maxTokens: request.maxTokens,
         ...(request.metadata || {})
+      },
+      context: {
+        tenantId: request.tenantId || request.passport.tenantId
       }
     });
 

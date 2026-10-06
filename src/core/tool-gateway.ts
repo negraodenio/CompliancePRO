@@ -16,6 +16,9 @@ import { ComplianceProfileRegistry } from './compliance-compiler';
 import { AgentPassport } from './compliance-contract';
 import { CapabilityRegistry, CapabilityAction } from './capability-registry';
 import { EvidenceLedger, canonicalizeJson } from './evidence-ledger';
+import { ContinuousRiskDetector } from './continuous-risk-detector';
+import { RuntimeManager } from './runtime-manager';
+import { DurableStore } from '../server/db/durable-store';
 
 export interface ToolInvocationContext {
   agentId: string;
@@ -135,7 +138,7 @@ export class ToolGateway {
   private static activeSessions: Map<string, {
     context: ToolInvocationContext;
     gateId?: string;
-    status: 'PAUSED' | 'APPROVED' | 'REJECTED';
+    status: 'PAUSED' | 'APPROVED' | 'REJECTED' | 'COMPLETED' | 'CLAIMED_FOR_EXECUTION' | 'BLOCKED';
   }> = new Map();
 
   static {
@@ -259,18 +262,16 @@ export class ToolGateway {
         version: context.passport.runtime?.frameworkVersion
       },
       passport: {
-        passportId: context.passport.passportId,
-        passportFingerprint: context.passport.passportFingerprint,
-        complianceProfileChecksum: context.passport.complianceProfileChecksum,
-        declaredTools: context.passport.declaredTools,
-        governedCapabilities: context.passport.governedCapabilities as any,
-        toolManifestHash: context.passport.toolManifestHash,
-        riskTier: context.passport.riskTier
+        ...context.passport,
+        tenantId: context.passport.tenantId || context.tenantId
       },
       complianceProfile: profile,
       toolName: context.capability,
       actionType: context.action,
-      payload: context.payload
+      payload: context.payload,
+      context: {
+        tenantId: context.tenantId || context.passport.tenantId
+      }
     });
 
     const decisionLatencyMs = guardianVerdict.decisionLatencyMs;
@@ -312,6 +313,26 @@ export class ToolGateway {
         gateId: guardianVerdict.gateId,
         status: 'PAUSED'
       });
+
+      const tenantId = context.tenantId || context.passport.tenantId || 'TENANT-DEFAULT';
+      try {
+        DurableStore.saveExecutionSession({
+          executionId,
+          agentId: context.agentId,
+          runtimeId: context.runtimeId || 'rt_unbound',
+          passportId: context.passportId || context.passport.passportId,
+          status: 'PAUSED',
+          toolExecutionCount: 0,
+          gateId: guardianVerdict.gateId,
+          pendingCapability: context.capability,
+          pendingContext: context,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          tenantId
+        }, tenantId);
+      } catch {
+        // Safe persistence fallback
+      }
 
       return {
         status: 'PAUSED',
@@ -427,15 +448,85 @@ export class ToolGateway {
       throw new Error(`UNKNOWN_EXECUTION_SESSION: Execution session "${executionId}" not found in Tool Gateway`);
     }
 
+    // 1. Process-local early guard
     if (session.status !== 'PAUSED') {
       throw new Error(`ILLEGAL_SESSION_STATE: Session "${executionId}" is not in PAUSED state`);
     }
+
+    const tenantId = session.context.tenantId || session.context.passport.tenantId || 'TENANT-DEFAULT';
+
+    // 2. Authoritative durable conditional claim (Multi-instance / Cluster atomic CAS)
+    const claim = await DurableStore.claimExecutionSessionConditional(executionId, tenantId);
+    if (!claim.success || claim.affectedRows === 0) {
+      session.status = 'CLAIMED_FOR_EXECUTION';
+      throw new Error(`ILLEGAL_SESSION_STATE: Session "${executionId}" could not be claimed for execution (already claimed or not in PAUSED state)`);
+    }
+    session.status = 'CLAIMED_FOR_EXECUTION';
 
     const timestamp = new Date().toISOString();
     const profile = ComplianceProfileRegistry.getAllProfiles().find(
       p => p.checksum === session.context.passport.complianceProfileChecksum
     );
     const profileId = profile?.profileId || 'UNKNOWN_PROFILE';
+
+    // Mandatory Passport / Runtime Revocation Check
+    let isRevoked = false;
+    let revocationReason = '';
+
+    if ((session.context.passport.status as string) === 'REVOKED') {
+      isRevoked = true;
+      revocationReason = 'Passport status is REVOKED';
+    }
+
+    if (!isRevoked && session.context.runtimeId) {
+      try {
+        const instance = RuntimeManager.getInstance(session.context.runtimeId);
+        if (instance && instance.status === 'REVOKED') {
+          isRevoked = true;
+          revocationReason = `Runtime [${session.context.runtimeId}] has been REVOKED: ${instance.error || 'Revoked during pause'}`;
+        }
+      } catch {
+        // Fallback
+      }
+    }
+
+    if (!isRevoked) {
+      const riskProfile = ContinuousRiskDetector.getProfile(tenantId, session.context.agentId);
+      if (riskProfile.isSuspended) {
+        isRevoked = true;
+        revocationReason = `Agent [${session.context.agentId}] is SUSPENDED by Continuous Guardian`;
+      }
+    }
+
+    if (isRevoked) {
+      session.status = 'BLOCKED';
+      EvidenceLedger.append({
+        evidenceId: `ev_blk_${crypto.randomBytes(4).toString('hex')}`,
+        timestamp: new Date().toISOString(),
+        eventType: 'AGENT_EXECUTION_BLOCKED',
+        agentId: session.context.agentId,
+        passportFingerprint: session.context.passport.passportFingerprint,
+        complianceProfileId: profileId,
+        complianceProfileChecksum: session.context.passport.complianceProfileChecksum,
+        action: session.context.action,
+        capability: session.context.capability,
+        verdict: 'BLOCK',
+        executionResult: 'BLOCKED',
+        payloadDigest: crypto.createHash('sha256').update(revocationReason).digest('hex')
+      }, tenantId);
+
+      return {
+        status: 'BLOCKED',
+        verdict: 'BLOCK',
+        executionId,
+        capability: session.context.capability,
+        provider: 'governed-provider',
+        latencyMs: 1,
+        decisionLatencyMs: 1,
+        providerCallCount: 0,
+        error: `EXECUTION_ABORTED_REVOKED: ${revocationReason}`
+      };
+    }
 
     // 1. Emit HITL_DECISION in Evidence Ledger
     EvidenceLedger.append({
@@ -449,7 +540,7 @@ export class ToolGateway {
       operatorId,
       operatorDecision: decision,
       payloadDigest: crypto.createHash('sha256').update(JSON.stringify({ gateId: session.gateId, decision })).digest('hex')
-    });
+    }, tenantId);
 
     if (decision === 'REJECTED') {
       session.status = 'REJECTED';
@@ -466,7 +557,7 @@ export class ToolGateway {
         verdict: 'BLOCK',
         executionResult: 'BLOCKED',
         payloadDigest: crypto.createHash('sha256').update('EXECUTION_REJECTED_BY_OPERATOR').digest('hex')
-      });
+      }, tenantId);
 
       return {
         status: 'BLOCKED',

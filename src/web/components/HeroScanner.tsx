@@ -51,36 +51,7 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
   };
 
   return (
-    <div className="pt-2 pb-6 px-1 sm:px-2 max-w-6xl mx-auto space-y-6 animate-fadeIn">
-      
-      {/* Top Banner / Pill Badges */}
-      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-center">
-        <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-600 dark:text-sky-400 text-xs font-semibold backdrop-blur-sm">
-          <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-          <span>Motor AST Estático & Dinâmico</span>
-        </div>
-        <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-semibold backdrop-blur-sm">
-          <Scale className="w-3.5 h-3.5" />
-          <span>13 Regulações Globais (EU AI Act, LGPD, NIST, OWASP)</span>
-        </div>
-        <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold backdrop-blur-sm">
-          <Lock className="w-3.5 h-3.5" />
-          <span>Zero Data Retention • Análise Local</span>
-        </div>
-      </div>
-
-      {/* Hero Header */}
-      <div className="text-center max-w-3xl mx-auto space-y-2.5">
-        <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
-          Governança, Riscos & Compliance para{' '}
-          <span className="bg-gradient-to-r from-sky-600 via-indigo-600 to-indigo-400 dark:from-sky-400 dark:via-indigo-400 dark:to-emerald-400 bg-clip-text text-transparent">
-            Agentes e Modelos de IA
-          </span>
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm leading-relaxed max-w-2xl mx-auto">
-          Escaneie repositórios e codebases para descobrir <strong>Shadow AI</strong>, catalogar agentes em arquitetura SIPOC, mapear violações de conformidade e alimentar o plano de controle de governança.
-        </p>
-      </div>
+    <div className="space-y-4 animate-fadeIn">
 
       {/* Ingestion Workstation Card */}
       <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden elevation-card">
@@ -90,53 +61,53 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
           <button
             onClick={() => setActiveTab('github')}
             disabled={isScanning}
-            className={`flex-1 min-w-[130px] px-3.5 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 cursor-pointer ${
+            className={`flex-1 min-w-[130px] px-3.5 py-2 rounded-xl text-xs font-medium transition flex items-center justify-center space-x-2 cursor-pointer ${
               activeTab === 'github'
-                ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-xs border border-slate-200 dark:border-slate-700'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs border border-slate-200 dark:border-slate-700 font-semibold'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/40'
             }`}
           >
             <Github className="w-4 h-4" />
-            <span>Repositório GitHub</span>
+            <span>GitHub Repository</span>
           </button>
 
           <button
             onClick={() => setActiveTab('zip')}
             disabled={isScanning}
-            className={`flex-1 min-w-[130px] px-3.5 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 cursor-pointer ${
+            className={`flex-1 min-w-[130px] px-3.5 py-2 rounded-xl text-xs font-medium transition flex items-center justify-center space-x-2 cursor-pointer ${
               activeTab === 'zip'
-                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs border border-slate-200 dark:border-slate-700'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs border border-slate-200 dark:border-slate-700 font-semibold'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/40'
             }`}
           >
             <FileArchive className="w-4 h-4" />
-            <span>Arquivo .ZIP</span>
+            <span>ZIP Archive</span>
           </button>
 
           <button
             onClick={() => setActiveTab('folder')}
             disabled={isScanning}
-            className={`flex-1 min-w-[130px] px-3.5 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 cursor-pointer ${
+            className={`flex-1 min-w-[130px] px-3.5 py-2 rounded-xl text-xs font-medium transition flex items-center justify-center space-x-2 cursor-pointer ${
               activeTab === 'folder'
-                ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs border border-slate-200 dark:border-slate-700'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs border border-slate-200 dark:border-slate-700 font-semibold'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/40'
             }`}
           >
             <FolderUp className="w-4 h-4" />
-            <span>Pasta Local</span>
+            <span>Local Directory</span>
           </button>
 
           <button
             onClick={() => setActiveTab('demo')}
             disabled={isScanning}
-            className={`flex-1 min-w-[130px] px-3.5 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 cursor-pointer ${
+            className={`flex-1 min-w-[130px] px-3.5 py-2 rounded-xl text-xs font-medium transition flex items-center justify-center space-x-2 cursor-pointer ${
               activeTab === 'demo'
-                ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-xs border border-slate-200 dark:border-slate-700'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs border border-slate-200 dark:border-slate-700 font-semibold'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/40'
             }`}
           >
             <Sparkles className="w-4 h-4" />
-            <span>Cenários Demo</span>
+            <span>Demo Scenarios</span>
           </button>
         </div>
 
@@ -148,7 +119,7 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="block text-[11px] font-bold tracking-wider text-slate-700 dark:text-slate-300 uppercase font-mono">
-                  URL do Repositório Git (Público ou Privado)
+                  Git Repository URL (Public or Private)
                 </label>
                 <div className="flex flex-col sm:flex-row items-center gap-2.5">
                   <div className="relative flex-1 w-full">
@@ -159,33 +130,33 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
                       type="text"
                       value={gitUrl}
                       onChange={(e) => setGitUrl(e.target.value)}
-                      placeholder="https://github.com/empresa/meu-projeto-ia"
+                      placeholder="https://github.com/org/ai-agent-project"
                       disabled={isScanning}
-                      className="w-full pl-10 pr-4 py-3 bg-slate-50/70 dark:bg-slate-950 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:bg-white dark:focus:bg-slate-950 focus:border-sky-500 dark:focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all font-mono"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50/70 dark:bg-slate-950 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded-xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:bg-white dark:focus:bg-slate-950 focus:border-slate-400 dark:focus:border-slate-600 transition-all font-mono"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={isScanning || !gitUrl.trim()}
-                    className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-sky-600 via-indigo-600 to-indigo-700 hover:from-sky-500 hover:to-indigo-600 text-white font-bold text-xs sm:text-sm rounded-xl transition-all flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0 shadow-md shadow-sky-500/10 active:scale-[0.99]"
+                    className="w-full sm:w-auto px-5 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 font-semibold text-xs rounded-xl transition flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0 shadow-xs"
                   >
                     {isScanning ? (
                       <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Processando AST...</span>
+                        <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                        <span>Scanning AST...</span>
                       </>
                     ) : (
                       <>
-                        <span>Escanear Repositório</span>
-                        <ArrowRight className="w-4 h-4 text-sky-200" />
+                        <span>Scan Repository</span>
+                        <ArrowRight className="w-4 h-4" />
                       </>
                     )}
                   </button>
                 </div>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Dica: Repositórios públicos do GitHub são analisados em tempo real na memória. Chamadas a modelos LLM, agentes, ferramentas MCP e credenciais são catalogados automaticamente.
+                Repositories are analyzed in memory. Models, frameworks, tools, and access boundaries are mapped automatically.
               </p>
             </form>
           )}
@@ -198,8 +169,8 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
               onDrop={handleDrop}
               className={`p-6 sm:p-8 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center text-center gap-3 ${
                 isDragOver
-                  ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20 scale-[1.01]'
-                  : 'border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-950/50 hover:border-indigo-400 dark:hover:border-indigo-500'
+                  ? 'border-slate-400 bg-slate-100/50 dark:bg-slate-900/50'
+                  : 'border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-950/50 hover:border-slate-400 dark:hover:border-slate-600'
               }`}
             >
               <input
@@ -214,23 +185,23 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
                   }
                 }}
               />
-              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                <FileArchive className="w-6 h-6" />
+              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center">
+                <FileArchive className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">Arraste e solte seu arquivo .ZIP aqui</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Ou selecione um arquivo compactado contendo seu código-fonte para ingestão imediata
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Drag and drop your .ZIP archive here</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Or select a compressed archive containing your agent codebase
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => zipInputRef.current?.click()}
                 disabled={isScanning}
-                className="mt-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition flex items-center space-x-2 shadow-sm cursor-pointer"
+                className="mt-1 px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 rounded-lg text-xs font-semibold transition flex items-center space-x-2 shadow-xs cursor-pointer"
               >
                 <FileArchive className="w-4 h-4" />
-                <span>Selecionar Arquivo .ZIP</span>
+                <span>Select .ZIP File</span>
               </button>
             </div>
           )}
@@ -252,23 +223,23 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
                   }
                 }}
               />
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                <FolderUp className="w-6 h-6" />
+              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center">
+                <FolderUp className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">Ingestão Direta de Pasta de Código</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Selecione um diretório em sua máquina local. Nenhum dado é enviado para servidores externos.
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Scan Local Project Directory</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Select a directory on your local machine. Processed entirely in memory.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => folderInputRef.current?.click()}
                 disabled={isScanning}
-                className="mt-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center space-x-2 shadow-sm cursor-pointer"
+                className="mt-1 px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 rounded-lg text-xs font-semibold transition flex items-center space-x-2 shadow-xs cursor-pointer"
               >
                 <FolderUp className="w-4 h-4" />
-                <span>Escolher Pasta no Disco</span>
+                <span>Choose Local Directory</span>
               </button>
             </div>
           )}
@@ -278,7 +249,7 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                  Selecione um Cenário Corporativo Pré-Configurado
+                  Select Pre-Configured Enterprise Scenario
                 </span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400">1-Click Live Ingestion</span>
               </div>
@@ -300,12 +271,12 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                      CrewAI + LangChain com decisões autônomas de crédito, scoring e alta criticidade financeira.
+                      CrewAI + LangChain with automated credit decisions, scoring, and financial criticality.
                     </p>
                   </div>
                   <div>
                     <span className="inline-block px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 rounded-md">
-                      ALTO RISCO • BCB / LGPD
+                      HIGH RISK • FINANCIAL / EU AI ACT
                     </span>
                   </div>
                 </button>
@@ -326,12 +297,12 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Assistente médico com análise de sintomas, dados clínicos sensíveis e triagem automatizada.
+                      Medical assistant with symptom analysis, sensitive clinical records, and automated triage.
                     </p>
                   </div>
                   <div>
                     <span className="inline-block px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-md">
-                      ALTO RISCO • EU AI ACT / ANVISA
+                      HIGH RISK • HEALTHCARE / EU AI ACT
                     </span>
                   </div>
                 </button>
@@ -352,12 +323,12 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Chatbot com MCP tools, chamadas externas de API e validação contra vulnerabilidades OWASP.
+                      Customer support agent with MCP tools, external API calls, and OWASP guardrails.
                     </p>
                   </div>
                   <div>
                     <span className="inline-block px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-md">
-                      OWASP LLM TOP 10
+                      MODERATE RISK • OWASP LLM TOP 10
                     </span>
                   </div>
                 </button>
@@ -371,7 +342,7 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
               <div className="flex items-center justify-between text-xs">
                 <span className="text-sky-900 dark:text-sky-300 font-mono font-semibold flex items-center space-x-2">
                   <div className="w-2.5 h-2.5 rounded-full bg-sky-500 animate-ping" />
-                  <span>{scanProgress.message || 'Analisando AST e regras de conformidade...'}</span>
+                  <span>{scanProgress.message || 'Analyzing AST patterns and agent capability manifests...'}</span>
                 </span>
                 <span className="text-sky-700 dark:text-sky-400 font-mono font-bold">{scanProgress.percent}%</span>
               </div>
@@ -395,9 +366,9 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
             <CheckCircle className="w-4 h-4" />
           </div>
           <div className="space-y-1">
-            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">Transparência Auditável</h4>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">Audit Evidence</h4>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-              Metodologia de pontuação explicável com evidências criptográficas para auditoria.
+              Tamper-evident cryptographic ledger of agent actions and decisions.
             </p>
           </div>
         </div>
@@ -407,9 +378,9 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
             <Scale className="w-4 h-4" />
           </div>
           <div className="space-y-1">
-            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">13 Regulações Globais</h4>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">Global Standards</h4>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-              Alinhamento direto a normas de IA, privacidade e segurança cibernética corporativa.
+              Direct alignment with EU AI Act, NIST AI RMF, and ISO/IEC 42001.
             </p>
           </div>
         </div>
@@ -419,9 +390,9 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
             <BarChart3 className="w-4 h-4" />
           </div>
           <div className="space-y-1">
-            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">Relatórios Executivos</h4>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">Audit Dossiers</h4>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-              Dossiês regulatórios, matrizes de risco e planos de remediação estruturados.
+              Pre-compiled compliance profiles, risk matrices, and evidence chains.
             </p>
           </div>
         </div>
@@ -431,9 +402,9 @@ export const HeroScanner: React.FC<HeroScannerProps> = ({
             <Lock className="w-4 h-4" />
           </div>
           <div className="space-y-1">
-            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">Privacidade & Segurança</h4>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">Zero Secret Leaks</h4>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-              Análise local opcional. Seus dados e códigos nunca são usados para treinamento.
+              Air-gapped worker execution. Provider API keys are held out-of-band.
             </p>
           </div>
         </div>

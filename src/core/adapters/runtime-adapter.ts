@@ -17,7 +17,7 @@ import { CapabilityAction } from '../capability-registry';
 import { IsolatedWorker } from '../isolated-worker';
 import { AgentPassport } from '../compliance-contract';
 
-export type ExecutionStatus = 'CREATED' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'BLOCKED' | 'FAILED';
+export type ExecutionStatus = 'CREATED' | 'RUNNING' | 'PAUSED' | 'CLAIMED_FOR_EXECUTION' | 'COMPLETED' | 'BLOCKED' | 'FAILED';
 
 export interface CapabilityInvocationContext {
   agentId: string;
@@ -38,7 +38,7 @@ export interface ExecutionSession {
   status: ExecutionStatus;
   pauseReason?: string;
   pendingCapability?: string;
-  pendingContext?: CapabilityInvocationContext;
+  pendingContext?: CapabilityInvocationContext | Record<string, any>;
   gateId?: string;
   toolExecutionCount: number;
   createdAt: string;

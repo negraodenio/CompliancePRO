@@ -123,6 +123,8 @@ export interface AgentPassport {
     riskTier?: string;
     requiresHitl?: boolean;
   }>;
+  declaredModels?: string[];
+  declaredDataScopes?: string[];
   runtime?: {
     framework: string;
     frameworkVersion?: string;

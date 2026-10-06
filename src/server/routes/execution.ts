@@ -11,19 +11,20 @@
 
 import { Router, Request, Response } from 'express';
 import { CrewAiRuntimeAdapter } from '../../core/adapters/crewai-runtime-adapter';
+import { NatRuntimeAdapter } from '../../core/adapters/nat-runtime-adapter';
 import { ExecutionSession } from '../../core/adapters/runtime-adapter';
 import { requireRoles, defaultRateLimiter } from '../security/auth-middleware';
 import { DurableStore } from '../db/durable-store';
 
 // In-memory registry of active adapters for the REST API
 export class ExecutionAdapterRegistry {
-  private static adapters: Map<string, CrewAiRuntimeAdapter> = new Map();
+  private static adapters: Map<string, CrewAiRuntimeAdapter | NatRuntimeAdapter> = new Map();
 
-  public static registerAdapter(executionId: string, adapter: CrewAiRuntimeAdapter): void {
+  public static registerAdapter(executionId: string, adapter: CrewAiRuntimeAdapter | NatRuntimeAdapter): void {
     this.adapters.set(executionId, adapter);
   }
 
-  public static getAdapter(executionId: string): CrewAiRuntimeAdapter | undefined {
+  public static getAdapter(executionId: string): (CrewAiRuntimeAdapter | NatRuntimeAdapter) | undefined {
     return this.adapters.get(executionId);
   }
 
@@ -32,7 +33,7 @@ export class ExecutionAdapterRegistry {
   }
 }
 
-export async function getOrRecoverAdapter(executionId: string): Promise<{ adapter?: CrewAiRuntimeAdapter; session?: ExecutionSession }> {
+export async function getOrRecoverAdapter(executionId: string): Promise<{ adapter?: CrewAiRuntimeAdapter | NatRuntimeAdapter; session?: ExecutionSession }> {
   let adapter = ExecutionAdapterRegistry.getAdapter(executionId);
   if (adapter) {
     return { adapter, session: adapter.getSession(executionId) };
@@ -70,7 +71,8 @@ export async function getOrRecoverAdapter(executionId: string): Promise<{ adapte
   }
 
   if (worker) {
-    adapter = new CrewAiRuntimeAdapter(worker);
+    const isNat = worker.passport.runtime?.framework === 'nat' || worker.passport.runtime?.framework === 'nvidia-nat';
+    adapter = isNat ? new NatRuntimeAdapter(worker) : new CrewAiRuntimeAdapter(worker);
     const session: ExecutionSession = {
       executionId: stored.execution_id,
       agentId: stored.agent_id,

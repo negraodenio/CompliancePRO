@@ -64,13 +64,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setLoading(false);
     if (res.success) {
       FunnelAnalytics.track('GOVERNANCE_ENTERED', { authMode: 'login' });
-      setSuccessMsg('Login realizado com sucesso!');
+      setSuccessMsg('Signed in successfully!');
       setTimeout(() => {
         onClose();
         onSuccess?.();
       }, 600);
     } else {
-      setErrorMsg(res.error || 'Falha ao autenticar.');
+      setErrorMsg(res.error || 'Authentication failed.');
     }
   };
 
@@ -92,13 +92,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (res.success) {
       FunnelAnalytics.track('WORKSPACE_CREATED', { desiredRole });
       FunnelAnalytics.track('GOVERNANCE_ENTERED', { authMode: 'signup' });
-      setSuccessMsg('Empresa e conta criadas com sucesso!');
+      setSuccessMsg('Organization and account created successfully!');
       setTimeout(() => {
         onClose();
         onSuccess?.();
       }, 800);
     } else {
-      setErrorMsg(res.error || 'Falha ao criar conta.');
+      setErrorMsg(res.error || 'Failed to create account.');
     }
   };
 
@@ -121,16 +121,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({ detail: 'Erro ao aceitar convite' }));
-        throw new Error(data.detail || 'Convite inválido');
+        const data = await res.json().catch(() => ({ detail: 'Error accepting invitation' }));
+        throw new Error(data.detail || 'Invalid invitation');
       }
 
-      setSuccessMsg('Convite aceito com sucesso! Bem-vindo à organização.');
+      setSuccessMsg('Invitation accepted! Welcome to the organization.');
       setTimeout(() => {
         window.location.reload();
       }, 1000);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao processar convite.');
+      setErrorMsg(err.message || 'Error processing invitation.');
     } finally {
       setLoading(false);
     }
@@ -176,235 +176,235 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         )}
 
-        {/* Tab Navigation */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-900/60 p-1 m-4 rounded-2xl">
-          <button
-            onClick={() => { setTab('login'); setErrorMsg(''); setSuccessMsg(''); }}
-            className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
-              tab === 'login'
-                ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-xs'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            Entrar
-          </button>
-          <button
-            onClick={() => { setTab('signup'); setErrorMsg(''); setSuccessMsg(''); }}
-            className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
-              tab === 'signup'
-                ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-xs'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            Criar Empresa
-          </button>
-          <button
-            onClick={() => { setTab('invite'); setErrorMsg(''); setSuccessMsg(''); }}
-            className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
-              tab === 'invite'
-                ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-xs'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            Aceitar Convite
-          </button>
-        </div>
+          {/* Tab Navigation */}
+          <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-900/60 p-1 m-4 rounded-2xl">
+            <button
+              onClick={() => { setTab('login'); setErrorMsg(''); setSuccessMsg(''); }}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
+                tab === 'login'
+                  ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => { setTab('signup'); setErrorMsg(''); setSuccessMsg(''); }}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
+                tab === 'signup'
+                  ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              Create Organization
+            </button>
+            <button
+              onClick={() => { setTab('invite'); setErrorMsg(''); setSuccessMsg(''); }}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition ${
+                tab === 'invite'
+                  ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              Accept Invitation
+            </button>
+          </div>
 
-        {/* Form Body */}
-        <div className="p-6 pt-0 space-y-4">
-          
-          {errorMsg && (
-            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center space-x-2">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
-
-          {successMsg && (
-            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs flex items-center space-x-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
-              <span>{successMsg}</span>
-            </div>
-          )}
-
-          {/* 1. LOGIN FORM */}
-          {tab === 'login' && (
-            <form onSubmit={handleLogin} className="space-y-3.5">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  E-mail Corporativo
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="seu.email@empresa.com"
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-sky-500"
-                  />
-                </div>
+          {/* Form Body */}
+          <div className="p-6 pt-0 space-y-4">
+            
+            {errorMsg && (
+              <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center space-x-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{errorMsg}</span>
               </div>
+            )}
 
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Senha
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••••••"
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-sky-500"
-                  />
-                </div>
+            {successMsg && (
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>{successMsg}</span>
               </div>
+            )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full mt-2 py-2.5 px-4 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition cursor-pointer shadow-sm disabled:opacity-50"
-              >
-                <span>{loading ? 'Autenticando...' : 'Entrar no Workspace'}</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </form>
-          )}
-
-          {/* 2. SIGNUP FORM */}
-          {tab === 'signup' && (
-            <form onSubmit={handleSignup} className="space-y-3">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Seu Nome Completo
-                </label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="text"
-                    required
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Ex: Carlos Silva"
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-sky-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Nome da Empresa / Tenant
-                </label>
-                <div className="relative">
-                  <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="text"
-                    required
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="Ex: Vanguard Financial Group"
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-sky-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
+            {/* 1. LOGIN FORM */}
+            {tab === 'login' && (
+              <form onSubmit={handleLogin} className="space-y-3.5">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                    E-mail
+                    Corporate Email
                   </label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="carlos@empresa.com"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-sky-500"
-                  />
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@enterprise.com"
+                      className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-sky-500"
+                    />
+                  </div>
                 </div>
+
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                    Senha
+                    Password
                   </label>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••••••"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-sky-500"
-                  />
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-sky-500"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Seu Papel Corporativo (Enterprise Role)
-                </label>
-                <select
-                  value={desiredRole}
-                  onChange={(e) => setDesiredRole(e.target.value as EnterpriseRole)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-sky-500"
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full mt-2 py-2.5 px-4 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition cursor-pointer shadow-sm disabled:opacity-50"
                 >
-                  <option value="CISO">🛡️ CISO & Lead Risk Officer</option>
-                  <option value="DPO">⚖️ Data Protection Officer (DPO)</option>
-                  <option value="AI_OFFICE">🏛️ AI Office & Head of Governance</option>
-                  <option value="SECURITY_LEAD">🔐 Security Lead & Incident Commander</option>
-                  <option value="ENGINEER">💻 AI & Software Engineer</option>
-                  <option value="AUDITOR">🔍 Independent Auditor</option>
-                  <option value="BOARD">📊 Board / Executive Director</option>
-                </select>
-              </div>
+                  <span>{loading ? 'Authenticating...' : 'Sign In to Workspace'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </form>
+            )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full mt-2 py-2.5 px-4 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition cursor-pointer shadow-sm disabled:opacity-50"
-              >
-                <span>{loading ? 'Provisionando Organização...' : 'Criar Empresa & Entrar'}</span>
-                <Sparkles className="w-4 h-4" />
-              </button>
-            </form>
-          )}
-
-          {/* 3. INVITE ACCEPTANCE FORM */}
-          {tab === 'invite' && (
-            <form onSubmit={handleAcceptInvite} className="space-y-3.5">
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Insira o token de convite fornecido pelo Administrador da sua organização para associar seu perfil.
-              </p>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Token de Convite
-                </label>
-                <div className="relative">
-                  <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="text"
-                    required
-                    value={tokenInput}
-                    onChange={(e) => setTokenInput(e.target.value)}
-                    placeholder="Ex: 944b39a4-7271-4..."
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 font-mono focus:outline-hidden focus:border-sky-500"
-                  />
+            {/* 2. SIGNUP FORM */}
+            {tab === 'signup' && (
+              <form onSubmit={handleSignup} className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                    Full Name
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    <input
+                      type="text"
+                      required
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="e.g. Alex Vance"
+                      className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-sky-500"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full mt-2 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition cursor-pointer shadow-sm disabled:opacity-50"
-              >
-                <span>{loading ? 'Vinculando...' : 'Aceitar Convite & Entrar'}</span>
-                <UserCheck className="w-4 h-4" />
-              </button>
-            </form>
-          )}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                    Organization / Tenant Name
+                  </label>
+                  <div className="relative">
+                    <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    <input
+                      type="text"
+                      required
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="e.g. Vanguard Financial Group"
+                      className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-sky-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="alex@enterprise.com"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-sky-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      Password
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-sky-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                    Enterprise Role
+                  </label>
+                  <select
+                    value={desiredRole}
+                    onChange={(e) => setDesiredRole(e.target.value as EnterpriseRole)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden focus:border-sky-500"
+                  >
+                    <option value="CISO">🛡️ CISO & Lead Risk Officer</option>
+                    <option value="DPO">⚖️ Data Protection Officer (DPO)</option>
+                    <option value="AI_OFFICE">🏛️ AI Office & Head of Governance</option>
+                    <option value="SECURITY_LEAD">🔐 Security Lead & Incident Commander</option>
+                    <option value="ENGINEER">💻 AI & Software Engineer</option>
+                    <option value="AUDITOR">🔍 Independent Auditor</option>
+                    <option value="BOARD">📊 Board / Executive Director</option>
+                  </select>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full mt-2 py-2.5 px-4 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition cursor-pointer shadow-sm disabled:opacity-50"
+                >
+                  <span>{loading ? 'Provisioning Organization...' : 'Create Organization & Enter'}</span>
+                  <Sparkles className="w-4 h-4" />
+                </button>
+              </form>
+            )}
+
+            {/* 3. INVITE ACCEPTANCE FORM */}
+            {tab === 'invite' && (
+              <form onSubmit={handleAcceptInvite} className="space-y-3.5">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Enter the invitation token provided by your organization administrator.
+                </p>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                    Invitation Token
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    <input
+                      type="text"
+                      required
+                      value={tokenInput}
+                      onChange={(e) => setTokenInput(e.target.value)}
+                      placeholder="e.g. 944b39a4-7271-4..."
+                      className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 font-mono focus:outline-hidden focus:border-sky-500"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full mt-2 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition cursor-pointer shadow-sm disabled:opacity-50"
+                >
+                  <span>{loading ? 'Connecting...' : 'Accept Invitation & Enter'}</span>
+                  <UserCheck className="w-4 h-4" />
+                </button>
+              </form>
+            )}
 
         </div>
 

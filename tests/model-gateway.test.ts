@@ -71,6 +71,7 @@ provision.passport.governedCapabilities = [
   ...(provision.passport.governedCapabilities || []),
   { capability: 'gpt-4o', channel: 'MODEL', riskTier: 'MEDIUM' }
 ];
+AgentProvisioner.signPassport(provision.passport, provision.agentId);
 
 const runtimeInstance = RuntimeManager.createRuntime(provision.runtimeSpec, provision.passport);
 const startedRuntime = RuntimeManager.startRuntime(runtimeInstance.runtimeId);

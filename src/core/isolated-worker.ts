@@ -192,27 +192,25 @@ export class IsolatedWorker {
       };
     }
 
-    // 3. Dispatch through Guardian Gateway
-    const guardianVerdict = GuardianService.evaluateCapability({
+    // 3. Dispatch through Guardian Gateway (Active Governance Perimeter)
+    const guardianVerdict = GuardianService.evaluateActiveCapability({
       agent: {
         id: this.agentId,
         name: this.passport.runtime?.framework ? `${this.passport.runtime.framework}-agent` : 'governed-agent',
         version: this.passport.runtime?.frameworkVersion
       },
       passport: {
-        passportId: this.passport.passportId,
-        passportFingerprint: this.passport.passportFingerprint,
-        complianceProfileChecksum: this.passport.complianceProfileChecksum,
-        declaredTools: this.passport.declaredTools,
-        governedCapabilities: this.passport.governedCapabilities as any,
-        toolManifestHash: this.passport.toolManifestHash,
-        riskTier: this.passport.riskTier
+        ...this.passport,
+        tenantId: this.passport.tenantId
       },
       complianceProfile: profile,
       channel: capability.channel,
       capability: capability.id,
       actionType,
-      payload
+      payload,
+      context: {
+        tenantId: this.passport.tenantId
+      }
     });
 
     // 4. Handle verdict

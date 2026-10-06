@@ -7,6 +7,9 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { IndustryProvider } from './context/IndustryContext';
 import { RoleLensProvider } from './context/RoleLensContext';
 import { AppShell, ActiveNavView } from './components/AppShell';
+import { AgentInventoryPageView } from './views/AgentInventoryPageView';
+import { AgentDetailView } from './views/AgentDetailView';
+import { DiscoveredAgentsBanner } from './components/DiscoveredAgentsBanner';
 import { GovernanceCenter } from './views/GovernanceCenter';
 import { AgentStudioView } from './views/AgentStudioView';
 import { GovernanceCockpitView } from './views/GovernanceCockpitView';
@@ -39,6 +42,7 @@ import { CodePlayground } from './components/CodePlayground';
 import { ExecutiveSummary } from './components/ExecutiveSummary';
 import { ReportExportModal } from './components/ReportExportModal';
 import { SettingsModal } from './components/SettingsModal';
+import { SettingsView } from './views/SettingsView';
 import { AcademyModal } from './components/AcademyModal';
 import { CommercialLandingView } from './views/CommercialLandingView';
 import { SeoPageView } from './views/SeoPageView';
@@ -80,7 +84,16 @@ const AuthSessionGuard: React.FC<AuthSessionGuardProps> = ({
 const AppInner: React.FC = () => {
   const { isAuthenticated, activeOrganization, user } = useAuth();
   const [pageMode, setPageMode] = useState<'landing' | 'app'>('landing');
-  const [activeView, setActiveView] = useState<ActiveNavView>('overview-center');
+  const [activeView, setActiveView] = useState<ActiveNavView>('ai-agents');
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const p = window.location.pathname.replace(/\/$/, '') || '/';
+      if (p.startsWith('/agents/')) {
+        return p.replace('/agents/', '');
+      }
+    }
+    return null;
+  });
   const [currentPath, setCurrentPath] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       return window.location.pathname.replace(/\/$/, '') || '/';
@@ -101,6 +114,18 @@ const AppInner: React.FC = () => {
     const handlePopState = () => {
       const p = window.location.pathname.replace(/\/$/, '') || '/';
       setCurrentPath(p);
+      if (p.startsWith('/agents/')) {
+        const id = p.replace('/agents/', '');
+        if (id) {
+          setSelectedAgentId(id);
+          setActiveView('ai-agents');
+          setPageMode('app');
+        }
+      } else if (p === '/agents') {
+        setSelectedAgentId(null);
+        setActiveView('ai-agents');
+        setPageMode('app');
+      }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -110,6 +135,16 @@ const AppInner: React.FC = () => {
     window.history.pushState({}, '', path);
     const normalized = path.replace(/\/$/, '') || '/';
     setCurrentPath(normalized);
+    if (normalized.startsWith('/agents/')) {
+      const id = normalized.replace('/agents/', '');
+      if (id) {
+        setSelectedAgentId(id);
+        setActiveView('ai-agents');
+      }
+    } else if (normalized === '/agents') {
+      setSelectedAgentId(null);
+      setActiveView('ai-agents');
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -124,7 +159,7 @@ const AppInner: React.FC = () => {
   useEffect(() => {
     if (pageMode === 'app' && activeView === 'settings') {
       setShowSettings(true);
-      setActiveView('overview-center');
+      setActiveView('ai-agents');
     }
   }, [activeView, pageMode]);
 
@@ -260,7 +295,8 @@ const AppInner: React.FC = () => {
         }
       }
       setPageMode('app');
-      setActiveView('overview-center');
+      setActiveView('ai-agents');
+      setSelectedAgentId(null);
     } else {
       setAuthContextBanner({
         title: 'Preserve Seus Resultados no Workspace',
@@ -282,7 +318,8 @@ const AppInner: React.FC = () => {
         }
       }
       setPageMode('app');
-      setActiveView('overview-center');
+      setActiveView('ai-agents');
+      setSelectedAgentId(null);
     } else {
       setAuthContextBanner({
         title: 'Acesso ao Workspace ComplyPRO',
@@ -304,7 +341,8 @@ const AppInner: React.FC = () => {
     }
     setAuthContextBanner(null);
     setPageMode('app');
-    setActiveView('overview-center');
+    setActiveView('ai-agents');
+    setSelectedAgentId(null);
   };
 
   const handleOpenAuth = (mode: 'login' | 'signup' = 'signup') => {
@@ -378,111 +416,169 @@ const AppInner: React.FC = () => {
         ) : (
           <AppShell
             activeView={activeView}
-            setActiveView={setActiveView}
+            setActiveView={(view) => {
+              setSelectedAgentId(null);
+              setActiveView(view);
+            }}
             totalAgentsCount={totalAgentsCount}
             criticalGapsCount={criticalGapsCount}
             onNavigateToLanding={() => {
               setPageMode('landing');
-              setActiveView('overview-center');
+              setActiveView('ai-agents');
             }}
           >
-                {activeView === 'studio-builder' && (
-                  <AgentStudioView />
-                )}
-
-                {activeView === 'cockpit-control' && (
-                  <GovernanceCockpitView />
-                )}
-
-                {activeView === 'overview-center' && (
-                  <GovernanceCenter 
-                    onNavigateToScanner={() => setActiveView('tools-scanner')}
-                    onNavigateToPassports={() => setActiveView('discover-agents')}
-                    onNavigateToControls={() => setActiveView('govern-controls')}
-                    onNavigateToInventory={() => setActiveView('discover-inventory')}
-                    onNavigateToAgents={() => setActiveView('discover-agents')}
+                {selectedAgentId ? (
+                  <AgentDetailView
+                    agentId={selectedAgentId}
+                    onBack={() => {
+                      setSelectedAgentId(null);
+                      handleNavigate('/agents');
+                    }}
+                    onOpenCockpit={(id) => {
+                      setSelectedAgentId(null);
+                      setActiveView('cockpit-control');
+                    }}
+                    onOpenStudio={(id) => {
+                      setSelectedAgentId(null);
+                      setActiveView('studio-builder');
+                    }}
+                    onOpenEvidence={() => {
+                      setSelectedAgentId(null);
+                      setActiveView('assure-evidence');
+                    }}
                   />
-                )}
+                ) : (
+                  <>
+                    {activeView === 'ai-agents' && (
+                      <AgentInventoryPageView
+                        onSelectAgent={(agentId) => {
+                          setSelectedAgentId(agentId);
+                          handleNavigate(`/agents/${agentId}`);
+                        }}
+                        onNavigateToDiscover={() => {
+                          setSelectedAgentId(null);
+                          setActiveView('tools-scanner');
+                        }}
+                        onNavigateToStudio={() => {
+                          setSelectedAgentId(null);
+                          setActiveView('studio-builder');
+                        }}
+                        onNavigateToCockpit={() => {
+                          setSelectedAgentId(null);
+                          setActiveView('cockpit-control');
+                        }}
+                        onNavigateToGovernance={() => {
+                          setSelectedAgentId(null);
+                          setActiveView('overview-center');
+                        }}
+                      />
+                    )}
 
-                {activeView === 'discover-inventory' && (
-                  <AiInventoryView 
-                    result={scanResult}
-                    onOpenScanner={() => setActiveView('tools-scanner')}
-                  />
-                )}
+                    {activeView === 'studio-builder' && (
+                      <AgentStudioView />
+                    )}
 
-                {activeView === 'discover-agents' && (
-                  <AgentsTeamsView 
-                    result={scanResult}
-                  />
-                )}
+                    {activeView === 'cockpit-control' && (
+                      <GovernanceCockpitView />
+                    )}
 
-                {activeView === 'discover-assessments' && (
-                  <AssessmentsView 
-                    result={scanResult}
-                  />
-                )}
+                    {activeView === 'overview-center' && (
+                      <GovernanceCenter 
+                        onNavigateToScanner={() => setActiveView('tools-scanner')}
+                        onNavigateToPassports={() => setActiveView('ai-agents')}
+                        onNavigateToControls={() => setActiveView('govern-controls')}
+                        onNavigateToInventory={() => setActiveView('ai-agents')}
+                        onNavigateToAgents={() => setActiveView('ai-agents')}
+                      />
+                    )}
 
-                {activeView === 'discover-passports' && (
-                  <AgentsTeamsView 
-                    result={scanResult}
-                  />
-                )}
+                    {activeView === 'discover-inventory' && (
+                      <AiInventoryView 
+                        result={scanResult}
+                        onOpenScanner={() => setActiveView('tools-scanner')}
+                      />
+                    )}
 
-                {activeView === 'learn-academy' && <AcademyView onNavigate={(view) => setActiveView(view)} />}
-                {activeView === 'tools-operations' && <OperationsCenterView />}
-                {activeView === 'tools-deployment' && <ProductionDeploymentView />}
-                {activeView === 'tools-scanner' && (
-                  <div className="space-y-6">
-                    {/* Header Banner */}
-                    <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-sky-950/40 to-slate-900 border border-slate-800 text-white shadow-xl relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
-                      <div className="relative z-10 space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <span className="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-wider uppercase bg-sky-500/20 text-sky-300 border border-sky-500/30">
-                            SENSOR & INGESTION SUITE
-                          </span>
+                    {activeView === 'discover-agents' && (
+                      <AgentsTeamsView 
+                        result={scanResult}
+                      />
+                    )}
+
+                    {activeView === 'discover-assessments' && (
+                      <AssessmentsView 
+                        result={scanResult}
+                      />
+                    )}
+
+                    {activeView === 'discover-passports' && (
+                      <AgentsTeamsView 
+                        result={scanResult}
+                      />
+                    )}
+
+                    {activeView === 'learn-academy' && <AcademyView onNavigate={(view) => setActiveView(view)} />}
+                    {activeView === 'tools-operations' && <OperationsCenterView />}
+                    {activeView === 'tools-deployment' && <ProductionDeploymentView />}
+                    {activeView === 'tools-scanner' && (
+                      <div className="space-y-6">
+                        {/* Clean Page Header */}
+                        <div>
+                          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                            Discover Agents
+                          </h1>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                            Already have AI agents? Scan repositories to discover unmanaged agents and bring them into your inventory.
+                          </p>
                         </div>
-                        <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
-                          <Terminal className="w-6 h-6 text-sky-400" />
-                          <span>Codebase AST Scanner & Capability Detector</span>
-                        </h1>
-                        <p className="text-xs text-slate-300 max-w-2xl">
-                          Execute deep static analysis on TypeScript, Python, notebooks, and configuration files to extract AI agents, models, credentials, shadow AI, and compliance violations.
-                        </p>
-                      </div>
-                    </div>
 
-                    <HeroScanner 
-                      onScanGitHub={handleScanGitHub}
-                      onScanZip={handleScanZip}
-                      onScanFolder={handleScanFolder}
-                      onSelectDemo={handleSelectDemo}
-                      isScanning={isScanning}
-                      scanProgress={scanProgress}
-                    />
+                        <HeroScanner 
+                          onScanGitHub={handleScanGitHub}
+                          onScanZip={handleScanZip}
+                          onScanFolder={handleScanFolder}
+                          onSelectDemo={handleSelectDemo}
+                          isScanning={isScanning}
+                          scanProgress={scanProgress}
+                        />
 
-                    {scanResult && (
-                      <div className="space-y-6 animate-fadeIn">
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs">
-                          <div className="flex items-center space-x-2">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                            <span className="font-semibold">
-                              Scan of <strong>{scanResult.repo?.name || 'Local Repository'}</strong> successfully mapped into Governance Domain Stores.
-                            </span>
+                        {scanResult && (
+                          <div className="space-y-6 animate-fadeIn">
+                            <DiscoveredAgentsBanner
+                              scanResult={scanResult}
+                              onNavigateToAgent={(agentId) => {
+                                setSelectedAgentId(agentId);
+                                setActiveView('ai-agents');
+                                handleNavigate(`/agents/${agentId}`);
+                              }}
+                              onNavigateToInventory={() => {
+                                setSelectedAgentId(null);
+                                setActiveView('ai-agents');
+                                handleNavigate('/agents');
+                              }}
+                            />
+
+                            <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs">
+                              <div className="flex items-center space-x-2">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                <span>
+                                  Repository <strong>{scanResult.repo?.name || 'Local Repository'}</strong> mapped to Agent Inventory.
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setSelectedAgentId(null);
+                                  setActiveView('ai-agents');
+                                }}
+                                className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition shrink-0 cursor-pointer shadow-xs"
+                              >
+                                View in AI Agents →
+                              </button>
+                            </div>
                           </div>
-                          <button
-                            onClick={() => setActiveView('overview-center')}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition shadow-xs"
-                          >
-                            Open Governance Center →
-                          </button>
-                        </div>
-                        <ExecutiveSummary result={scanResult} />
-                        <ViolationsList result={scanResult} />
+                        )}
                       </div>
                     )}
-                  </div>
+                  </>
                 )}
 
                 {activeView === 'govern-controls' && (
@@ -567,6 +663,10 @@ const AppInner: React.FC = () => {
 
                 {activeView === 'manage-team' && (
                   <TeamManagementView />
+                )}
+
+                {activeView === 'settings' && (
+                  <SettingsView />
                 )}
 
                 {/* Universal MCP — Informational Status View */}

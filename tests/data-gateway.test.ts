@@ -104,6 +104,7 @@ provision.passport.governedCapabilities = [
   ...(provision.passport.governedCapabilities || []),
   { capability: 'tracked.data_query', channel: 'DATA', riskTier: 'LOW' }
 ];
+AgentProvisioner.signPassport(provision.passport, provision.agentId);
 
 const runtimeInstance = RuntimeManager.createRuntime(provision.runtimeSpec, provision.passport);
 const startedRuntime = RuntimeManager.startRuntime(runtimeInstance.runtimeId);
@@ -413,6 +414,11 @@ CapabilityRegistry.register({
 });
 
 provision.passport.declaredTools.push('flaky.data');
+provision.passport.governedCapabilities = [
+  ...(provision.passport.governedCapabilities || []),
+  { capability: 'flaky.data', channel: 'DATA', riskTier: 'LOW' }
+];
+AgentProvisioner.signPassport(provision.passport, provision.agentId);
 const failRes = await DataGateway.invokeData({
   agentId: provision.agentId,
   passportId: provision.passportId,
@@ -448,6 +454,11 @@ CapabilityRegistry.register({
 });
 
 provision.passport.declaredTools.push('vector.semantic_search');
+provision.passport.governedCapabilities = [
+  ...(provision.passport.governedCapabilities || []),
+  { capability: 'vector.semantic_search', channel: 'DATA', riskTier: 'LOW' }
+];
+AgentProvisioner.signPassport(provision.passport, provision.agentId);
 const vectorRes = await DataGateway.invokeData({
   agentId: provision.agentId,
   passportId: provision.passportId,

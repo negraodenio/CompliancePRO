@@ -911,6 +911,119 @@ export class DurableStore {
     return results;
   }
 
+  /**
+   * Distributed Atomic Conditional Claim for HITL Execution
+   * Executes atomic conditional update:
+   * UPDATE execution_sessions SET status = 'CLAIMED_FOR_EXECUTION', updated_at = NOW()
+   * WHERE execution_id = ? AND status = 'PAUSED'
+   *
+   * affectedRows = 1 -> caller successfully claimed session
+   * affectedRows = 0 -> session was not PAUSED or already claimed by another caller
+   */
+  public static async claimExecutionSessionConditional(
+    executionId: string,
+    tenantId?: string
+  ): Promise<{ success: boolean; affectedRows: number; error?: string }> {
+    // 0. Process-local early guard
+    const localMem = this.executionsTable.get(executionId);
+    if (localMem && localMem.status !== 'PAUSED') {
+      return { success: false, affectedRows: 0 };
+    }
+
+    // 1. Production check: If in production and database is unavailable, FAIL CLOSED
+    if (process.env.NODE_ENV === 'production' && !this.isDatabaseConnected()) {
+      throw new Error('DURABLE_PERSISTENCE_UNAVAILABLE: Exactly-once HITL approval requires an active database connection in production. Failing closed.');
+    }
+
+    // 2. Direct PostgreSQL connection via pgPool
+    if (this.isPgConnected && this.pgPool) {
+      const sql = `
+        UPDATE execution_sessions
+        SET status = 'CLAIMED_FOR_EXECUTION', updated_at = NOW()
+        WHERE execution_id = $1 AND status = 'PAUSED'
+        RETURNING *;
+      `;
+      const client = await this.pgPool.connect();
+      try {
+        const res = await client.query(sql, [executionId]);
+        const affectedRows = res.rowCount || 0;
+        if (affectedRows > 0) {
+          if (localMem) {
+            localMem.status = 'CLAIMED_FOR_EXECUTION';
+            localMem.updated_at = new Date().toISOString();
+          }
+          return { success: true, affectedRows: 1 };
+        }
+        if (process.env.NODE_ENV === 'production') {
+          return { success: false, affectedRows: 0 };
+        }
+      } finally {
+        client.release();
+      }
+    }
+
+    // 3. Supabase PostgREST client
+    const config = this.getSupabaseConfig();
+    if (config) {
+      try {
+        const url = `${config.url}/rest/v1/execution_sessions?execution_id=eq.${encodeURIComponent(executionId)}&status=eq.PAUSED`;
+        const res = await fetch(url, {
+          method: 'PATCH',
+          headers: {
+            apikey: config.key,
+            Authorization: `Bearer ${config.key}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation'
+          },
+          body: JSON.stringify({
+            status: 'CLAIMED_FOR_EXECUTION',
+            updated_at: new Date().toISOString()
+          })
+        });
+
+        if (!res.ok) {
+          if (process.env.NODE_ENV === 'production') {
+            const errText = await res.text();
+            throw new Error(`DATABASE_CLAIM_FAILED: Failed conditional claim on execution [${executionId}]: HTTP ${res.status} - ${errText}`);
+          }
+        } else {
+          const data = await res.json();
+          const affectedRows = Array.isArray(data) ? data.length : 0;
+          if (affectedRows > 0) {
+            if (localMem) {
+              localMem.status = 'CLAIMED_FOR_EXECUTION';
+              localMem.updated_at = new Date().toISOString();
+            }
+            return { success: true, affectedRows: 1 };
+          }
+          if (process.env.NODE_ENV === 'production') {
+            return { success: false, affectedRows: 0 };
+          }
+        }
+      } catch (err: any) {
+        if (process.env.NODE_ENV === 'production') {
+          throw err;
+        }
+      }
+    }
+
+    // 4. In-Memory / Test Mode Fallback (Offline or Test Suite)
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('DURABLE_PERSISTENCE_UNAVAILABLE: Exactly-once HITL approval requires an active database connection in production. Failing closed.');
+    }
+
+    if (localMem) {
+      if (localMem.status !== 'PAUSED') {
+        return { success: false, affectedRows: 0 };
+      }
+      localMem.status = 'CLAIMED_FOR_EXECUTION';
+      localMem.updated_at = new Date().toISOString();
+      return { success: true, affectedRows: 1 };
+    }
+
+    return { success: false, affectedRows: 0 };
+  }
+
   // ==========================================================================
   // 5. HITL REQUESTS & DECISIONS (Write-Through)
   // ==========================================================================
