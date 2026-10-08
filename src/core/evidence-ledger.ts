@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { GuardianVerdict } from './guardian-service';
 import { MerkleTree, MerkleInclusionProof } from './merkle-tree';
 import { PersistenceAdapter } from '../web/services/persistence-adapter';
+import { DurableStore } from '../server/db/durable-store';
 
 export const GENESIS_PREVIOUS_HASH = '0000000000000000000000000000000000000000000000000000000000000000';
 
@@ -80,6 +81,7 @@ export interface EvidenceLedgerEntry {
   operatorDecision?: 'APPROVED' | 'REJECTED';
   executionResult?: 'SUCCESS' | 'FAILED' | 'BLOCKED';
   payloadDigest?: string;
+  executionId?: string;
   previousHash: string;
   eventHash: string;
 }
@@ -133,7 +135,8 @@ export function calculateEventHash(entry: Omit<EvidenceLedgerEntry, 'eventHash'>
     operatorDecision: entry.operatorDecision || null,
     executionResult: entry.executionResult || null,
     payloadDigest: entry.payloadDigest || null,
-    previousHash: entry.previousHash
+    previousHash: entry.previousHash,
+    ...(entry.executionId ? {executionId:entry.executionId} : {})
   });
 
   return crypto.createHash('sha256').update(canonical).digest('hex');
@@ -143,6 +146,47 @@ export class EvidenceLedger {
   private static inMemoryChains: Map<string, EvidenceLedgerEntry[]> = new Map();
   private static initializedTenants: Set<string> = new Set();
   public static readonly DEFAULT_TENANT = 'TENANT-DEFAULT';
+  private static durableTenants = new Set<string>();
+  private static durableQueues = new Map<string, Promise<void>>();
+  private static durableErrors = new Map<string, Error>();
+  private static durablePreparations = new Map<string, Promise<void>>();
+
+  public static async prepareTenant(tenantId: string): Promise<void> {
+    if (process.env.NODE_ENV !== 'production' || this.durableTenants.has(tenantId)) return;
+    let preparation = this.durablePreparations.get(tenantId);
+    if (!preparation) {
+      preparation = (async () => {
+        const chain = await DurableStore.loadRuntimeEvidence(tenantId);
+        const check = this.verifyChain(chain, tenantId);
+        if (!check.valid) throw new Error(`DURABLE_EVIDENCE_INTEGRITY_FAILED: ${check.error}`);
+        this.inMemoryChains.set(tenantId, chain);
+        this.initializedTenants.add(tenantId);
+        this.durableTenants.add(tenantId);
+      })();
+      this.durablePreparations.set(tenantId, preparation);
+    }
+    try { await preparation; }
+    finally { if (this.durablePreparations.get(tenantId) === preparation) this.durablePreparations.delete(tenantId); }
+  }
+
+  public static async flushPendingWrites(tenantId: string): Promise<void> {
+    if (process.env.NODE_ENV !== 'production') return;
+    if (this.durableErrors.has(tenantId)) throw this.durableErrors.get(tenantId);
+    await this.durableQueues.get(tenantId);
+    if (this.durableErrors.has(tenantId)) throw this.durableErrors.get(tenantId);
+  }
+
+  public static async reloadTenant(tenantId: string): Promise<void> {
+    if (process.env.NODE_ENV !== 'production') return;
+    await this.flushPendingWrites(tenantId);
+    this.durableTenants.delete(tenantId);
+    await this.prepareTenant(tenantId);
+  }
+
+  public static async assertDurableWritesHealthy(): Promise<void> {
+    if (process.env.NODE_ENV !== 'production') return;
+    for (const tenantId of this.durableQueues.keys()) await this.flushPendingWrites(tenantId);
+  }
 
   private static resolveTenant(tenantId?: string): string {
     const ctx = PersistenceAdapter.getContext();
@@ -159,6 +203,7 @@ export class EvidenceLedger {
   private static ensureInitialized(tenantId?: string) {
     const resolvedTenant = this.resolveTenant(tenantId);
     if (!this.initializedTenants.has(resolvedTenant)) {
+      if (process.env.NODE_ENV === 'production') throw new Error('DURABLE_EVIDENCE_NOT_INITIALIZED: Load authoritative tenant evidence before reading.');
       PersistenceAdapter.setContext({ tenantId: resolvedTenant });
       try {
         const persisted = PersistenceAdapter.read<EvidenceLedgerEntry[]>('evidence_chain', 'cg_ag_evidence_chain_v1');
@@ -173,6 +218,12 @@ export class EvidenceLedger {
   }
 
   public static reset(tenantId?: string) {
+    if (process.env.NODE_ENV === 'production') {
+      // Clear presentation caches only; never erase durable production evidence.
+      if (tenantId) { this.inMemoryChains.delete(tenantId); this.initializedTenants.delete(tenantId); this.durableTenants.delete(tenantId); }
+      else { this.inMemoryChains.clear(); this.initializedTenants.clear(); this.durableTenants.clear(); }
+      return;
+    }
     if (tenantId) {
       this.inMemoryChains.set(tenantId, []);
       this.initializedTenants.add(tenantId);
@@ -198,6 +249,9 @@ export class EvidenceLedger {
 
   public static append(input: CreateEvidenceEntryInput, tenantId?: string): EvidenceLedgerEntry {
     const resolvedTenant = this.resolveTenant(tenantId);
+    if (process.env.NODE_ENV === 'production' && !this.durableTenants.has(resolvedTenant))
+      throw new Error('DURABLE_EVIDENCE_NOT_INITIALIZED: Prepare authoritative tenant evidence before execution.');
+    if (process.env.NODE_ENV === 'production' && this.durableErrors.has(resolvedTenant)) throw this.durableErrors.get(resolvedTenant);
     this.ensureInitialized(resolvedTenant);
     PersistenceAdapter.setContext({ tenantId: resolvedTenant });
 
@@ -220,6 +274,14 @@ export class EvidenceLedger {
     };
 
     chain.push(entry);
+
+    if (process.env.NODE_ENV === 'production') {
+      const previous = this.durableQueues.get(resolvedTenant) || Promise.resolve();
+      const next = previous.then(() => DurableStore.appendRuntimeEvidence(resolvedTenant, entry));
+      this.durableQueues.set(resolvedTenant, next);
+      next.catch(error => { this.durableErrors.set(resolvedTenant, error); });
+      return entry; // Tentative until the mandatory gateway/API durability barrier resolves.
+    }
 
     try {
       PersistenceAdapter.write('evidence_chain', chain, 'cg_ag_evidence_chain_v1');
@@ -274,7 +336,7 @@ export class EvidenceLedger {
     }
 
     const resolvedTenant = this.resolveTenant(effectiveTenant);
-    this.ensureInitialized(resolvedTenant);
+    if (!entries) this.ensureInitialized(resolvedTenant);
     const chain = entries || this.getChain(resolvedTenant);
 
     if (chain.length === 0) {

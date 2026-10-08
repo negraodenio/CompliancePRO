@@ -34,34 +34,29 @@ export const DiscoveredAgentsBanner: React.FC<DiscoveredAgentsBannerProps> = ({
 
   const visibleAgents = rawAgents.filter(a => !ignoredNames[a.name]);
 
-  const handleImportSingle = (agent: any, idx: number) => {
-    const cleanName = agent.name || `Discovered Agent ${idx + 1}`;
-    const newAgent = AgentInventoryStore.addAgent({
-      name: cleanName,
-      owner: {
-        name: scanResult.owner?.label || 'Engineering Team',
-        role: scanResult.owner?.role || 'AI Lead',
-        department: scanResult.owner?.teams?.[0] || 'AI Platform'
-      },
-      framework: agent.framework || 'CrewAI',
-      model: agent.model || scanResult.source?.aiModels?.[0]?.modelId || 'gpt-4o',
-      risk: (agent.riskLevel === 'critical' || agent.riskLevel === 'high') ? 'HIGH' : 'MEDIUM',
-      status: 'IMPORTED',
-      description: agent.description || `Agent discovered from static analysis of repository ${repoName}.`
-    });
-
-    setImportedIds(prev => ({ ...prev, [agent.name]: newAgent.id }));
+  const handleImportSingle = async (agent: any, idx: number) => {
+    try {
+      const [newAgent] = await AgentInventoryStore.importFromScanResult({
+        ...scanResult, source: {...scanResult.source, agents:[{...agent,name:agent.name || `Discovered Agent ${idx + 1}`}]} as ScannerResult['source']
+      });
+      setImportedIds(prev => ({ ...prev, [agent.name]: newAgent.id }));
+    } catch {
+      window.alert('Agent import could not be confirmed. Please retry when the backend is available.');
+    }
   };
 
-  const handleImportAll = () => {
+  const handleImportAll = async () => {
     setIsImportingAll(true);
-    const imported = AgentInventoryStore.importFromScanResult(scanResult);
-    const idMap: Record<string, string> = {};
-    imported.forEach(a => {
-      idMap[a.name] = a.id;
-    });
-    setImportedIds(prev => ({ ...prev, ...idMap }));
-    setIsImportingAll(false);
+    try {
+      const imported = await AgentInventoryStore.importFromScanResult(scanResult);
+      const idMap: Record<string, string> = {};
+      imported.forEach(a => { idMap[a.name] = a.id; });
+      setImportedIds(prev => ({ ...prev, ...idMap }));
+    } catch {
+      window.alert('Inventory import could not be confirmed. Please retry; confirmed records will not be duplicated.');
+    } finally {
+      setIsImportingAll(false);
+    }
   };
 
   const handleIgnore = (agentName: string) => {

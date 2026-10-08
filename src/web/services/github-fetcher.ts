@@ -99,7 +99,7 @@ export async function fetchGitHubRepo(
       batch.map(async item => {
         try {
           const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${defaultBranch}/${item.path}`;
-          const res = await fetch(rawUrl);
+          const res = await fetch(rawUrl, { headers });
           if (res.ok) {
             const content = await res.text();
             fileMap.set(item.path, content);

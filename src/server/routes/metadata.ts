@@ -92,6 +92,7 @@ metadataRouter.get('/evidence/:agentId', requireRoles('developer', 'compliance_o
 
     // Cross-tenant boundary check
     const callerTenant = req.tenantId || req.principal?.tenantId;
+    if (callerTenant) await EvidenceLedger.reloadTenant(callerTenant);
     const agent = AgentProvisioner.getAgent(agentId);
     if (callerTenant && agent) {
       const agentTenant = agent.tenantId || agent.passport?.tenantId;
@@ -104,8 +105,8 @@ metadataRouter.get('/evidence/:agentId', requireRoles('developer', 'compliance_o
       }
     }
 
-    const entries = EvidenceLedger.getEntries(agentId);
-    const verification = EvidenceLedger.verifyChain(entries);
+    const entries = EvidenceLedger.getEntries(agentId, callerTenant);
+    const verification = EvidenceLedger.verifyChain(undefined, callerTenant);
 
     res.status(200).json({
       ok: true,
@@ -134,6 +135,7 @@ metadataRouter.post('/evidence/verify', requireRoles('developer', 'compliance_of
 
     // Cross-tenant boundary check
     const callerTenant = req.tenantId || req.principal?.tenantId;
+    if (callerTenant) await EvidenceLedger.reloadTenant(callerTenant);
     if (callerTenant && agentId) {
       const agent = AgentProvisioner.getAgent(agentId);
       if (agent) {
@@ -148,14 +150,14 @@ metadataRouter.post('/evidence/verify', requireRoles('developer', 'compliance_of
       }
     }
 
-    const entries = EvidenceLedger.getEntries(agentId);
-    const chainCheck = EvidenceVerifier.verifyChain(entries);
+    const entries = EvidenceLedger.getEntries(agentId, callerTenant);
+    const chainCheck = EvidenceVerifier.verifyChain(EvidenceLedger.getEntries(undefined, callerTenant));
 
     let auditPackReport: any = null;
     let auditPack: any = null;
     if (entries.length > 0) {
       const latest = entries[entries.length - 1];
-      auditPack = EvidenceLedger.buildAuditPack(latest.evidenceId);
+      auditPack = EvidenceLedger.buildAuditPack(latest.evidenceId, callerTenant);
       auditPackReport = EvidenceVerifier.verifyAuditPack(auditPack);
     }
 

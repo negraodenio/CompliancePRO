@@ -674,7 +674,7 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
                     <p className="text-[11px] font-mono text-sky-400 bg-slate-900 p-2 rounded border border-slate-800 break-all">
                       SHA-256 Digest: {activeInvestigatedFinding?.evidenceDigest}
                     </p>
-                    <p className="text-[11px] text-slate-400">Recorded into immutable session ledger with human accountability timestamp.</p>
+                    <p className="text-[11px] text-slate-400">Recorded into a verifiable session ledger with human accountability timestamp.</p>
                   </div>
                 )}
 

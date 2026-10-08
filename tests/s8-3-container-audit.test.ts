@@ -199,7 +199,10 @@ async function runS8_3_Tests() {
   const testPort = 3099;
   const child = spawn(process.execPath, [compiledServerPath], {
     cwd: rootDir,
-    env: { ...process.env, PORT: String(testPort), NODE_ENV: 'production', COMPLYPRO_PASSPORT_SECRET: process.env.COMPLYPRO_PASSPORT_SECRET || 'a-very-secure-production-secret-for-testing-1234' },
+    // Deterministic production-negative contract: no database is available to this child.
+    env: { ...process.env, PORT: String(testPort), NODE_ENV: 'production', DATABASE_URL:'',
+      SUPABASE_URL:'',SUPABASE_SERVICE_ROLE_KEY:'',SUPABASE_ANON_KEY:'',
+      COMPLYPRO_PASSPORT_SECRET: process.env.COMPLYPRO_PASSPORT_SECRET || 'a-very-secure-production-secret-for-testing-1234' },
     stdio: 'pipe'
   });
 
@@ -223,11 +226,13 @@ async function runS8_3_Tests() {
     }
     assert.strictEqual(isReady, true, 'Compiled server must boot under pure node and respond on /health with 200 operational');
 
-    // Test /ready on compiled server
+    // Liveness does not imply readiness; missing durable authority must fail closed.
     const readyRes = await fetch(`http://127.0.0.1:${testPort}/ready`);
-    assert.strictEqual(readyRes.status, 200, 'Compiled server must respond on /ready with 200 OK');
+    assert.strictEqual(readyRes.status, 503, 'Compiled production server must not claim readiness without a database');
+    assert.match(readyRes.headers.get('content-type') || '',/application\/json/);
     const readyJson = await readyRes.json() as any;
-    assert.strictEqual(readyJson.status, 'ready');
+    assert.strictEqual(readyJson.status, 'not_ready');
+    assert.strictEqual(readyJson.services.persistence,'unavailable_or_unverified');
 
     console.log('  [PASS 8]: Compiled production JavaScript runs cleanly under pure node without tsx or dev loaders');
   } finally {

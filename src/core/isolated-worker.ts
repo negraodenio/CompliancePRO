@@ -243,12 +243,17 @@ export class IsolatedWorker {
       };
     }
 
-    // ALLOW: In S4, execution succeeds through the gateway
+    if (process.env.NODE_ENV !== 'test') return {
+      status:'FAILED',verdict:'ALLOW',decisionLatencyMs:guardianVerdict.decisionLatencyMs,
+      error:'PROVIDER_EXECUTION_REQUIRED: Authorization alone is not execution. Use the tool, model or data gateway.'
+    };
+    // Legacy authorization fixture is confined to the explicit test environment.
     return {
       status: 'COMPLETED',
       verdict: 'ALLOW',
       decisionLatencyMs: guardianVerdict.decisionLatencyMs,
       result: {
+        fixture: true,
         capability: capability.id,
         action: actionType,
         executedVia: 'COMPLYPRO_GATEWAY',

@@ -31,6 +31,9 @@ import { AgentProvisioningResponse, RuntimeSpecification } from '../../core/agen
 import { AgentPassport } from '../../core/compliance-contract';
 import { RuntimeInstance, RuntimeLifecycleStatus } from '../../core/runtime-manager';
 import { ExecutionSession, ExecutionStatus } from '../../core/adapters/runtime-adapter';
+import type { EvidenceLedgerEntry } from '../../core/evidence-ledger';
+import { PassportSigner } from '../../core/passport-signer';
+import { ComplianceProfileRegistry } from '../../core/compliance-compiler';
 
 // ----------------------------------------------------------------------------
 // Entity Schema Interfaces
@@ -53,6 +56,7 @@ export interface StoredAgentRecord {
   created_at: string;
   updated_at: string;
   version: number;
+  metadata?: Record<string, any>;
 }
 
 export interface StoredPassportRecord {
@@ -283,7 +287,8 @@ export class DurableStore {
           'Content-Type': 'application/json',
           Prefer: 'resolution=merge-duplicates,return=representation'
         },
-        body: JSON.stringify(record)
+        body: JSON.stringify(record),
+        signal: AbortSignal.timeout(15000)
       });
 
       if (!res.ok) {
@@ -292,17 +297,23 @@ export class DurableStore {
       }
 
       const data = await res.json();
+      if (process.env.NODE_ENV === 'production' && (!Array.isArray(data) || data.length !== 1)) {
+        throw new Error('DATABASE_WRITE_UNCONFIRMED: Expected one persisted record.');
+      }
       return Array.isArray(data) && data.length > 0 ? data[0] : record;
     }
 
     // Offline / in-memory testing fallback
+    if (process.env.NODE_ENV === 'production') throw new Error('DURABLE_PERSISTENCE_UNAVAILABLE: Database configuration is required.');
     return record;
   }
 
   /**
    * Authoritative Select directly from PostgreSQL table
    */
-  private static async selectFromDatabase(table: string, filter?: Record<string, string>): Promise<any[]> {
+  private static async selectFromDatabase(table: string, filter?: Record<string, string>, page?: {
+    orderBy: string; offset: number; limit: number
+  }): Promise<any[]> {
     if (this.isPgConnected && this.pgPool) {
       let sql = `SELECT * FROM ${table}`;
       const values: any[] = [];
@@ -314,6 +325,11 @@ export class DurableStore {
           values.push(v);
         }
         sql += ` WHERE ${clauses.join(' AND ')}`;
+      }
+      if (page) {
+        if (!/^[a-z_][a-z0-9_]*$/i.test(page.orderBy)) throw new Error('INVALID_DATABASE_ORDER');
+        sql += ` ORDER BY "${page.orderBy}" ASC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+        values.push(page.limit, page.offset);
       }
 
       const client = await this.pgPool.connect();
@@ -333,13 +349,19 @@ export class DurableStore {
           params.set(k, `eq.${v}`);
         }
       }
+      if (page) {
+        params.set('order', `${page.orderBy}.asc`);
+        params.set('offset', String(page.offset));
+        params.set('limit', String(page.limit));
+      }
 
       const url = `${config.url}/rest/v1/${table}${params.toString() ? '?' + params.toString() : ''}`;
       const res = await fetch(url, {
         headers: {
           apikey: config.key,
           Authorization: `Bearer ${config.key}`
-        }
+        },
+        signal: AbortSignal.timeout(15000)
       });
 
       if (!res.ok) {
@@ -347,9 +369,12 @@ export class DurableStore {
         throw new Error(`DATABASE_READ_FAILED: Failed to select from table [${table}]: HTTP ${res.status} - ${errText}`);
       }
 
-      return await res.json();
+      const rows = await res.json();
+      if (!Array.isArray(rows)) throw new Error('DATABASE_RESPONSE_INVALID: Expected records array.');
+      return rows;
     }
 
+    if (process.env.NODE_ENV === 'production') throw new Error('DURABLE_PERSISTENCE_UNAVAILABLE: Database configuration is required.');
     return [];
   }
 
@@ -389,7 +414,8 @@ export class DurableStore {
           'Content-Type': 'application/json',
           Prefer: 'return=representation'
         },
-        body: JSON.stringify(updates)
+        body: JSON.stringify(updates),
+        signal: AbortSignal.timeout(15000)
       });
 
       if (!res.ok) {
@@ -398,9 +424,13 @@ export class DurableStore {
       }
 
       const data = await res.json();
+      if (process.env.NODE_ENV === 'production' && (!Array.isArray(data) || data.length !== 1)) {
+        throw new Error('DATABASE_WRITE_UNCONFIRMED: Expected one updated record.');
+      }
       return Array.isArray(data) && data.length > 0 ? data[0] : updates;
     }
 
+    if (process.env.NODE_ENV === 'production') throw new Error('DURABLE_PERSISTENCE_UNAVAILABLE: Database configuration is required.');
     return updates;
   }
 
@@ -480,7 +510,7 @@ export class DurableStore {
         tool_manifest_hash: agent.passport.toolManifestHash,
         declared_tools: agent.passport.declaredTools,
         governed_capabilities: agent.passport.governedCapabilities,
-        runtime_spec: agent.runtimeSpec || agent.passport.runtime || {},
+        runtime_spec: { ...(agent.runtimeSpec || agent.passport.runtime || {}), passportSnapshot: structuredClone(agent.passport) },
         risk_tier: agent.passport.riskTier,
         status: agent.passport.status as string,
         created_at: new Date().toISOString(),
@@ -547,7 +577,7 @@ export class DurableStore {
       tool_manifest_hash: agent.passport.toolManifestHash,
       declared_tools: agent.passport.declaredTools,
       governed_capabilities: agent.passport.governedCapabilities,
-      runtime_spec: agent.runtimeSpec || agent.passport.runtime || {},
+      runtime_spec: { ...(agent.runtimeSpec || agent.passport.runtime || {}), passportSnapshot: structuredClone(agent.passport) },
       risk_tier: agent.passport.riskTier,
       status: agent.passport.status as string,
       created_at: new Date().toISOString(),
@@ -637,7 +667,7 @@ export class DurableStore {
         tool_manifest_hash: passport.toolManifestHash,
         declared_tools: passport.declaredTools,
         governed_capabilities: passport.governedCapabilities,
-        runtime_spec: runtimeSpec || passport.runtime || {},
+        runtime_spec: { ...(runtimeSpec || passport.runtime || {}), passportSnapshot: structuredClone(passport) },
         risk_tier: passport.riskTier,
         status: passport.status as string,
         created_at: new Date().toISOString(),
@@ -689,7 +719,7 @@ export class DurableStore {
       tool_manifest_hash: passport.toolManifestHash,
       declared_tools: passport.declaredTools,
       governed_capabilities: passport.governedCapabilities,
-      runtime_spec: runtimeSpec || passport.runtime || {},
+      runtime_spec: { ...(runtimeSpec || passport.runtime || {}), passportSnapshot: structuredClone(passport) },
       risk_tier: passport.riskTier,
       status: passport.status as string,
       created_at: new Date().toISOString(),
@@ -926,6 +956,13 @@ export class DurableStore {
   ): Promise<{ success: boolean; affectedRows: number; error?: string }> {
     // 0. Process-local early guard
     const localMem = this.executionsTable.get(executionId);
+    if (tenantId && localMem && localMem.tenant_id !== tenantId) {
+      return { success: false, affectedRows: 0 };
+    }
+    const claimTenant = tenantId || localMem?.tenant_id;
+    if (process.env.NODE_ENV === 'production' && !claimTenant) {
+      throw new Error('DURABLE_TENANT_REQUIRED: HITL authorization must be bound to an authenticated tenant.');
+    }
     if (localMem && localMem.status !== 'PAUSED') {
       return { success: false, affectedRows: 0 };
     }
@@ -935,17 +972,22 @@ export class DurableStore {
       throw new Error('DURABLE_PERSISTENCE_UNAVAILABLE: Exactly-once HITL approval requires an active database connection in production. Failing closed.');
     }
 
+    // A queued PAUSED upsert must commit before CAS, or it could overwrite the claim.
+    if (process.env.NODE_ENV === 'production') {
+      await this.entityWriteQueues.get(`execution_sessions:${executionId}`);
+    }
+
     // 2. Direct PostgreSQL connection via pgPool
     if (this.isPgConnected && this.pgPool) {
       const sql = `
         UPDATE execution_sessions
         SET status = 'CLAIMED_FOR_EXECUTION', updated_at = NOW()
-        WHERE execution_id = $1 AND status = 'PAUSED'
+        WHERE execution_id = $1 AND tenant_id = $2 AND status = 'PAUSED'
         RETURNING *;
       `;
       const client = await this.pgPool.connect();
       try {
-        const res = await client.query(sql, [executionId]);
+        const res = await client.query(sql, [executionId, claimTenant]);
         const affectedRows = res.rowCount || 0;
         if (affectedRows > 0) {
           if (localMem) {
@@ -966,7 +1008,7 @@ export class DurableStore {
     const config = this.getSupabaseConfig();
     if (config) {
       try {
-        const url = `${config.url}/rest/v1/execution_sessions?execution_id=eq.${encodeURIComponent(executionId)}&status=eq.PAUSED`;
+        const url = `${config.url}/rest/v1/execution_sessions?execution_id=eq.${encodeURIComponent(executionId)}&tenant_id=eq.${encodeURIComponent(claimTenant || '')}&status=eq.PAUSED`;
         const res = await fetch(url, {
           method: 'PATCH',
           headers: {
@@ -1391,6 +1433,8 @@ export class DurableStore {
         complianceProfileChecksum: passportRec.compliance_profile_checksum,
         declaredTools: passportRec.declared_tools,
         governedCapabilities: passportRec.governed_capabilities,
+        declaredModels: passportRec.runtime_spec?.passportSnapshot?.declaredModels,
+        declaredDataScopes: passportRec.runtime_spec?.passportSnapshot?.declaredDataScopes,
         runtime: {
           framework: agentRec.framework_name,
           frameworkVersion: agentRec.framework_version,
@@ -1453,10 +1497,12 @@ export class DurableStore {
         complianceProfileChecksum: passportRec.compliance_profile_checksum,
         declaredTools: passportRec.declared_tools,
         governedCapabilities: passportRec.governed_capabilities,
+        declaredModels: passportRec.runtime_spec?.passportSnapshot?.declaredModels,
+        declaredDataScopes: passportRec.runtime_spec?.passportSnapshot?.declaredDataScopes,
         runtime: {
-          framework: 'crewai',
-          frameworkVersion: '0.102.0',
-          runtimeVersion: 'complypro-runtime-v1.0'
+          framework: passportRec.runtime_spec?.passportSnapshot?.runtime?.framework || this.agentsTable.get(rtRec.agent_id)?.framework_name || 'Unknown',
+          frameworkVersion: passportRec.runtime_spec?.passportSnapshot?.runtime?.frameworkVersion || this.agentsTable.get(rtRec.agent_id)?.framework_version,
+          runtimeVersion: passportRec.runtime_spec?.passportSnapshot?.runtime?.runtimeVersion || 'complypro-runtime-v1.0'
         },
         toolManifestHash: passportRec.tool_manifest_hash,
         riskTier: passportRec.risk_tier as any,
@@ -1477,5 +1523,139 @@ export class DurableStore {
       pendingHitlCount: pendingHitlGates.length,
       source
     };
+  }
+
+  /** The existing audit_ledger_blocks table is the durable backing of EvidenceLedger. */
+  public static async loadRuntimeEvidence(tenantId: string): Promise<EvidenceLedgerEntry[]> {
+    if (!tenantId || !this.isDatabaseConnected()) throw new Error('DURABLE_EVIDENCE_UNAVAILABLE');
+    const rows: any[] = [];
+    const limit = 1000;
+    for (let offset = 0; ; offset += limit) {
+      const page = await this.selectFromDatabase('audit_ledger_blocks', { tenant_id: tenantId, workspace_id: 'WS-RUNTIME' },
+        { orderBy: 'block_height', offset, limit });
+      rows.push(...page);
+      if (page.length < limit) break;
+    }
+    return rows.map(row => {
+      const entry = row.payload_data as EvidenceLedgerEntry;
+      if (!entry || row.block_hash !== entry.eventHash || row.previous_hash !== entry.previousHash || row.block_height !== entry.sequence)
+        throw new Error('DURABLE_EVIDENCE_INTEGRITY_FAILED: Stored row/entry mismatch.');
+      return entry;
+    });
+  }
+
+  public static async appendRuntimeEvidence(tenantId: string, entry: EvidenceLedgerEntry): Promise<void> {
+    if (!tenantId || !this.isDatabaseConnected()) throw new Error('DURABLE_EVIDENCE_UNAVAILABLE');
+    if (this.isPgConnected && this.pgPool) {
+      await this.pgPool.query('SELECT append_runtime_evidence($1, $2::jsonb)', [tenantId, JSON.stringify(entry)]);
+      return;
+    }
+    const config = this.getSupabaseConfig();
+    if (!config) throw new Error('DURABLE_EVIDENCE_UNAVAILABLE');
+    const response = await fetch(`${config.url}/rest/v1/rpc/append_runtime_evidence`, {
+      method: 'POST', headers: { apikey: config.key, Authorization: `Bearer ${config.key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_tenant_id: tenantId, p_entry: entry }), signal: AbortSignal.timeout(15000)
+    });
+    if (!response.ok) throw new Error(`DURABLE_EVIDENCE_WRITE_FAILED: HTTP ${response.status}`);
+  }
+
+  public static async verifyRuntimeEvidenceSchema(): Promise<void> {
+    if (!this.isDatabaseConnected()) throw new Error('DURABLE_EVIDENCE_UNAVAILABLE');
+    if (this.isPgConnected && this.pgPool) {
+      const result = await this.pgPool.query(`SELECT
+        to_regclass('public.audit_ledger_blocks') IS NOT NULL AS ledger,
+        to_regprocedure('public.append_runtime_evidence(text,jsonb)') IS NOT NULL AS appender,
+        has_function_privilege(current_user,to_regprocedure('public.append_runtime_evidence(text,jsonb)'),'EXECUTE') AS executable`);
+      if (!result.rows[0]?.ledger || !result.rows[0]?.appender || !result.rows[0]?.executable) throw new Error('DURABLE_EVIDENCE_SCHEMA_UNAVAILABLE');
+      return;
+    }
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) throw new Error('DURABLE_SERVICE_ROLE_REQUIRED');
+    const response = await fetch(`${url}/rest/v1/`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(10000)
+    });
+    if (!response.ok) throw new Error('SCHEMA_UNAVAILABLE');
+    const schema = await response.json();
+    if (!schema.paths?.['/rpc/append_runtime_evidence']) throw new Error('DURABLE_EVIDENCE_RPC_UNAVAILABLE');
+  }
+
+  public static async requireExecutionAuthority(context: {
+    agentId: string; passportId: string; runtimeId: string; passport: AgentPassport; tenantId?: string
+  }): Promise<void> {
+    if (process.env.NODE_ENV !== 'production') return;
+    const tenant = context.tenantId || context.passport.tenantId || 'TENANT-DEFAULT';
+    const [passports,runtimes] = await Promise.all([
+      this.selectFromDatabase('agent_passports',{passport_id:context.passportId,tenant_id:tenant}),
+      this.selectFromDatabase('runtime_instances',{runtime_id:context.runtimeId,tenant_id:tenant})
+    ]);
+    const passport = passports[0],runtime = runtimes[0];
+    if (passports.length !== 1 || runtimes.length !== 1 || passport.agent_id !== context.agentId ||
+        runtime.agent_id !== context.agentId || runtime.passport_id !== passport.passport_id ||
+        passport.status !== 'GOVERNED' || runtime.status !== 'RUNNING' ||
+        passport.passport_fingerprint !== context.passport.passportFingerprint) {
+      throw new Error('CURRENT_EXECUTION_AUTHORITY_DENIED: Durable Passport/runtime no longer authorizes execution.');
+    }
+    const current = {...passport.runtime_spec?.passportSnapshot,passportId:passport.passport_id,tenantId:passport.tenant_id,
+      passportFingerprint:passport.passport_fingerprint,complianceProfileChecksum:passport.compliance_profile_checksum,
+      toolManifestHash:passport.tool_manifest_hash,declaredTools:passport.declared_tools,
+      governedCapabilities:passport.governed_capabilities,riskTier:passport.risk_tier,status:passport.status};
+    const profile=ComplianceProfileRegistry.getAllProfiles().find(profile=>profile.checksum===current.complianceProfileChecksum);
+    if (!profile || !PassportSigner.verify(current.passportFingerprint,PassportSigner.toSignInput(current,context.agentId,profile.version)).valid) {
+      throw new Error('CURRENT_EXECUTION_AUTHORITY_DENIED: Durable authorization signature is invalid.');
+    }
+  }
+
+  public static async getOrganizationMembership(userId: string, organizationId: string): Promise<any | null> {
+    const rows = await this.selectFromDatabase('organization_members', { user_id: userId, organization_id: organizationId });
+    return rows[0] || null;
+  }
+
+  public static async listAgentRecordsAsync(tenantId: string): Promise<StoredAgentRecord[]> {
+    if (process.env.NODE_ENV === 'test') return this.listAgents(tenantId);
+    if (!this.isDatabaseConnected() && process.env.NODE_ENV !== 'production') return this.listAgents(tenantId);
+    const rows = await this.selectFromDatabase('agents', { tenant_id: tenantId });
+    return rows.map(row => ({ ...row, version: 1 }));
+  }
+
+  public static async hydrateTenantCache(tenantId: string): Promise<void> {
+    if (process.env.NODE_ENV !== 'production') return;
+    const tables = ['agents','agent_passports','runtime_instances','execution_sessions','hitl_requests'] as const;
+    const maps = [this.agentsTable,this.passportsTable,this.runtimesTable,this.executionsTable,this.hitlRequestsTable] as Map<string, any>[];
+    const keys = ['agent_id','passport_id','runtime_id','execution_id','gate_id'];
+    const rowsByTable = await Promise.all(tables.map(table => this.selectFromDatabase(table, {tenant_id:tenantId})));
+    for (let i=0;i<tables.length;i++) {
+      for (const [key, record] of maps[i]) if (record.tenant_id === tenantId) maps[i].delete(key);
+      for (const row of rowsByTable[i]) maps[i].set(row[keys[i]],{...row,version:1});
+    }
+  }
+
+  public static async importAgentAsync(input: { name: string; framework: string; sourceRepository?: string;
+    sourcePath?: string; models?: string[]; tools?: string[]; description?: string; risk?: string; owner?: any; openFindings?: number },
+    tenantId: string, actorId: string): Promise<StoredAgentRecord> {
+    if (typeof input?.name !== 'string' || !input.name.trim() || input.name.trim().length > 255 ||
+        typeof input.framework !== 'string' || !input.framework.trim() || !tenantId ||
+        [input.models,input.tools].some(values => values !== undefined && (!Array.isArray(values) || values.some(value => typeof value !== 'string'))) ||
+        (input.owner !== undefined && (!input.owner || typeof input.owner !== 'object' || typeof input.owner.name !== 'string'))) {
+      throw new Error('INVALID_IMPORT');
+    }
+    const discovery = { name: input.name.trim(), framework: input.framework.trim(),
+      sourceRepository: input.sourceRepository, sourcePath: input.sourcePath,
+      models: input.models || [], tools: input.tools || [], description: input.description,
+      risk: input.risk, owner: input.owner, openFindings: input.openFindings };
+    const id = `agt_scan_${crypto.createHash('sha256').update(JSON.stringify([tenantId,discovery.sourceRepository || '',discovery.sourcePath || '',discovery.name])).digest('hex').slice(0,24)}`;
+    const existing = (await this.listAgentRecordsAsync(tenantId)).find(row => row.agent_id === id);
+    if (existing) return existing; // Reimport must never mint a Passport or promote status.
+    const now = new Date().toISOString();
+    const record: StoredAgentRecord = {
+      agent_id: id, tenant_id: tenantId, name: discovery.name, framework_name: discovery.framework,
+      framework_version: 'Unknown', compliance_profile: 'UNASSIGNED', capabilities: [],
+      budget: { maxCostPerRunEur: 0 }, status: 'IMPORTED', created_at: now, updated_at: now, version: 1,
+      metadata: { discovery, importedBy: actorId }
+    };
+    const { version, ...payload } = record;
+    if (process.env.NODE_ENV !== 'test') await this.upsertToDatabase('agents','agent_id',payload);
+    this.agentsTable.set(id,record);
+    return record;
   }
 }

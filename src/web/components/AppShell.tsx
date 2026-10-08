@@ -150,81 +150,12 @@ export const AppShell: React.FC<AppShellProps> = ({
     };
   }, []);
 
-  // Simplified Enterprise Navigation: Core Destinations
+  // Simplified Enterprise Navigation: Canonical 4 Destinations
   const topLevelItems = [
-    { id: 'ai-agents' as ActiveNavView, label: 'AI Agents', icon: Bot, badge: null },
-    { id: 'tools-scanner' as ActiveNavView, label: 'Discover', icon: Terminal, badge: null },
-    { id: 'assure-evidence' as ActiveNavView, label: 'Evidence', icon: LockKeyhole, badge: null }
+    { id: 'ai-agents' as ActiveNavView, label: 'AI Agents', icon: Bot },
+    { id: 'tools-scanner' as ActiveNavView, label: 'Discover', icon: Terminal },
+    { id: 'assure-evidence' as ActiveNavView, label: 'Evidence', icon: LockKeyhole }
   ];
-
-  // Progressive Disclosure: Collapsible Advanced Engineering Workspaces
-  const navGroups = [
-    {
-      id: 'advanced-tools',
-      label: 'ADVANCED WORKSPACES',
-      items: [
-        { id: 'studio-builder' as ActiveNavView, label: 'Agent Studio', icon: Bot, badge: null },
-        { id: 'cockpit-control' as ActiveNavView, label: 'Governance Cockpit', icon: Activity, badge: null },
-        { id: 'overview-center' as ActiveNavView, label: 'Governance Center', icon: Shield, badge: null },
-        { id: 'govern-controls' as ActiveNavView, label: '12 Controls Matrix', icon: CheckSquare, badge: null },
-        { id: 'govern-risk' as ActiveNavView, label: 'Risk Engine', icon: AlertTriangle, badge: pendingDecisionsCount > 0 ? `${pendingDecisionsCount}` : null },
-        { id: 'govern-policies' as ActiveNavView, label: 'Policy Engine', icon: FileText, badge: null },
-        { id: 'operate-approvals' as ActiveNavView, label: 'Human Approvals', icon: CheckCircle2, badge: pendingHitlCount > 0 ? `${pendingHitlCount}` : null },
-        { id: 'operate-incidents' as ActiveNavView, label: 'Failsafe & Incidents', icon: Zap, badge: activeIncidentsCount > 0 ? `${activeIncidentsCount}` : null },
-        { id: 'tools-integrations' as ActiveNavView, label: 'Universal MCP', icon: Share2, badge: null },
-        { id: 'manage-team' as ActiveNavView, label: 'Team & RBAC', icon: Users, badge: null },
-        { id: 'learn-academy' as ActiveNavView, label: 'Governance Academy', icon: GraduationCap, badge: null }
-      ]
-    }
-  ];
-
-  // Collapsible Groups State: Active group opens automatically, inactive remain collapsed
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    for (const group of navGroups) {
-      if (group.items.some(item => item.id === activeView)) {
-        initial[group.id] = true;
-      }
-    }
-    return initial;
-  });
-
-  // Automatically open the section containing the activeView when it changes
-  useEffect(() => {
-    for (const group of navGroups) {
-      if (group.items.some(item => item.id === activeView)) {
-        setOpenGroups(prev => ({
-          ...prev,
-          [group.id]: true
-        }));
-        break;
-      }
-    }
-  }, [activeView]);
-
-  const toggleGroup = (groupId: string) => {
-    setOpenGroups(prev => ({
-      ...prev,
-      [groupId]: !prev[groupId]
-    }));
-  };
-
-  const findNavItem = (id: ActiveNavView) => {
-    if (id === 'settings') return { id: 'settings' as ActiveNavView, label: 'Settings', icon: Lock, badge: null };
-    for (const item of topLevelItems) {
-      if (item.id === id) return item;
-    }
-    for (const g of navGroups) {
-      for (const item of g.items) {
-        if (item.id === id) return item;
-      }
-    }
-    return null;
-  };
-
-  const priorityNavItems = isLensPrioritized
-    ? activeLens.priorityViews.map(id => findNavItem(id)).filter(Boolean)
-    : [];
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 transition-colors duration-150">
@@ -266,23 +197,20 @@ export const AppShell: React.FC<AppShellProps> = ({
             </button>
           )}
 
-          {/* 1. ROLE-BASED LENS SELECTOR (EXPERIENCE LAYER) */}
-          <div className="relative">
+          {/* 1. ROLE-BASED LENS (Discreet Secondary Utility) */}
+          <div className="relative hidden xl:block">
             <button
               onClick={() => {
                 setIsLensMenuOpen(!isLensMenuOpen);
                 setIsIndustryMenuOpen(false);
                 setIsUserMenuOpen(false);
               }}
-              className="flex items-center space-x-2 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold transition cursor-pointer shadow-2xs"
-              title="Personalize sua perspectiva de trabalho por cargo/perfil corporativo"
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs text-slate-600 dark:text-slate-400 transition cursor-pointer"
+              title="Role Lens Perspective (Optional)"
             >
-              <span className="text-sm">{activeLens.icon}</span>
-              <div className="flex flex-col text-left">
-                <span className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-mono font-bold leading-none">Role Lens</span>
-                <span className="text-xs font-bold leading-tight truncate max-w-[110px] sm:max-w-[150px] text-slate-700 dark:text-slate-300">{activeLens.shortLabel}</span>
-              </div>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
+              <span className="text-xs">{activeLens.icon}</span>
+              <span className="text-xs font-medium truncate max-w-[110px]">{activeLens.shortLabel}</span>
+              <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
             </button>
 
             {isLensMenuOpen && (
@@ -331,19 +259,20 @@ export const AppShell: React.FC<AppShellProps> = ({
             )}
           </div>
 
-          {/* 2. INDUSTRY GOVERNANCE PROFILE */}
-          <div className="relative hidden sm:block">
+          {/* 2. INDUSTRY GOVERNANCE PROFILE (Discreet Secondary Utility) */}
+          <div className="relative hidden xl:block">
             <button
               onClick={() => {
                 setIsIndustryMenuOpen(!isIndustryMenuOpen);
                 setIsLensMenuOpen(false);
                 setIsUserMenuOpen(false);
               }}
-              className="flex items-center space-x-2 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold transition cursor-pointer shadow-2xs"
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs text-slate-600 dark:text-slate-400 transition cursor-pointer"
+              title="Industry Governance Profile (Optional)"
             >
-              <span className="text-sm">{activeProfile.icon}</span>
-              <span className="hidden md:inline text-slate-700 dark:text-slate-300 font-medium truncate max-w-[120px]">{activeProfile.name}</span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-xs">{activeProfile.icon}</span>
+              <span className="text-xs font-medium truncate max-w-[110px]">{activeProfile.name}</span>
+              <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
             </button>
 
             {isIndustryMenuOpen && (
@@ -500,140 +429,42 @@ export const AppShell: React.FC<AppShellProps> = ({
       {/* Main App Workspace Layout */}
       <div className="flex-1 flex overflow-hidden">
         
-        {/* Left Sidebar Navigation */}
-        <aside className="w-64 border-r border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#0f172a] flex flex-col justify-between overflow-y-auto shrink-0 select-none">
-          <div className="p-3 space-y-4">
-            
-            {/* 4 Core Destinations */}
-
-            {/* REDESIGNED NAVIGATION: FIXED TOP-LEVEL + 4 COLLAPSIBLE GROUPS */}
-            <div className="space-y-3">
-              {/* Fixed Top-Level Destinations */}
-              <div className="space-y-1 pb-2 mb-2 border-b border-slate-200/80 dark:border-slate-800/80">
-                {topLevelItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeView === item.id;
-                  return (
-                    <button
-                      key={`top-${item.id}-${item.label}`}
-                      onClick={() => setActiveView(item.id as ActiveNavView)}
-                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
-                        isActive
-                          ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
-                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-2.5 truncate">
-                        <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`} />
-                        <span className="truncate">{item.label}</span>
-                      </div>
-                      {item.badge && (
-                        <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono shrink-0 ${
-                          isActive ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-                        }`}>
-                          {item.badge}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Advanced Workspaces (Progressive Disclosure) */}
-              <div className="space-y-2">
-                {navGroups.map((group) => {
-                  const isOpen = !!openGroups[group.id];
-                  const hasActiveItem = group.items.some(i => i.id === activeView);
-
-                  return (
-                    <div key={group.id} className="rounded-xl overflow-hidden">
-                      {/* Group Header Button (Accordion Toggle) */}
-                      <button
-                        type="button"
-                        onClick={() => toggleGroup(group.id)}
-                        className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[10px] font-bold tracking-wider uppercase transition cursor-pointer select-none ${
-                          hasActiveItem
-                            ? 'text-slate-900 dark:text-slate-100 bg-slate-100/60 dark:bg-slate-800/40'
-                            : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100/50 dark:hover:bg-slate-800/40'
-                        }`}
-                      >
-                        <span className="truncate">{group.label}</span>
-                        <span className="ml-1 shrink-0 text-slate-400">
-                          {isOpen ? (
-                            <ChevronDown className="w-3.5 h-3.5" />
-                          ) : (
-                            <ChevronRight className="w-3.5 h-3.5" />
-                          )}
-                        </span>
-                      </button>
-
-                      {/* Group Items (Collapsible with subtle CSS transition) */}
-                      {isOpen && (
-                        <div className="space-y-0.5 mt-0.5 pl-1 transition-all duration-150">
-                          {group.items.map((item) => {
-                            const Icon = item.icon;
-                            const isActive = activeView === item.id;
-                            const isPriority = isLensPrioritized && activeLens.priorityViews.includes(item.id as ActiveNavView);
-
-                            return (
-                              <button
-                                key={item.id}
-                                onClick={() => setActiveView(item.id as ActiveNavView)}
-                                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
-                                  isActive
-                                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
-                                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
-                                }`}
-                              >
-                                <div className="flex items-center space-x-2.5 truncate">
-                                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`} />
-                                  <span className="truncate">{item.label}</span>
-                                </div>
-                                {item.badge ? (
-                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono shrink-0 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                                    {item.badge}
-                                  </span>
-                                ) : isPriority ? (
-                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" title="Priority item" />
-                                ) : null}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
+        {/* Left Sidebar Navigation — Enterprise 4 Destinations */}
+        <aside className="w-60 border-r border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#0f172a] flex flex-col justify-between shrink-0 select-none">
+          <div className="p-3 space-y-1">
+            {topLevelItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeView === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveView(item.id)}
+                  className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                    isActive
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white dark:text-slate-950' : 'text-slate-400'}`} />
+                  <span className="truncate">{item.label}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* Settings - Visually Separated */}
-          <div className="px-3 py-2 border-t border-slate-200/80 dark:border-slate-800/80">
+          <div className="p-3 border-t border-slate-200/80 dark:border-slate-800/80">
             <button
               onClick={() => setActiveView('settings')}
-              className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
                 activeView === 'settings'
-                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
-              <div className="flex items-center space-x-2.5 truncate">
-                <Lock className={`w-4 h-4 shrink-0 ${activeView === 'settings' ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`} />
-                <span className="truncate">Settings</span>
-              </div>
+              <Lock className={`w-4 h-4 shrink-0 ${activeView === 'settings' ? 'text-white dark:text-slate-950' : 'text-slate-400'}`} />
+              <span className="truncate">Settings</span>
             </button>
-          </div>
-
-          {/* Sidebar Footer */}
-          <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-1">
-            <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-              <span className="font-mono text-[10px]">{activeLens.shortLabel}</span>
-              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold text-[10px]">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Operational
-              </span>
-            </div>
           </div>
         </aside>
 

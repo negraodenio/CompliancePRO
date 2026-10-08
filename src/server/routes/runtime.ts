@@ -11,11 +11,13 @@
 import { Router, Request, Response } from 'express';
 import { RuntimeManager } from '../../core/runtime-manager';
 import { requireRoles, defaultRateLimiter } from '../security/auth-middleware';
+import { DurableStore } from '../db/durable-store';
+import { EvidenceLedger } from '../../core/evidence-ledger';
 
 export const runtimeRouter = Router();
 
 // POST /api/v1/runtimes/start - Developer only, Rate-limited
-runtimeRouter.post('/start', requireRoles('developer'), defaultRateLimiter.middleware(), (req: Request, res: Response) => {
+runtimeRouter.post('/start', requireRoles('developer'), defaultRateLimiter.middleware(), async (req: Request, res: Response) => {
   try {
     const { runtimeId } = req.body;
     const tenantId = req.tenantId || req.principal?.tenantId || (req.headers['x-tenant-id'] as string) || req.body?.tenantId;
@@ -28,6 +30,8 @@ runtimeRouter.post('/start', requireRoles('developer'), defaultRateLimiter.middl
     }
 
     const instance = RuntimeManager.startRuntime(runtimeId, tenantId);
+    if (process.env.NODE_ENV === 'production') await DurableStore.saveRuntimeAsync(instance,tenantId!);
+    await EvidenceLedger.flushPendingWrites(tenantId!);
     return res.status(200).json({ ok: true, runtime: instance });
   } catch (error: any) {
     const msg = error.message || 'Failed to start runtime';
@@ -44,7 +48,7 @@ runtimeRouter.post('/start', requireRoles('developer'), defaultRateLimiter.middl
 });
 
 // POST /api/v1/runtimes/stop - Developer only, Rate-limited
-runtimeRouter.post('/stop', requireRoles('developer'), defaultRateLimiter.middleware(), (req: Request, res: Response) => {
+runtimeRouter.post('/stop', requireRoles('developer'), defaultRateLimiter.middleware(), async (req: Request, res: Response) => {
   try {
     const { runtimeId } = req.body;
     const tenantId = req.tenantId || req.principal?.tenantId || (req.headers['x-tenant-id'] as string) || req.body?.tenantId;
@@ -57,6 +61,8 @@ runtimeRouter.post('/stop', requireRoles('developer'), defaultRateLimiter.middle
     }
 
     const instance = RuntimeManager.stopRuntime(runtimeId, tenantId);
+    if (process.env.NODE_ENV === 'production') await DurableStore.saveRuntimeAsync(instance,tenantId!);
+    await EvidenceLedger.flushPendingWrites(tenantId!);
     return res.status(200).json({ ok: true, runtime: instance });
   } catch (error: any) {
     const msg = error.message || 'Failed to stop runtime';

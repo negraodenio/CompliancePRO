@@ -317,12 +317,17 @@ export class SandboxManager {
       };
     }
 
-    // ALLOW: Successful governed execution
+    if (process.env.NODE_ENV !== 'test') return {
+      success:false,status:'RUNNING',verdict:'ALLOW',durationMs,
+      error:'PROVIDER_EXECUTION_REQUIRED: Sandbox authorization is not a provider execution receipt.'
+    };
+    // Legacy authorization fixture, not an actual provider execution.
     return {
       success: true,
       status: 'RUNNING',
       verdict: 'ALLOW',
       result: {
+        fixture: true,
         capabilityId: capability.id,
         action: request.action,
         executedVia: 'COMPLYPRO_SANDBOX_GATEWAY',
@@ -450,7 +455,8 @@ export class SandboxManager {
     }
 
     const resolvedPath = path.resolve(sandbox.ephemeralPath, relativePath);
-    if (!resolvedPath.startsWith(path.resolve(sandbox.ephemeralPath))) {
+    const withinSandbox = path.relative(path.resolve(sandbox.ephemeralPath), resolvedPath);
+    if (path.isAbsolute(withinSandbox) || withinSandbox === '..' || withinSandbox.startsWith(`..${path.sep}`)) {
       throw new Error(`FILESYSTEM_ESCAPE_DENIED: Attempted path traversal to "${relativePath}" outside sandbox root`);
     }
 
@@ -474,7 +480,8 @@ export class SandboxManager {
     }
 
     const resolvedPath = path.resolve(sandbox.ephemeralPath, relativePath);
-    if (!resolvedPath.startsWith(path.resolve(sandbox.ephemeralPath))) {
+    const withinSandbox = path.relative(path.resolve(sandbox.ephemeralPath), resolvedPath);
+    if (path.isAbsolute(withinSandbox) || withinSandbox === '..' || withinSandbox.startsWith(`..${path.sep}`)) {
       throw new Error(`FILESYSTEM_ESCAPE_DENIED: Attempted path traversal to "${relativePath}" outside sandbox root`);
     }
 

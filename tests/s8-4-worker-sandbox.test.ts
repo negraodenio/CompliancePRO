@@ -8,6 +8,7 @@
  * 3. Observability & Evidence Invariants (WHO, WHAT, WHEN, WHICH SANDBOX, etc.)
  */
 
+import { ensureSaasFixture, testLiveModelCredentials, assertRuntimeParents, assertStoredSession } from './test-supabase-fixtures';
 import assert from 'assert';
 import fs from 'fs';
 import path from 'path';
@@ -26,6 +27,7 @@ import { CrewAiRuntimeAdapter } from '../src/core/adapters/crewai-runtime-adapte
 import { EvidenceVerifier } from '../src/core/evidence-verifier';
 import { AgentProvisioner, AgentDefinition } from '../src/core/agent-provisioner';
 import { RuntimeManager } from '../src/core/runtime-manager';
+import { DurableStore } from '../src/server/db/durable-store';
 
 async function runS84WorkerSandboxSuite() {
   console.log('\n==================================================================');
@@ -78,7 +80,8 @@ async function runS84WorkerSandboxSuite() {
     provider: 'REST',
     riskLevel: 'HIGH',
     allowedActions: ['WRITE', 'EXECUTE'],
-    dataClassification: 'RESTRICTED'
+    dataClassification: 'RESTRICTED',
+    hitl: { required: true }
   });
 
   // ============================================================================
@@ -311,6 +314,18 @@ async function runS84WorkerSandboxSuite() {
   console.log('  [PASS ADV-10]: Complete provenance trail verified (WHO, WHAT, WHEN, WHICH SANDBOX)');
 
   console.log('\n--- GROUP 3: THE 10 OFFICIAL CRUCIBLE TESTS ---');
+  const crucibleAgent = AgentProvisioner.provision({
+    name: 'sandbox-crucible-fixture', framework: { name: 'crewai', version: '0.102.0' },
+    complianceProfile: 'CP-EU-AI-ACT-HIGH-RISK-FINANCIAL', capabilities: ['credit.check', 'credit.transfer'],
+    tenantId: 'tenant_alpha', environment: 'sandbox',
+    budget: { maxCostPerRunEur: 15.0, maxTokensPerStep: 4096, maxCallsPerMinute: 60 }
+  });
+  const crucibleRuntime = RuntimeManager.createRuntime(crucibleAgent.runtimeSpec, crucibleAgent.passport, crucibleAgent.tenantId);
+  RuntimeManager.startRuntime(crucibleRuntime.runtimeId, crucibleAgent.tenantId);
+  await DurableStore.flushPendingWrites();
+  await assertRuntimeParents({ agentId: crucibleAgent.agentId, passportId: crucibleAgent.passportId,
+    runtimeId: crucibleRuntime.runtimeId, tenantId: crucibleAgent.tenantId });
+  const crucibleExecutionId = `exec_s84_hitl_${crucibleAgent.agentId}`;
 
   // CRUCIBLE 1: SECRET ESCAPE
   assert.throws(() => {
@@ -381,11 +396,11 @@ async function runS84WorkerSandboxSuite() {
     dataClassification: 'RESTRICTED'
   });
   const bypassRes = await ToolGateway.invokeTool({
-    agentId: referencePassport.passportId,
-    runtimeId: 'rt_alpha_01',
-    passportId: referencePassport.passportId,
+    agentId: crucibleAgent.agentId,
+    runtimeId: crucibleRuntime.runtimeId,
+    passportId: crucibleAgent.passportId,
     executionId: 'exec_ddl_test',
-    passport: referencePassport,
+    passport: crucibleAgent.passport,
     capability: 'DIRECT_DB_DDL',
     action: 'DELETE',
     payload: { query: 'DROP TABLE agents;' }
@@ -396,11 +411,11 @@ async function runS84WorkerSandboxSuite() {
 
   // CRUCIBLE 7: HITL INTERVENE & RESUME
   const hitlRes = await ToolGateway.invokeTool({
-    agentId: referencePassport.passportId,
-    runtimeId: 'rt_alpha_01',
-    passportId: referencePassport.passportId,
-    executionId: 'exec_hitl_test',
-    passport: referencePassport,
+    agentId: crucibleAgent.agentId,
+    runtimeId: crucibleRuntime.runtimeId,
+    passportId: crucibleAgent.passportId,
+    executionId: crucibleExecutionId,
+    passport: crucibleAgent.passport,
     capability: 'credit.transfer',
     action: 'EXECUTE',
     payload: { amount: 25000, recipient: 'NL91ABNA0417164300' }
@@ -409,9 +424,12 @@ async function runS84WorkerSandboxSuite() {
   assert.strictEqual(hitlRes.status, 'PAUSED');
   assert.strictEqual(hitlRes.providerCallCount, 0);
   // Operator approves
-  const resumeRes = await ToolGateway.resumeExecution('exec_hitl_test', 'APPROVED', 'OP-COMPLIANCE-OFFICER');
+  const resumeRes = await ToolGateway.resumeExecution(crucibleExecutionId, 'APPROVED', 'OP-COMPLIANCE-OFFICER');
   assert.strictEqual(resumeRes.status, 'COMPLETED');
   assert.strictEqual(resumeRes.providerCallCount, 1);
+  await DurableStore.flushPendingWrites();
+  await assertStoredSession({ executionId: crucibleExecutionId, agentId: crucibleAgent.agentId,
+    runtimeId: crucibleRuntime.runtimeId, tenantId: crucibleAgent.tenantId, status: 'COMPLETED' });
   console.log('  [PASS CRUCIBLE 7]: HITL intervention: credit.transfer paused, tool calls = 0, resumed on approval');
 
   // CRUCIBLE 8: MODEL GOVERNANCE
@@ -436,7 +454,7 @@ async function runS84WorkerSandboxSuite() {
     dataClassification: 'CONFIDENTIAL'
   });
   const modelAllowed = GuardianService.evaluateModelInvocation({
-    agent: { id: referencePassport.passportId, name: 'risk-agent' },
+    agent: { id: crucibleAgent.agentId, name: 'risk-agent' },
     passport: {
       passportId: referencePassport.passportId,
       passportFingerprint: referencePassport.passportFingerprint,
@@ -452,7 +470,7 @@ async function runS84WorkerSandboxSuite() {
   assert.strictEqual(modelAllowed.verdict, 'ALLOW');
 
   const modelBlocked = GuardianService.evaluateModelInvocation({
-    agent: { id: referencePassport.passportId, name: 'risk-agent' },
+    agent: { id: crucibleAgent.agentId, name: 'risk-agent' },
     passport: {
       passportId: referencePassport.passportId,
       passportFingerprint: referencePassport.passportFingerprint,
@@ -480,7 +498,7 @@ async function runS84WorkerSandboxSuite() {
     dataClassification: 'CONFIDENTIAL'
   });
   const dataAllowed = GuardianService.evaluateDataEgress({
-    agent: { id: referencePassport.passportId, name: 'risk-agent' },
+    agent: { id: crucibleAgent.agentId, name: 'risk-agent' },
     passport: {
       passportId: referencePassport.passportId,
       passportFingerprint: referencePassport.passportFingerprint,
@@ -497,7 +515,7 @@ async function runS84WorkerSandboxSuite() {
   assert.strictEqual(dataAllowed.verdict, 'ALLOW');
 
   const dataBlocked = GuardianService.evaluateDataEgress({
-    agent: { id: referencePassport.passportId, name: 'risk-agent' },
+    agent: { id: crucibleAgent.agentId, name: 'risk-agent' },
     passport: {
       passportId: referencePassport.passportId,
       passportFingerprint: referencePassport.passportFingerprint,
@@ -529,15 +547,20 @@ async function runS84WorkerSandboxSuite() {
   // GROUP 4: END-TO-END GOVERNED AGENT PROOF INSIDE SANDBOX
   // ============================================================================
   console.log('\n--- GROUP 4: END-TO-END GOVERNED AGENT PROOF INSIDE SANDBOX ---');
+  const saasFixture = await ensureSaasFixture('s84-sandbox-e2e');
+  const liveModel = testLiveModelCredentials();
+  CapabilityRegistry.register({ id: 'supabase.organizations.read', name: 'Fixture Organization Read',
+    description: 'Real TEST SaaS organization query', channel: 'DATA', provider: 'supabase-postgresql',
+    riskLevel: 'LOW', allowedActions: ['READ'], dataClassification: 'INTERNAL' });
   
   // 1. Provision Agent
   const e2eAgentDef: AgentDefinition = {
     name: 'sandbox-e2e-analyst',
     framework: { name: 'crewai', version: '0.102.0' },
     complianceProfile: 'CP-EU-AI-ACT-HIGH-RISK-FINANCIAL',
-    capabilities: ['crm.read_customer', 'gpt-4o', 'credit.check'],
+    capabilities: ['supabase.organizations.read', 'gpt-4o', 'credit.check'],
     budget: { maxCostPerRunEur: 15.0, maxTokensPerStep: 4096, maxCallsPerMinute: 60 },
-    environment: 'sandbox'
+    environment: 'sandbox', tenantId: saasFixture.organizationId
   };
   const e2eProvision = AgentProvisioner.provision(e2eAgentDef);
   assert.strictEqual(e2eProvision.status, 'PROVISIONED');
@@ -548,6 +571,9 @@ async function runS84WorkerSandboxSuite() {
   assert.strictEqual(startedE2eRuntime.status, 'RUNNING');
   const e2eWorker = RuntimeManager.getWorker(startedE2eRuntime.runtimeId)!;
   assert.ok(e2eWorker, 'E2E Worker must be initialized');
+  await DurableStore.flushPendingWrites();
+  await assertRuntimeParents({ agentId: e2eProvision.agentId, passportId: e2eProvision.passportId,
+    runtimeId: e2eRuntime.runtimeId, tenantId: e2eProvision.tenantId });
 
   // 3. CrewAI Runtime Adapter Execution
   const e2eAdapter = new CrewAiRuntimeAdapter(e2eWorker);
@@ -555,26 +581,28 @@ async function runS84WorkerSandboxSuite() {
   assert.strictEqual(e2eSession.status, 'RUNNING');
 
   // Step A: DATA Capability
-  const dataStep = await e2eAdapter.execute(e2eSession, {
-    taskId: 'task_data_step',
-    description: 'Read customer risk profile',
-    targetCapability: 'crm.read_customer',
-    actionType: 'READ',
-    payload: { customerId: 'CUST-E2E-77' }
-  });
+  const dataProvider = DataGateway.getProvider('supabase-postgresql') as any;
+  const dataCallsBefore = dataProvider.callCount;
+  const dataStep = await e2eWorker.requestData('supabase.organizations.read', 'READ', 'organizations',
+    { limit: 1 }, 'LOCAL', e2eProvision.tenantId, e2eSession.executionId);
   assert.strictEqual(dataStep.status, 'COMPLETED');
-  assert.strictEqual(dataStep.toolExecuted, true);
+  assert.strictEqual(dataStep.providerCallCount, 1);
+  assert.strictEqual(dataProvider.callCount, dataCallsBefore + 1, 'DATA authorization must result in an observed real query');
+  assert.strictEqual(dataStep.data?.length, 1);
+  assert.strictEqual(dataStep.data?.[0].id, saasFixture.organizationId);
 
-  // Step B: MODEL Capability
+  // Step B: MODEL Capability uses ModelGateway, not the tool adapter's authorization helper.
+  ModelGateway.setProviderCredentials(liveModel.provider, { apiKey: liveModel.apiKey, endpoint: liveModel.endpoint });
+  ModelGateway.setDispatcher(ModelGateway.realHttpDispatcher);
   const e2eSession2 = await e2eAdapter.start();
-  const modelStep = await e2eAdapter.execute(e2eSession2, {
-    taskId: 'task_model_step',
-    description: 'Generate risk score via LLM',
-    targetCapability: 'gpt-4o',
-    actionType: 'EXECUTE',
-    payload: { prompt: 'Analyze creditworthiness for CUST-E2E-77' }
+  const modelStep = await e2eWorker.requestModel({
+    provider:liveModel.provider,model:'gpt-4o',messages:[{role:'user',content:'Confirm this controlled ComplyPRO governance test.'}],
+    executionId:e2eSession2.executionId
   });
   assert.strictEqual(modelStep.status, 'COMPLETED');
+  assert.strictEqual(modelStep.providerCallCount, 1, 'MODEL authorization must result in an observed real dispatch');
+  assert.ok(modelStep.responseMessage?.content, 'Real model provider must return content');
+  ModelGateway.resetDispatcher();
 
   // Step C: TOOL Capability
   const e2eSession3 = await e2eAdapter.start();
@@ -593,6 +621,8 @@ async function runS84WorkerSandboxSuite() {
   assert.strictEqual(verification.totalEntries > 10, true, 'Evidence chain must contain all lifecycle events');
   console.log(`  [PASS E2E]: End-to-end governed workflow verified across DATA, MODEL, and TOOL`);
   console.log(`  [PASS E2E]: Cryptographic Evidence Chain verified (valid: true, entries: ${verification.totalEntries})`);
+  await DurableStore.flushPendingWrites();
+  for (const session of [e2eSession, e2eSession2, e2eSession3]) await assertStoredSession(session);
 
   console.log('\n==================================================================');
   console.log('>>> S8-4 WORKER SANDBOX SUITE: ALL 36 TESTS & CRUCIBLES PASSED <<<');

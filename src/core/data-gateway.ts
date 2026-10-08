@@ -24,6 +24,7 @@ import { AgentPassport } from './compliance-contract';
 import { CapabilityRegistry, CapabilityAction, DataClassification, DataMaskingStrategy } from './capability-registry';
 import { EvidenceLedger, canonicalizeJson } from './evidence-ledger';
 import { PostgresPersistenceAdapter } from '../server/db/postgres-adapter';
+import { DurableStore } from '../server/db/durable-store';
 
 export interface DataInvocationContext {
   agentId: string;
@@ -115,6 +116,9 @@ export class PostgreSqlDataProvider implements DataProviderAdapter {
     context: DataInvocationContext,
     _credentials?: DataProviderCredentials
   ): Promise<any[]> {
+    if (!/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/.test(resource)) {
+      throw new Error('INVALID_RESOURCE_IDENTIFIER: Data resource must be a SQL identifier.');
+    }
     this.callCount++;
 
     // 1. If real PostgreSQL pool is initialized and online, we can query live DB
@@ -122,13 +126,19 @@ export class PostgreSqlDataProvider implements DataProviderAdapter {
       try {
         const pool = PostgresPersistenceAdapter.getPool();
         // Server-side tenant parameter binding (prevents SQL injection and cross-tenant leak)
-        const queryText = `SELECT * FROM ${resource} WHERE tenant_id = $1 ${params?.id ? 'AND id = $2' : ''}`;
+        const table = resource.split('.').map(part => `"${part}"`).join('.');
+        const queryText = `SELECT * FROM ${table} WHERE tenant_id = $1 ${params?.id ? 'AND id = $2' : ''}`;
         const values = params?.id ? [context.tenantId || 'TENANT-DEFAULT', params.id] : [context.tenantId || 'TENANT-DEFAULT'];
         const res = await pool.query(queryText, values);
         return res.rows;
       } catch (err: any) {
+        if (process.env.NODE_ENV !== 'test') throw err;
         // Fallback to deterministic store if table does not exist or connection fails
       }
+    }
+
+    if (process.env.NODE_ENV !== 'test') {
+      throw new Error('POSTGRES_PROVIDER_UNAVAILABLE: Data access requires an active database; fixture fallback is test-only.');
     }
 
     // 2. Deterministic managed store with strict server-side tenant isolation
@@ -160,11 +170,13 @@ export class MockVectorDataProvider implements VectorDataProviderAdapter {
     context: DataInvocationContext
   ): Promise<any[]> {
     this.callCount++;
+    if (process.env.NODE_ENV !== 'test') throw new Error('MOCK_PROVIDER_FORBIDDEN: Vector fixture is test-only.');
     return [{ id: 'vec_doc_01', score: 0.98, snippet: `Governed vector record for ${context.tenantId}` }];
   }
 
   public async search(queryVector: number[], topK: number, context: DataInvocationContext): Promise<any[]> {
     this.callCount++;
+    if (process.env.NODE_ENV !== 'test') throw new Error('MOCK_PROVIDER_FORBIDDEN: Vector fixture is test-only.');
     return [{ id: 'vec_sim_01', similarity: 0.94, tenantId: context.tenantId, topK }];
   }
 }
@@ -185,6 +197,9 @@ export class SupabasePostgreSqlDataProvider implements DataProviderAdapter {
     context: DataInvocationContext,
     credentials?: DataProviderCredentials
   ): Promise<any[]> {
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(resource)) {
+      throw new Error('INVALID_RESOURCE_IDENTIFIER: Data resource must be a PostgREST table name.');
+    }
     this.callCount++;
 
     const supabaseUrl = credentials?.supabaseUrl || process.env.SUPABASE_URL;
@@ -195,14 +210,13 @@ export class SupabasePostgreSqlDataProvider implements DataProviderAdapter {
     }
 
     const queryParams = new URLSearchParams();
-    if (context.tenantId && context.tenantId !== 'TENANT-DEFAULT') {
-      if (resource === 'organizations') {
-        queryParams.set('id', `eq.${context.tenantId}`);
-      } else {
-        queryParams.set('organization_id', `eq.${context.tenantId}`);
-      }
+    const tenantId = context.tenantId || 'TENANT-DEFAULT';
+    if (resource === 'organizations') {
+      queryParams.set('id', `eq.${tenantId}`);
+    } else {
+      queryParams.set('organization_id', `eq.${tenantId}`);
     }
-    if (params?.id) {
+    if (params?.id && resource !== 'organizations') {
       queryParams.set('id', `eq.${params.id}`);
     }
     if (params?.limit) {
@@ -225,7 +239,9 @@ export class SupabasePostgreSqlDataProvider implements DataProviderAdapter {
       throw new Error(`SUPABASE_QUERY_ERROR: HTTP ${res.status} ${res.statusText} - ${errText}`);
     }
 
-    return await res.json();
+    const records = await res.json();
+    if (!Array.isArray(records)) throw new Error('DATA_PROVIDER_RESPONSE_INVALID: Expected records array.');
+    return records;
   }
 }
 
@@ -240,7 +256,7 @@ export class DataGateway {
   private static activeSessions: Map<string, {
     context: DataInvocationContext;
     gateId?: string;
-    status: 'PAUSED' | 'COMPLETED' | 'BLOCKED';
+    status: 'PAUSED' | 'CLAIMED_FOR_EXECUTION' | 'COMPLETED' | 'BLOCKED';
   }> = new Map();
 
   static {
@@ -325,7 +341,9 @@ export class DataGateway {
   public static async invokeData(context: DataInvocationContext): Promise<DataExecutionResponse> {
     const startTime = Date.now();
     const executionId = context.executionId || `exec_data_${Date.now().toString(36)}`;
-    const tenantId = context.tenantId || 'TENANT-DEFAULT';
+    context = {...context,executionId};
+    const tenantId = context.tenantId || context.passport?.tenantId || 'TENANT-DEFAULT';
+    await EvidenceLedger.prepareTenant(tenantId);
 
     // 1. Validate Passport & Identity
     if (!context.passport || !context.passport.passportFingerprint) {
@@ -366,6 +384,7 @@ export class DataGateway {
         evidenceId: `ev_derr_${crypto.randomBytes(4).toString('hex')}`,
         timestamp: new Date().toISOString(),
         eventType: 'DATA_ERROR',
+        executionId,
         agentId: context.agentId,
         passportFingerprint: context.passport.passportFingerprint,
         complianceProfileId: 'CP-EU-AI-ACT-HIGH-RISK-FINANCIAL',
@@ -377,6 +396,7 @@ export class DataGateway {
         executionResult: 'FAILED',
         payloadDigest: crypto.createHash('sha256').update(errorMsg).digest('hex')
       }, tenantId);
+      await EvidenceLedger.flushPendingWrites(tenantId);
 
       return {
         status: 'BLOCKED',
@@ -401,6 +421,7 @@ export class DataGateway {
         evidenceId: `ev_derr_${crypto.randomBytes(4).toString('hex')}`,
         timestamp: new Date().toISOString(),
         eventType: 'DATA_ERROR',
+        executionId,
         agentId: context.agentId,
         passportFingerprint: context.passport.passportFingerprint,
         complianceProfileId: 'CP-EU-AI-ACT-HIGH-RISK-FINANCIAL',
@@ -412,6 +433,7 @@ export class DataGateway {
         executionResult: 'FAILED',
         payloadDigest: crypto.createHash('sha256').update(errorMsg).digest('hex')
       }, tenantId);
+      await EvidenceLedger.flushPendingWrites(tenantId);
 
       return {
         status: 'BLOCKED',
@@ -433,6 +455,7 @@ export class DataGateway {
         evidenceId: `ev_derr_${crypto.randomBytes(4).toString('hex')}`,
         timestamp: new Date().toISOString(),
         eventType: 'DATA_ERROR',
+        executionId,
         agentId: context.agentId,
         passportFingerprint: context.passport.passportFingerprint,
         complianceProfileId: 'CP-EU-AI-ACT-HIGH-RISK-FINANCIAL',
@@ -444,6 +467,7 @@ export class DataGateway {
         executionResult: 'FAILED',
         payloadDigest: crypto.createHash('sha256').update(errorMsg).digest('hex')
       }, tenantId);
+      await EvidenceLedger.flushPendingWrites(tenantId);
 
       return {
         status: 'BLOCKED',
@@ -467,6 +491,7 @@ export class DataGateway {
           evidenceId: `ev_degress_${crypto.randomBytes(4).toString('hex')}`,
           timestamp: new Date().toISOString(),
           eventType: 'DATA_EGRESS',
+          executionId,
           agentId: context.agentId,
           passportFingerprint: context.passport.passportFingerprint,
           complianceProfileId: 'CP-EU-AI-ACT-HIGH-RISK-FINANCIAL',
@@ -478,6 +503,7 @@ export class DataGateway {
           executionResult: 'BLOCKED',
           payloadDigest: crypto.createHash('sha256').update(errorMsg).digest('hex')
         }, tenantId);
+        await EvidenceLedger.flushPendingWrites(tenantId);
 
         return {
           status: 'BLOCKED',
@@ -504,6 +530,7 @@ export class DataGateway {
         evidenceId: `ev_derr_${crypto.randomBytes(4).toString('hex')}`,
         timestamp: new Date().toISOString(),
         eventType: 'DATA_ERROR',
+        executionId,
         agentId: context.agentId,
         passportFingerprint: context.passport.passportFingerprint,
         complianceProfileId: 'UNKNOWN_PROFILE',
@@ -515,6 +542,7 @@ export class DataGateway {
         executionResult: 'FAILED',
         payloadDigest: crypto.createHash('sha256').update(errorMsg).digest('hex')
       }, tenantId);
+      await EvidenceLedger.flushPendingWrites(tenantId);
 
       return {
         status: 'FAILED',
@@ -544,6 +572,7 @@ export class DataGateway {
       evidenceId: `ev_dreq_${crypto.randomBytes(4).toString('hex')}`,
       timestamp: new Date().toISOString(),
       eventType: 'DATA_REQUEST',
+      executionId,
       agentId: context.agentId,
       passportFingerprint: context.passport.passportFingerprint,
       complianceProfileId: profile.profileId,
@@ -575,7 +604,7 @@ export class DataGateway {
         ...(context.parameters || {})
       },
       context: {
-        tenantId: context.passport.tenantId || tenantId
+        tenantId
       }
     });
 
@@ -587,6 +616,7 @@ export class DataGateway {
         evidenceId: `ev_derr_${crypto.randomBytes(4).toString('hex')}`,
         timestamp: new Date().toISOString(),
         eventType: 'DATA_ERROR',
+        executionId,
         agentId: context.agentId,
         passportFingerprint: context.passport.passportFingerprint,
         complianceProfileId: profile.profileId,
@@ -598,6 +628,7 @@ export class DataGateway {
         executionResult: 'BLOCKED',
         payloadDigest: crypto.createHash('sha256').update(guardianVerdict.reason).digest('hex')
       }, tenantId);
+      await EvidenceLedger.flushPendingWrites(tenantId);
 
       return {
         status: 'BLOCKED',
@@ -618,6 +649,22 @@ export class DataGateway {
         gateId: guardianVerdict.gateId,
         status: 'PAUSED'
       });
+
+      // Production cannot expose an approvable action before its durable gate exists.
+      if (process.env.NODE_ENV === 'production') {
+        const now = new Date().toISOString();
+        await DurableStore.saveExecutionSessionAsync({
+          executionId, agentId: context.agentId, runtimeId: context.runtimeId,
+          passportId: context.passportId, status: 'PAUSED', toolExecutionCount: 0,
+          gateId: guardianVerdict.gateId, pendingCapability: context.capability,
+          pendingContext: context as any, createdAt: now, updatedAt: now, tenantId
+        }, tenantId);
+        await DurableStore.saveHitlRequestAsync({
+          gateId: guardianVerdict.gateId!, executionId, tenantId, agentId: context.agentId,
+          capability: context.capability, actionType: context.action, payload: context.parameters
+        });
+      }
+      await EvidenceLedger.flushPendingWrites(tenantId);
 
       return {
         status: 'PAUSED',
@@ -648,10 +695,25 @@ export class DataGateway {
     decisionLatencyMs: number
   ): Promise<DataExecutionResponse> {
     const tenantId = context.tenantId || 'TENANT-DEFAULT';
+    const scopes = context.passport.declaredDataScopes;
+    if ((process.env.NODE_ENV === 'production' || scopes?.length) && !scopes?.includes(context.targetResource)) {
+      EvidenceLedger.append({evidenceId:`ev_scope_${crypto.randomUUID()}`,timestamp:new Date().toISOString(),
+        eventType:'DATA_ERROR',executionId:context.executionId,agentId:context.agentId,passportFingerprint:context.passport.passportFingerprint,
+        complianceProfileId:profileId,complianceProfileChecksum:context.passport.complianceProfileChecksum,
+        channel:'DATA',capability:context.capability,verdict:'BLOCK',executionResult:'BLOCKED'},tenantId);
+      await EvidenceLedger.flushPendingWrites(tenantId);
+      return {status:'BLOCKED',verdict:'BLOCK',executionId:context.executionId,capability:context.capability,provider:capability.provider,
+        latencyMs:Date.now()-startTime,decisionLatencyMs,providerCallCount:0,error:'UNDECLARED_DATA_SCOPE: Requested resource is not sealed in the Passport.'};
+    }
     const adapter = this.providers.get(capability.provider);
 
     if (!adapter) {
       const errorMsg = `DATA_PROVIDER_NOT_FOUND: No registered provider found for id "${capability.provider}"`;
+      EvidenceLedger.append({evidenceId:`ev_derr_${crypto.randomUUID()}`,timestamp:new Date().toISOString(),
+        eventType:'DATA_ERROR',executionId:context.executionId,agentId:context.agentId,passportFingerprint:context.passport.passportFingerprint,
+        complianceProfileId:profileId,complianceProfileChecksum:context.passport.complianceProfileChecksum,
+        channel:'DATA',capability:context.capability,verdict:'BLOCK',executionResult:'FAILED'},tenantId);
+      await EvidenceLedger.flushPendingWrites(tenantId);
       return {
         status: 'FAILED',
         verdict: 'BLOCK',
@@ -667,15 +729,22 @@ export class DataGateway {
 
     const creds = this.credentialVault.get(capability.provider);
     let rawRecords: any[] = [];
+    let providerCallCount = 0;
 
     try {
+      await EvidenceLedger.flushPendingWrites(tenantId);
+      await DurableStore.requireExecutionAuthority(context);
+      providerCallCount = 1;
       rawRecords = await adapter.query(context.targetResource, context.action, context.parameters, context, creds);
+      if (!Array.isArray(rawRecords)) throw new Error('DATA_PROVIDER_RESPONSE_INVALID: Expected records array.');
     } catch (dbErr: any) {
       const errorMsg = `DATA_PROVIDER_ERROR: ${dbErr.message}`;
+      const denied = dbErr.message?.startsWith('CURRENT_EXECUTION_AUTHORITY_DENIED');
       EvidenceLedger.append({
         evidenceId: `ev_derr_${crypto.randomBytes(4).toString('hex')}`,
         timestamp: new Date().toISOString(),
         eventType: 'DATA_ERROR',
+        executionId: context.executionId,
         agentId: context.agentId,
         passportFingerprint: context.passport.passportFingerprint,
         complianceProfileId: profileId,
@@ -683,20 +752,21 @@ export class DataGateway {
         channel: 'DATA',
         capability: context.capability,
         action: context.action,
-        verdict: 'ALLOW',
-        executionResult: 'FAILED',
+        verdict: denied ? 'BLOCK' : 'ALLOW',
+        executionResult: denied ? 'BLOCKED' : 'FAILED',
         payloadDigest: crypto.createHash('sha256').update(errorMsg).digest('hex')
       }, tenantId);
+      await EvidenceLedger.flushPendingWrites(tenantId);
 
       return {
-        status: 'FAILED',
-        verdict: 'ALLOW',
+        status: denied ? 'BLOCKED' : 'FAILED',
+        verdict: denied ? 'BLOCK' : 'ALLOW',
         executionId: context.executionId,
         capability: context.capability,
         provider: capability.provider,
         latencyMs: Date.now() - startTime,
         decisionLatencyMs,
-        providerCallCount: 1,
+        providerCallCount,
         error: errorMsg
       };
     }
@@ -730,6 +800,7 @@ export class DataGateway {
       evidenceId: `ev_dresp_${crypto.randomBytes(4).toString('hex')}`,
       timestamp: new Date().toISOString(),
       eventType: 'DATA_RESPONSE',
+      executionId: context.executionId,
       agentId: context.agentId,
       passportFingerprint: context.passport.passportFingerprint,
       complianceProfileId: profileId,
@@ -741,6 +812,7 @@ export class DataGateway {
       executionResult: 'SUCCESS',
       payloadDigest: resultDigest
     }, tenantId);
+    await EvidenceLedger.flushPendingWrites(tenantId);
 
     return {
       status: 'COMPLETED',
@@ -770,7 +842,38 @@ export class DataGateway {
       throw new Error(`INVALID_SESSION_STATE: Execution is already in state "${session.status}"`);
     }
 
-    const tenantId = session.context.tenantId || 'TENANT-DEFAULT';
+    const tenantId = session.context.tenantId || session.context.passport.tenantId || 'TENANT-DEFAULT';
+    // Claim synchronously before any await so two local reviewers cannot both dispatch.
+    session.status = 'CLAIMED_FOR_EXECUTION';
+    const profile = ComplianceProfileRegistry.getAllProfiles().find(
+      p => p.checksum === session.context.passport.complianceProfileChecksum
+    );
+    if (!profile) {
+      session.status = 'BLOCKED';
+      throw new Error('UNRESOLVED_COMPLIANCE_PROFILE: HITL data authorization failed closed.');
+    }
+    const authorization = GuardianService.evaluateActiveCapability({
+      agent: { id: session.context.agentId, name: session.context.agentId },
+      passport: session.context.passport, complianceProfile: profile, channel: 'DATA',
+      capability: session.context.capability, actionType: session.context.action,
+      payload: session.context.parameters, context: { tenantId }
+    });
+    if (authorization.verdict === 'BLOCK' || authorization.verdict === 'CIRCUIT_BREAK') {
+      session.status = 'BLOCKED';
+      throw new Error(`DATA_APPROVAL_BLOCKED: ${authorization.reason}`);
+    }
+    if (process.env.NODE_ENV === 'production') {
+      try {
+        const claim = await DurableStore.claimExecutionSessionConditional(executionId, tenantId);
+        if (!claim.success) throw new Error('INVALID_SESSION_STATE: Durable HITL claim was not obtained.');
+        await DurableStore.saveHitlDecisionAsync({
+          gateId: session.gateId!, executionId, tenantId, decidedBy: operatorId, decision: 'APPROVED'
+        });
+      } catch (err) {
+        session.status = 'BLOCKED';
+        throw err;
+      }
+    }
 
     // Record human approval decision in Evidence Ledger
     EvidenceLedger.append({
@@ -792,8 +895,8 @@ export class DataGateway {
     }, tenantId);
 
     const capability = CapabilityRegistry.get(session.context.capability);
-    const result = await this.executeProviderQuery(session.context, capability, 'CP-EU-AI-ACT-HIGH-RISK-FINANCIAL', Date.now(), 0);
-    session.status = 'COMPLETED';
+    const result = await this.executeProviderQuery(session.context, capability, profile.profileId, Date.now(), authorization.decisionLatencyMs);
+    session.status = result.status === 'COMPLETED' ? 'COMPLETED' : 'BLOCKED';
     return result;
   }
 

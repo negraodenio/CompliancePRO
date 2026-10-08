@@ -75,11 +75,7 @@ export const AgentDetailView: React.FC<AgentDetailViewProps> = ({
   }
 
   const handleToggleStatus = () => {
-    if (agent.status === 'RUNNING' || agent.status === 'GOVERNED') {
-      AgentInventoryStore.updateAgentStatus(agent.id, 'PAUSED');
-    } else {
-      AgentInventoryStore.updateAgentStatus(agent.id, 'GOVERNED');
-    }
+    onOpenCockpit?.(agent.id);
   };
 
   const getGovernanceDisplay = (status: AgentGovernanceStatus) => {
@@ -116,34 +112,11 @@ export const AgentDetailView: React.FC<AgentDetailViewProps> = ({
   const gov = getGovernanceDisplay(agent.status);
   const risk = getRiskDisplay(agent.risk);
 
-  // Models, tools, and data lists with clean fallbacks
-  const modelsList = agent.access?.models?.length 
-    ? agent.access.models 
-    : [{ name: agent.model || 'GPT-4o', allowed: true, provider: 'Model Gateway' }];
-
-  const toolsList = agent.access?.tools?.length
-    ? agent.access.tools
-    : [
-        { name: 'CRM Read', status: 'ALLOW' as const, boundary: 'Read-only Customer Scopes' },
-        { name: 'Credit Approval', status: agent.risk === 'HIGH' || agent.risk === 'CRITICAL' ? ('HITL' as const) : ('ALLOW' as const), boundary: 'Financial Authorization' }
-      ];
-
-  const dataList = agent.access?.data?.length
-    ? agent.access.data
-    : [
-        { name: 'Customer Records', allowed: true, classification: 'Confidential' },
-        { name: 'Credit Data', allowed: true, classification: 'Restricted' }
-      ];
-
-  // Activity list with clean fallbacks
-  const activityList = agent.activity?.length
-    ? agent.activity
-    : [
-        { id: 'act-1', timestamp: '10:31', type: 'EXECUTION' as const, summary: 'CRM Read', verdict: 'ALLOW' as const },
-        { id: 'act-2', timestamp: '10:32', type: 'HITL' as const, summary: 'Credit Approval (€25,000)', verdict: 'REQUIRE_HITL' as const },
-        { id: 'act-3', timestamp: '10:33', type: 'DECISION' as const, summary: 'Credit Approval Operator Review', verdict: 'APPROVED' as const },
-        { id: 'act-4', timestamp: '10:33', type: 'EXECUTION' as const, summary: 'Credit Approval Execution', verdict: 'ALLOW' as const }
-      ];
+  const modelsList = agent.access?.models || [];
+  const toolsList = agent.access?.tools || [];
+  const dataList = agent.access?.data || [];
+  const activityList = agent.activity || [];
+  const isProvisioned = agent.governance.passportStatus === 'VERIFIED';
 
   return (
     <div className="space-y-6 pb-16 max-w-4xl mx-auto">
@@ -186,6 +159,7 @@ export const AgentDetailView: React.FC<AgentDetailViewProps> = ({
           <div className="flex items-center space-x-2 shrink-0">
             <button
               onClick={handleToggleStatus}
+              disabled={!onOpenCockpit}
               className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition flex items-center space-x-1.5 cursor-pointer ${
                 agent.status === 'PAUSED'
                   ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-transparent'
@@ -195,12 +169,12 @@ export const AgentDetailView: React.FC<AgentDetailViewProps> = ({
               {agent.status === 'PAUSED' ? (
                 <>
                   <Play className="w-3.5 h-3.5" />
-                  <span>Resume Agent</span>
+                  <span>Review Runtime Controls</span>
                 </>
               ) : (
                 <>
                   <Pause className="w-3.5 h-3.5" />
-                  <span>Pause Execution</span>
+                  <span>Runtime Controls</span>
                 </>
               )}
             </button>
@@ -245,7 +219,7 @@ export const AgentDetailView: React.FC<AgentDetailViewProps> = ({
               {modelsList.map((m, idx) => (
                 <div key={idx} className="flex items-center justify-between text-xs">
                   <span className="font-medium text-slate-900 dark:text-white">{m.name}</span>
-                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">Allowed</span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{isProvisioned && m.allowed ? 'Declared' : 'Needs review'}</span>
                 </div>
               ))}
             </div>
@@ -268,7 +242,7 @@ export const AgentDetailView: React.FC<AgentDetailViewProps> = ({
                       ? 'text-rose-600 dark:text-rose-400' 
                       : 'text-emerald-600 dark:text-emerald-400'
                   }`}>
-                    {t.status === 'HITL' ? 'Approval required' : t.status === 'BLOCKED' ? 'Blocked' : 'Allowed'}
+                    {!isProvisioned ? 'Needs review' : t.status === 'HITL' ? 'Approval required' : t.status === 'BLOCKED' ? 'Blocked' : 'Declared'}
                   </span>
                 </div>
               ))}
@@ -293,6 +267,33 @@ export const AgentDetailView: React.FC<AgentDetailViewProps> = ({
         </div>
       </div>
 
+      {/* Contextual Human Approval (HITL) Runtime Governance */}
+      {agent.risk === 'HIGH' && (
+        <div className="rounded-xl border p-5 transition animate-fadeIn bg-amber-50/70 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800/80">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center space-x-2 text-xs font-bold">
+                <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <span className="text-amber-700 dark:text-amber-400">High-risk governance review</span>
+              </div>
+              <p className="text-xs text-slate-700 dark:text-slate-300">
+                Review actual runtime requests and pending approvals before authorizing an action.
+              </p>
+            </div>
+              <div className="shrink-0">
+                <button
+                  type="button"
+                  onClick={() => onOpenCockpit?.(agent.id)}
+                  disabled={!onOpenCockpit}
+                  className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 text-xs font-semibold rounded-lg transition cursor-pointer shadow-xs"
+                >
+                  Review Approvals
+                </button>
+              </div>
+          </div>
+        </div>
+      )}
+
       {/* 3. RECENT ACTIVITY: Clear Timeline */}
       <div className="bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-slate-800 p-6 space-y-4">
         <div>
@@ -300,7 +301,7 @@ export const AgentDetailView: React.FC<AgentDetailViewProps> = ({
             Recent Activity
           </h2>
           <p className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
-            Audit trail of recent requests and decisions made by this agent
+            {activityList.length ? 'Recorded requests and decisions reported for this agent' : 'No activity data available in this inventory record.'}
           </p>
         </div>
 
@@ -340,15 +341,13 @@ export const AgentDetailView: React.FC<AgentDetailViewProps> = ({
             Governance Policy
           </h2>
           <p className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
-            {agent.complianceProfile ? agent.complianceProfile.replace('CP-', '') : 'EU AI Act High-Risk Profile'}
+            {agent.complianceProfile ? agent.complianceProfile.replace('CP-', '') : 'Policy not assigned'}
           </p>
         </div>
 
         <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-2 list-disc list-inside">
-          <li>Human approval required for any transaction above €10,000</li>
-          <li>Zero secret access: Model and Tool API keys held outside execution worker</li>
-          <li>Air-gapped network execution with outbound requests intercepted by Gateways</li>
-          <li>All capability invocations require verified cryptographic passport</li>
+          {agent.governance.hitlRules.map(rule => <li key={rule}>{rule}</li>)}
+          <li>Runtime authorization must be confirmed by Guardian and the configured gateways.</li>
         </ul>
       </div>
 
@@ -359,10 +358,10 @@ export const AgentDetailView: React.FC<AgentDetailViewProps> = ({
             Audit Evidence
           </h2>
           <p className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
-            Cryptographically signed ledger records for this agent
+            Verifiable evidence records for this agent
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Every decision and capability execution is immutably logged in the Evidence Ledger.
+            Inspect recorded evidence and verify the available payload digests and hash-chain linkage.
           </p>
         </div>
 
@@ -408,13 +407,13 @@ export const AgentDetailView: React.FC<AgentDetailViewProps> = ({
 
               <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block font-sans">Sandbox Perimeter</span>
-                <span className="text-slate-800 dark:text-slate-200">Worker Air-Gapped (Zero Secrets)</span>
+                <span className="text-slate-800 dark:text-slate-200">{agent.access.network.description}</span>
               </div>
             </div>
 
             <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
               <span className="text-[10px] uppercase font-bold text-slate-400 block font-sans">Policy Checksum / Version</span>
-              <span className="text-slate-600 dark:text-slate-400 text-[11px] break-all">{agent.governance.passportFingerprint || 'sha256:7f9b8c2d1e0a4f5b6c7d8e9f0a1b2c3d'}</span>
+              <span className="text-slate-600 dark:text-slate-400 text-[11px] break-all">{agent.governance.passportFingerprint || 'Not available'}</span>
             </div>
 
             {/* Direct links to technical workspaces if needed */}

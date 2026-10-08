@@ -336,7 +336,11 @@ try {
     }
   };
 
-  const importedAgents = AgentInventoryStore.importFromScanResult(mockScanResult);
+  const nativeFetch = globalThis.fetch;
+  globalThis.fetch = ((url: any, options: any = {}) => nativeFetch(
+    String(url).startsWith('/') ? `${baseUrl}${url}` : url,
+    {...options,headers:{...options.headers,'X-API-Key':'dev-key-tenant-a'}})) as any;
+  const importedAgents = await AgentInventoryStore.importFromScanResult(mockScanResult);
   assert.strictEqual(importedAgents.length, 1);
   const importedAgent = importedAgents[0];
   assert.strictEqual(importedAgent.name, 'data-harvester');
@@ -353,7 +357,7 @@ try {
   // --------------------------------------------------------------------------
   console.log('\n--- TEST K: UNKNOWN OWNER HANDLING & UPDATING ---');
 
-  const agentWithoutOwner = AgentInventoryStore.addAgent({
+  const agentWithoutOwner = await AgentInventoryStore.addAgent({
     name: 'orphaned-batch-agent',
     framework: 'Custom',
     model: 'claude-3-5-sonnet',
@@ -367,14 +371,15 @@ try {
   assert.strictEqual(agentWithoutOwner.owner.role, 'Not assigned');
 
   // Assign owner through store
-  AgentInventoryStore.updateAgent(agentWithoutOwner.id, {
+  await AgentInventoryStore.updateAgent(agentWithoutOwner.id, {
     owner: { name: 'Alice Santos', role: 'Tech Lead', department: 'SecOps' },
-    status: 'GOVERNED'
+    status: 'IMPORTED'
   });
 
   const updatedAgent = AgentInventoryStore.getAgent(agentWithoutOwner.id);
   assert.strictEqual(updatedAgent?.owner.name, 'Alice Santos');
-  assert.strictEqual(updatedAgent?.status, 'GOVERNED');
+  assert.strictEqual(updatedAgent?.status, 'IMPORTED', 'Owner assignment must not issue governance authority');
+  assert.strictEqual(updatedAgent?.governance.passportStatus,'NOT_ISSUED');
   pass('Unknown owner properly recognized and assigned via updateAgent');
 
   // --------------------------------------------------------------------------
@@ -399,6 +404,7 @@ try {
   assert.strictEqual(typeof currentMetrics.hitlPending, 'number');
   assert.ok(![12, 17].every((v, i) => [currentMetrics.totalAgents, currentMetrics.blockedActions][i] === v), 'Must not emit canonical 12 agents / 17 blocked mock pattern');
   pass('Confirmed zero hardcoded mock names or demo fallback metrics');
+  globalThis.fetch = nativeFetch;
 
   console.log('\n==================================================================');
   console.log(`>>> ALL ${passedCount} REAL AGENT INVENTORY TESTS PASSED WITH 100% <<<`);

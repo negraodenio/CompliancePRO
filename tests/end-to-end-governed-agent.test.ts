@@ -32,9 +32,10 @@
  * 17. Execution completion recorded (AGENT_EXECUTION_COMPLETED)
  */
 
+import { ensureSaasFixture, testSupabase, testLiveModelCredentials, assertRuntimeParents, assertStoredSession } from './test-supabase-fixtures';
 import assert from 'assert';
-import fs from 'fs';
-import path from 'path';
+import express from 'express';
+import http from 'http';
 import { AgentProvisioner, AgentDefinition } from '../src/core/agent-provisioner';
 import { RuntimeManager } from '../src/core/runtime-manager';
 import { IsolatedWorker } from '../src/core/isolated-worker';
@@ -47,6 +48,9 @@ import { DataGateway, SupabasePostgreSqlDataProvider } from '../src/core/data-ga
 import { ModelGateway } from '../src/core/model-gateway';
 import { ToolGateway, CompliancePROToolProvider } from '../src/core/tool-gateway';
 import { GuardianService } from '../src/core/guardian-service';
+import { DurableStore } from '../src/server/db/durable-store';
+import { scanRouter } from '../src/server/routes/scan';
+import { authenticateTokenOrKey, enforceTenantContext, requireRoles } from '../src/server/security/auth-middleware';
 
 console.log('==================================================================');
 console.log('>>> COMPLYPRO.PT — SPRINT 7-D: END-TO-END GOVERNED AGENT PROOF <<<');
@@ -54,7 +58,7 @@ console.log('>>> "Build with your framework. Govern with ComplyPRO."        <<<'
 console.log('==================================================================\n');
 
 // ----------------------------------------------------------------------------
-// 0. RESET STATE & DISCOVER CREDENTIALS
+// 0. RESET STATE & ESTABLISH EXPLICIT TEST PREREQUISITES
 // ----------------------------------------------------------------------------
 AgentProvisioner.reset();
 RuntimeManager.reset();
@@ -63,39 +67,26 @@ DataGateway.clearCredentials();
 ModelGateway.clearCredentials();
 ToolGateway.clearCredentials();
 
-// Discover database credentials safely
-const envPath = path.resolve(process.cwd(), '.env');
-let supabaseUrl = process.env.SUPABASE_URL || '';
-let supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const liveModel = testLiveModelCredentials();
+const fixture = await ensureSaasFixture('s7d-governed-agent');
+const sampleTenantId = fixture.organizationId;
+const supabaseUrl = testSupabase.SUPABASE_URL;
+const supabaseServiceKey = testSupabase.SUPABASE_SERVICE_ROLE_KEY;
+DataGateway.setProviderCredentials('supabase-postgresql', { supabaseUrl, serviceRoleKey: supabaseServiceKey });
+ModelGateway.setProviderCredentials(liveModel.provider, { apiKey: liveModel.apiKey, endpoint: liveModel.endpoint });
+ModelGateway.setDispatcher(ModelGateway.realHttpDispatcher);
 
-if (fs.existsSync(envPath)) {
-  const content = fs.readFileSync(envPath, 'utf-8');
-  for (const line of content.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (trimmed.startsWith('SUPABASE_URL=') && !supabaseUrl) {
-      supabaseUrl = trimmed.split('=')[1].trim().replace(/^['"]|['"]$/g, '');
-    }
-    if (trimmed.startsWith('SUPABASE_SERVICE_ROLE_KEY=') && !supabaseServiceKey) {
-      supabaseServiceKey = trimmed.split('=')[1].trim().replace(/^['"]|['"]$/g, '');
-    }
-  }
-}
-
-// Configure credentials strictly in respective Gateway vaults (Zero exposure to worker)
-if (supabaseUrl && supabaseServiceKey) {
-  DataGateway.setProviderCredentials('supabase-postgresql', {
-    supabaseUrl,
-    serviceRoleKey: supabaseServiceKey
-  });
-}
-
-ModelGateway.setProviderCredentials('openai', {
-  apiKey: 'sk-proj-complypro-gateway-secure-vault-key-01'
-});
-
+// Same real scanner handler and native authentication; only its provider-contract mount is test-local.
+const scannerApp = express();
+scannerApp.use(express.json());
+scannerApp.use('/api/v1/scans/run', authenticateTokenOrKey, enforceTenantContext, requireRoles('developer'), scanRouter);
+const scannerServer = http.createServer(scannerApp);
+await new Promise<void>(resolve => scannerServer.listen(0, '127.0.0.1', resolve));
+const scannerEndpoint = `http://127.0.0.1:${(scannerServer.address() as any).port}`;
+const scannerProvider = new CompliancePROToolProvider();
+ToolGateway.registerProvider(scannerProvider);
 ToolGateway.setProviderCredentials('compliancepro-api', {
-  apiKey: 'cpro_gateway_secret_token_live_8819',
-  endpoint: 'https://compliancepro-h6xb.onrender.com'
+  token: fixture.accessToken, organizationId: sampleTenantId, endpoint: scannerEndpoint
 });
 
 // Register capability for real Supabase if not yet registered
@@ -116,34 +107,9 @@ if (!CapabilityRegistry.get('supabase.organizations.read')) {
   });
 }
 
-// Discover real organization ID from Supabase if online
-let sampleTenantId = '50994bd9-363d-4c87-a22f-8b297c22a865';
-let isRealDbOnline = false;
-
-if (supabaseUrl && supabaseServiceKey) {
-  try {
-    const connCheck = await fetch(`${supabaseUrl}/rest/v1/organizations?select=id,name&limit=1`, {
-      headers: {
-        'apikey': supabaseServiceKey,
-        'Authorization': `Bearer ${supabaseServiceKey}`
-      }
-    });
-    if (connCheck.ok) {
-      const orgs = await connCheck.json();
-      if (orgs && orgs.length > 0 && orgs[0].id) {
-        sampleTenantId = orgs[0].id;
-        isRealDbOnline = true;
-      }
-    }
-  } catch (err) {
-    isRealDbOnline = false;
-  }
-}
-
-console.log(`[DISCOVERY] Database Provider: ${isRealDbOnline ? 'REAL Supabase PostgreSQL' : 'Simulated PostgreSqlDataProvider'}`);
-console.log(`[DISCOVERY] Target Tenant ID:  ${sampleTenantId}`);
-console.log(`[DISCOVERY] Model Provider:     Deterministic Test Provider (OpenAI gpt-4o Simulation)`);
-console.log(`[DISCOVERY] Tool Provider:      CompliancePRO Scanner Provider (compliancepro-api)\n`);
+console.log('[SETUP] Real TEST Supabase organization, membership and entitlement prepared');
+console.log(`[SETUP] Model Provider: ${liveModel.provider} (real HTTP dispatcher)`);
+console.log('[SETUP] Tool Provider: authenticated loopback scanner (real scanRouter)\n');
 
 // ----------------------------------------------------------------------------
 // SETUP: PROVISION CREWAI AGENT WITH THREE GATEWAY CAPABILITIES
@@ -179,6 +145,9 @@ console.log(`  [PASS]: Compliance Profile:   ${provisioned.complianceProfileId}`
 const runtimeInstance = RuntimeManager.createRuntime(provisioned.runtimeSpec, provisioned.passport);
 const startedRuntime = RuntimeManager.startRuntime(runtimeInstance.runtimeId);
 const worker = RuntimeManager.getWorker(startedRuntime.runtimeId)!;
+await DurableStore.flushPendingWrites();
+await assertRuntimeParents({ agentId: provisioned.agentId, passportId: provisioned.passportId,
+  runtimeId: runtimeInstance.runtimeId, tenantId: sampleTenantId });
 assert.ok(worker, 'Isolated worker must be active');
 assert.strictEqual(worker.isActive(), true);
 console.log(`  [PASS]: Isolated Runtime started: ${startedRuntime.runtimeId}\n`);
@@ -216,13 +185,16 @@ assert.strictEqual(dataResult.verdict, 'ALLOW', 'Guardian must return ALLOW for 
 assert.strictEqual(dataResult.capability, 'supabase.organizations.read');
 assert.strictEqual(dataResult.provider, 'supabase-postgresql');
 assert.ok(Array.isArray(dataResult.data), 'Data response must contain records array');
+assert.strictEqual(dataResult.data.length, 1, 'Real DATA query must return the explicitly prepared organization');
+assert.strictEqual(dataResult.data[0].id, sampleTenantId);
+assert.strictEqual(dataResult.providerCallCount, 1);
 console.log(`    [PASS]: Data Gateway returned ${dataResult.data?.length || 0} record(s) via ${dataResult.provider}`);
 console.log(`    [PASS]: Guardian verdict: ${dataResult.verdict} (${dataResult.decisionLatencyMs}ms)`);
 
 // STEP 2: MODEL GATEWAY
 console.log('\n  [STEP 2: MODEL GATEWAY]');
 const modelResult = await worker.requestModel({
-  provider: 'openai',
+  provider: liveModel.provider,
   model: 'gpt-4o',
   messages: [
     { role: 'system', content: 'You are an institutional credit risk officer.' },
@@ -236,6 +208,8 @@ const modelResult = await worker.requestModel({
 assert.strictEqual(modelResult.status, 'COMPLETED', 'Model Gateway request must complete');
 assert.strictEqual(modelResult.verdict, 'ALLOW', 'Guardian must return ALLOW for declared model');
 assert.strictEqual(modelResult.model, 'gpt-4o');
+assert.strictEqual(modelResult.provider, liveModel.provider);
+assert.strictEqual(modelResult.providerCallCount, 1);
 assert.ok(modelResult.responseMessage && modelResult.responseMessage.content.length > 0, 'Model must return response');
 assert.ok(modelResult.tokenUsage && modelResult.tokenUsage.totalTokens > 0, 'Tokens must be accounted for');
 console.log(`    [PASS]: Model Gateway response received: "${modelResult.responseMessage.content.substring(0, 48)}..."`);
@@ -247,15 +221,21 @@ console.log('\n  [STEP 3: TOOL GATEWAY]');
 const toolResult = await worker.requestTool(
   'compliance.scan',
   'EXECUTE',
-  { repository: 'financial-risk-core', targetRepo: 'github.com/enterprise/credit-core' },
+  { repoName: 'complypro-controlled-credit-fixture', files: {
+    'credit_agent.py': 'from crewai import Agent\ncredit_agent = Agent(role="Credit reviewer", goal="Review bounded credit evidence", backstory="Controlled test fixture")\n'
+  } },
   session.executionId
 );
 
 assert.strictEqual(toolResult.status, 'COMPLETED', 'Tool Gateway request must complete');
 assert.strictEqual(toolResult.verdict, 'ALLOW', 'Guardian must return ALLOW for declared tool');
 assert.strictEqual(toolResult.capability, 'compliance.scan');
-assert.ok(toolResult.result && toolResult.result.complianceScore !== undefined, 'Tool must return score');
-console.log(`    [PASS]: Tool Gateway returned scanId: ${toolResult.result.scanId} (Score: ${toolResult.result.complianceScore})`);
+assert.strictEqual(toolResult.providerCallCount, 1);
+assert.strictEqual(scannerProvider.getCallCount(), 1, 'Real scanner HTTP provider must execute exactly once');
+assert.strictEqual(toolResult.result?.ok, true, 'Real scanner handler must confirm execution');
+assert.strictEqual(toolResult.result.data?.source?.totalFiles, 1, 'Real scan must analyze the supplied fixture file');
+assert.strictEqual(typeof toolResult.result.data?.compliance?.overallScore, 'number', 'Real scanner must compute its own score');
+console.log(`    [PASS]: Real scanner analyzed ${toolResult.result.data.source.totalFiles} file(s)`);
 console.log(`    [PASS]: Guardian verdict: ${toolResult.verdict} (${toolResult.decisionLatencyMs}ms)`);
 
 // STEP 4: COMPLETE SESSION
@@ -288,7 +268,7 @@ assert.strictEqual(dataResult.executionId, session.executionId);
 console.log('  [PASS]: Data provider reached exclusively via DataGateway boundary');
 
 // Invariant 4: Model provider reached strictly through Model Gateway
-assert.strictEqual(modelResult.provider, 'openai');
+assert.strictEqual(modelResult.provider, liveModel.provider);
 assert.strictEqual(modelResult.executionId, session.executionId);
 console.log('  [PASS]: Model provider reached exclusively via ModelGateway boundary');
 
@@ -303,7 +283,7 @@ console.log('  [PASS]: Tool provider reached exclusively via ToolGateway boundar
 console.log('--- TEST 6: CRUCIBLE INVARIANT 1 — DIRECT NETWORK ACCESS DENIED ---');
 
 assert.throws(() => {
-  worker.directNetworkCall(supabaseUrl || 'https://efrmsnvibgrjuaotthrw.supabase.co');
+  worker.directNetworkCall(supabaseUrl);
 }, /NETWORK_ACCESS_DENIED/);
 
 assert.throws(() => {
@@ -311,7 +291,7 @@ assert.throws(() => {
 }, /NETWORK_ACCESS_DENIED/);
 
 assert.throws(() => {
-  worker.directNetworkCall('https://compliancepro-h6xb.onrender.com/api/v1/scans/run');
+  worker.directNetworkCall(`${scannerEndpoint}/api/v1/scans/run`);
 }, /NETWORK_ACCESS_DENIED/);
 
 console.log('  [PASS]: Direct network call to Supabase URL strictly threw NETWORK_ACCESS_DENIED');
@@ -464,9 +444,14 @@ const crossTenantResult = await worker.requestData(
   session.executionId
 );
 
-assert.strictEqual(crossTenantResult.status, 'COMPLETED');
+assert.strictEqual(crossTenantResult.status, 'BLOCKED', 'A foreign tenant claim must be rejected before querying the provider');
+assert.strictEqual(crossTenantResult.verdict, 'BLOCK');
+assert.strictEqual(crossTenantResult.providerCallCount, 0, 'Tenant rejection must not invoke the data provider');
 assert.strictEqual(crossTenantResult.data?.length || 0, 0, 'Foreign tenant request must return 0 records');
-console.log('  [PASS]: Cross-tenant data request strictly returned 0 records (Server-side isolation enforced)\n');
+assert.strictEqual(adapter.getSession(session.executionId, foreignTenantId), undefined,
+  'A tenant must not retrieve execution state belonging to another tenant');
+assert.ok(adapter.getSession(session.executionId, sampleTenantId), 'Same-tenant execution state remains readable');
+console.log('  [PASS]: Cross-tenant data BLOCKED before provider invocation; foreign execution state is not readable\n');
 
 // ----------------------------------------------------------------------------
 // TEST 14, 15, 16 & 17: EVIDENCE CHAIN INTEGRITY & VERIFICATION (INVARIANT 9)
@@ -506,8 +491,8 @@ console.log(`  [PASS]: EvidenceVerifier validated ${chainVerification.totalEntri
 for (const entry of sessionEntries) {
   const serialized = JSON.stringify(entry);
   assert.strictEqual(serialized.includes(supabaseServiceKey.substring(10, 30)), false, 'No Supabase secret in evidence');
-  assert.strictEqual(serialized.includes('sk-proj-complypro-gateway'), false, 'No OpenAI secret in evidence');
-  assert.strictEqual(serialized.includes('cpro_gateway_secret_token'), false, 'No Tool secret in evidence');
+  assert.strictEqual(serialized.includes(liveModel.apiKey), false, 'No real model secret in evidence');
+  assert.strictEqual(serialized.includes(fixture.accessToken), false, 'No fixture user token in evidence');
 }
 console.log('  [PASS]: Zero secrets, credentials, or raw tokens present in Evidence Ledger entries');
 
@@ -521,6 +506,11 @@ console.log(`  [PASS]: Execution completion verified: ${completionEvent.evidence
 // ----------------------------------------------------------------------------
 // FINAL SUMMARY
 // ----------------------------------------------------------------------------
+await DurableStore.flushPendingWrites();
+await assertStoredSession(session);
+await assertStoredSession(hitlSession);
+await new Promise<void>((resolve, reject) => scannerServer.close(error => error ? reject(error) : resolve()));
+ModelGateway.resetDispatcher();
 console.log('==================================================================');
 console.log('>>> S7-D END-TO-END GOVERNED AGENT EXECUTION PROOF: VALIDATED  <<<');
 console.log('>>> ALL 17 INVARIANTS SATISFIED (100% PASS)                    <<<');

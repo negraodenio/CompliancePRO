@@ -21,6 +21,7 @@ interface AddAgentModalProps {
 export const AddAgentModal: React.FC<AddAgentModalProps> = ({
   isOpen,
   onClose,
+  onSelectBuild,
   onSelectDiscover,
   onAgentCreated
 }) => {
@@ -38,18 +39,19 @@ export const AddAgentModal: React.FC<AddAgentModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleCreateAgent = (e: React.FormEvent, isNativeBuild: boolean) => {
+  const handleCreateAgent = async (e: React.FormEvent, isNativeBuild: boolean) => {
     e.preventDefault();
     if (!name.trim()) return;
 
     setIsSubmitting(true);
-    const newAgent = AgentInventoryStore.addAgent({
+    try {
+      const newAgent = await AgentInventoryStore.addAgent({
       name: name.trim(),
-      owner: {
-        name: ownerName.trim() || 'AI Owner',
+      owner: ownerName.trim() ? {
+        name: ownerName.trim(),
         role: 'Lead',
         department: ownerDept.trim() || 'Engineering'
-      },
+      } : undefined,
       framework: framework,
       model: model,
       risk: risk,
@@ -59,10 +61,12 @@ export const AddAgentModal: React.FC<AddAgentModalProps> = ({
         : `Agent ${name} connected to ComplyPRO governance perimeter.`)
     });
 
-    setIsSubmitting(false);
-    onClose();
-    if (onAgentCreated) {
-      onAgentCreated(newAgent.id);
+      onClose();
+      if (onAgentCreated) onAgentCreated(newAgent.id);
+    } catch {
+      window.alert('Agent import could not be confirmed. Please retry when the backend is available.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -95,7 +99,10 @@ export const AddAgentModal: React.FC<AddAgentModalProps> = ({
           {mode === 'CHOICE' ? (
             <div className="space-y-4">
               <div 
-                onClick={() => setMode('BUILD')}
+                onClick={() => {
+                  onClose();
+                  onSelectBuild();
+                }}
                 className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-600 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition cursor-pointer space-y-2 group"
               >
                 <div className="flex items-center justify-between">

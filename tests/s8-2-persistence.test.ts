@@ -25,6 +25,7 @@
  * + REAL Supabase Database RLS Live Verification
  */
 
+import { ensureSaasFixture, readTestRows, assertRuntimeParents, assertStoredSession } from './test-supabase-fixtures';
 import assert from 'assert';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
@@ -42,6 +43,7 @@ console.log('>>> COMPLYPRO.PT — SPRINT 8-2: DURABLE PERSISTENCE & RLS TESTS <<
 console.log('==================================================================');
 
 async function runS8_2_Tests() {
+  const saasFixture = await ensureSaasFixture('s82-persistence');
   DurableStore.reset();
   AgentProvisioner.reset();
   RuntimeManager.reset();
@@ -80,6 +82,9 @@ async function runS8_2_Tests() {
   // --------------------------------------------------------------------------
   console.log('\n--- TEST 3: RUNTIME INSTANCE DURABLE PERSISTENCE ---');
   const runtimeA = RuntimeManager.createRuntime(agentA.runtimeSpec, agentA.passport, TENANT_A);
+  await DurableStore.flushPendingWrites();
+  await assertRuntimeParents({ agentId: agentA.agentId, passportId: agentA.passportId,
+    runtimeId: runtimeA.runtimeId, tenantId: TENANT_A });
   const storedRuntimeCreated = DurableStore.getRuntime(runtimeA.runtimeId, TENANT_A);
   assert(storedRuntimeCreated !== null, 'Runtime must be persisted upon creation');
   assert.strictEqual(storedRuntimeCreated?.status, 'PROVISIONED');
@@ -353,41 +358,22 @@ async function runS8_2_Tests() {
   // TEST 21: REAL SUPABASE POSTGREST RLS LIVE TEST
   // --------------------------------------------------------------------------
   console.log('\n--- REAL SUPABASE RLS VERIFICATION ---');
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (supabaseUrl && anonKey && serviceKey) {
-    try {
-      // Query entitlements with anon key (Subject to Supabase PostgreSQL RLS)
-      const anonRes = await fetch(`${supabaseUrl}/rest/v1/entitlements`, {
-        headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` }
-      });
-      const anonData = await anonRes.json();
-
-      // Query entitlements with service role key (Bypasses RLS)
-      const serviceRes = await fetch(`${supabaseUrl}/rest/v1/entitlements`, {
-        headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` }
-      });
-      const serviceData = await serviceRes.json();
-
-      assert(Array.isArray(anonData), 'Anon response must be array');
-      assert(Array.isArray(serviceData), 'Service response must be array');
-      assert.strictEqual(anonData.length, 0, 'Anon client without tenant claim must receive 0 rows under RLS');
-      assert(serviceData.length > 0, 'Service role bypass returns rows');
-
-      console.log(`  [REAL SUPABASE PASS]: PostgREST Anonymous Query (RLS Enforced) = ${anonData.length} rows`);
-      console.log(`  [REAL SUPABASE PASS]: PostgREST Service Role Query (RLS Bypass) = ${serviceData.length} rows`);
-      console.log('  [REAL SUPABASE PASS]: Real Supabase PostgreSQL RLS verified live!');
-    } catch (err: any) {
-      console.warn('  [REAL SUPABASE NOTICE]: Live fetch failed:', err.message);
-    }
-  } else {
-    console.log('  [NOTICE]: Supabase credentials not found in environment, skipping live PostgREST call');
-  }
+  const entitlementScope = { organization_id: saasFixture.organizationId };
+  const anonData = await readTestRows('entitlements', entitlementScope, true);
+  const serviceData = await readTestRows('entitlements', entitlementScope);
+  assert(Array.isArray(anonData), 'Anon response must be array');
+  assert(Array.isArray(serviceData), 'Service response must be array');
+  assert.strictEqual(anonData.length, 0, 'Anon client without tenant claim must receive 0 rows under RLS');
+  assert(serviceData.length > 0, 'Service role bypass returns rows');
+  assert.strictEqual(serviceData.length, 1, 'Service setup query must identify exactly the fixture entitlement');
+  assert.strictEqual(serviceData[0].id, saasFixture.entitlementId);
+  console.log(`  [REAL SUPABASE PASS]: PostgREST Anonymous Query (RLS Enforced) = ${anonData.length} rows`);
+  console.log(`  [REAL SUPABASE PASS]: PostgREST Fixture Setup Query = ${serviceData.length} row`);
+  await DurableStore.flushPendingWrites();
+  await assertStoredSession(recoveredSession!);
 
   console.log('\n==================================================================');
-  console.log('>>> S8-2 DURABLE PERSISTENCE & SUPABASE RLS: ALL 20 TESTS PASS <<<');
+  console.log('>>> S8-2 DURABLE PERSISTENCE & SUPABASE RLS: ALL 21 TESTS PASS <<<');
   console.log('==================================================================\n');
 }
 

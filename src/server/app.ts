@@ -27,6 +27,10 @@ import {
   defaultRateLimiter
 } from './security/auth-middleware';
 import { PassportSigner } from '../core/passport-signer';
+import { EvidenceLedger } from '../core/evidence-ledger';
+import { DurableStore } from './db/durable-store';
+import { healthResponse, readinessResponse } from './health';
+export { healthResponse, readinessResponse };
 
 export function createServerApp() {
   // SEC-P1: Validate production secret configuration on application startup
@@ -42,7 +46,7 @@ export function createServerApp() {
   // SEC-P2-01: Configurable CORS policy (disallows wildcard * in production)
   const isProd = process.env.NODE_ENV === 'production';
   const defaultAllowed = isProd
-    ? ['https://standalone-compliance-scanner.vercel.app', 'https://complypro.ai']
+    ? ['https://standalone-compliance-scanner.vercel.app', 'https://complypro.pt', 'https://www.complypro.pt']
     : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001', 'http://127.0.0.1:5173'];
 
   const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -59,35 +63,21 @@ export function createServerApp() {
       return callback(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'x-session-id', 'x-tenant-id', 'idempotency-key']
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'x-session-id', 'x-tenant-id', 'x-organization-id', 'idempotency-key']
   }));
 
   app.use(express.json({ limit: '50mb' }));
 
   // Health check endpoint (Public Liveness)
   app.get('/health', (req, res) => {
-    res.status(200).json({
-      status: 'operational',
-      engine: 'ComplyPRO Governance Engine v1.1.0',
-      mode: 'lightweight-standalone',
-      airGapped: true,
-      principle: 'Every Agent Action Must Be Governable and Evidenced.',
-      timestamp: new Date().toISOString()
-    });
+    res.status(200).json(healthResponse());
   });
 
   // Readiness check endpoint (Public Readiness for Container Orchestrators)
-  app.get('/ready', (req, res) => {
-    res.status(200).json({
-      status: 'ready',
-      timestamp: new Date().toISOString(),
-      services: {
-        guardian: 'ready',
-        gateways: 'ready',
-        persistence: 'ready'
-      }
-    });
+  app.get('/ready', async (req, res) => {
+    const ready = await readinessResponse();
+    res.status(ready.statusCode).json(ready.body);
   });
 
   // SEC-P2-02: Server-side session revocation endpoint
@@ -112,6 +102,17 @@ export function createServerApp() {
 
   // Sprint 8-1: Governed Agent Operating System Protected Endpoints
   // All Execution, Agent, Runtime, and Gateway endpoints require authenticated identity & tenant scoping
+  app.use('/api/v1', async (req, res, next) => {
+    if (process.env.NODE_ENV !== 'production' || req.method === 'GET' || req.path.endsWith('/import')) return next();
+    try {
+      let authenticated = false;
+      await authenticateTokenOrKey(req,res,()=>{authenticated=true;});
+      if (!authenticated || !req.principal) return;
+      await EvidenceLedger.prepareTenant(req.principal.tenantId);
+      await DurableStore.hydrateTenantCache(req.principal.tenantId);
+      next();
+    } catch { res.status(503).json({ok:false,error:'DURABLE_EXECUTION_AUTHORITY_UNAVAILABLE'}); }
+  });
   app.use('/api/v1/guardian/evaluate', authenticateTokenOrKey, enforceTenantContext, requireRoles('developer'), defaultRateLimiter.middleware());
   app.use('/api/v1/guardian', guardianRouter);
   app.use('/api/v1/agents', authenticateTokenOrKey, enforceTenantContext, agentProvisioningRouter);
@@ -125,10 +126,14 @@ export function createServerApp() {
   // Universal Remote MCP Endpoints (Streamable HTTP on /mcp, SSE on /sse, /mcp/health)
   app.use(createMcpHttpRouter());
 
+  app.use((error: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    res.status(503).json({ok:false,error:'SERVER_AUTHORITY_UNAVAILABLE'});
+  });
+
   return app;
 }
 
-if (process.env.NODE_ENV !== 'test' && !process.env.VITEST && !process.env.TRANSPORT_MODE?.includes('stdio') && !process.argv.some(a => a.includes('test'))) {
+if (!process.env.VERCEL && process.env.NODE_ENV !== 'test' && !process.env.VITEST && !process.env.TRANSPORT_MODE?.includes('stdio') && !process.argv.some(a => a.includes('test'))) {
   const app = createServerApp();
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {

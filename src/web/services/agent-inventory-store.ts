@@ -12,7 +12,9 @@
  */
 
 import type { ScannerResult } from '../../core/types';
-import { ScanGovernanceBridge, IngestedAgentEntity } from './scan-governance-bridge';
+import { ScanGovernanceBridge } from './scan-governance-bridge';
+import { PersistenceAdapter } from './persistence-adapter';
+import { governanceHeaders } from './governance-fetch';
 
 export type AgentGovernanceStatus = 
   | 'UNKNOWN' 
@@ -138,60 +140,52 @@ export class AgentInventoryStore {
   private static agents: InventoryAgent[] = [];
   private static listeners: Array<() => void> = [];
   private static isInitialized = false;
+  private static activeScope = '';
   private static serverMetrics: InventoryMetrics | null = null;
 
   static initialize() {
-    if (this.isInitialized) return;
-
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) {
-            this.agents = parsed.filter(a => !isMockAgent(a));
-            this.isInitialized = true;
-            this.syncWithIngestedScans();
-            return;
-          }
-        }
-      } catch (e) {
-        console.warn('[AgentInventoryStore] Storage read warning:', e);
-      }
-    }
-
+    const scope = PersistenceAdapter.buildScopedKey('agent_inventory', STORAGE_KEY);
+    if (this.isInitialized && this.activeScope === scope) return;
+    this.activeScope = scope;
     this.agents = [];
+    this.serverMetrics = null;
+
+    // Browser caches and scan drafts are not authoritative inventory records.
     this.isInitialized = true;
-    this.syncWithIngestedScans();
-    this.persist();
   }
 
   static async fetchFromBackend(authHeader?: string, tenantHeader?: string): Promise<InventoryAgent[]> {
     this.initialize();
-    if (typeof fetch === 'undefined') return [...this.agents];
+    if (typeof fetch === 'undefined') throw new Error('AUTHORITATIVE_INVENTORY_TRANSPORT_UNAVAILABLE');
+    const scope = this.activeScope;
 
     try {
-      const headers: Record<string, string> = {};
+      const headers: Record<string, string> = governanceHeaders();
       if (authHeader) headers['Authorization'] = authHeader;
       if (tenantHeader) headers['x-tenant-id'] = tenantHeader;
 
       const res = await fetch('/api/v1/agents', { headers });
-      if (!res.ok) return [...this.agents];
+      if (!res.ok) throw new Error(`Authoritative inventory unavailable: HTTP ${res.status}`);
 
       const data = await res.json();
-      const backendAgents = data.agents || [];
-
-      // Preserve local scan agents that are not yet provisioned on the backend
-      const localScans = this.agents.filter(a => a.id.startsWith('agt_scan_'));
+      if (!Array.isArray(data.agents)) throw new Error('AUTHORITATIVE_INVENTORY_RESPONSE_INVALID');
+      const backendAgents = data.agents;
+      if (PersistenceAdapter.buildScopedKey('agent_inventory', STORAGE_KEY) !== scope) {
+        this.initialize();
+        return [...this.agents];
+      }
 
       const mappedAgents: InventoryAgent[] = backendAgents.map((ag: any) => {
-        const tools = (ag.passport?.declaredTools || []).map((t: string) => ({
+        const governed = ag.passportVerified === true && ag.passport?.status === 'GOVERNED';
+        const status = ag.passport?.status === 'REVOKED' ? 'REVOKED' : ag.status === 'PROVISIONED'
+          ? (governed ? 'GOVERNED' : 'UNKNOWN') : ag.status || 'UNKNOWN';
+        const tools = (ag.passport?.declaredTools || ag.discovery?.tools || []).map((t: string) => ({
           name: t,
-          status: (t.includes('approve') || t.includes('transfer') ? 'HITL' : t.includes('prohibit') || t.includes('admin') ? 'BLOCKED' : 'ALLOW') as any,
+          status: (!governed ? 'BLOCKED' : t.includes('approve') || t.includes('transfer') ? 'HITL' : t.includes('prohibit') || t.includes('admin') ? 'BLOCKED' : 'ALLOW') as any,
           boundary: 'Governed Runtime'
         }));
 
-        const ownerName = ag.owner?.name || ag.owner || (ag.tenantId ? 'Unknown' : 'Unknown');
+        const ownerName = ag.owner?.name || (typeof ag.owner === 'string' ? ag.owner : 'Unknown');
         const ownerRole = ag.owner?.role || (ownerName !== 'Unknown' ? 'Assigned AI Owner' : 'Not assigned');
         const ownerDept = ag.owner?.department || 'Unassigned';
 
@@ -203,56 +197,55 @@ export class AgentInventoryStore {
             role: ownerRole,
             department: ownerDept
           },
-          framework: ag.framework?.name || 'Custom',
-          frameworkVersion: ag.framework?.version || '1.0.0',
-          model: (ag.passport?.declaredModels && ag.passport.declaredModels[0]) || 'gpt-4o',
-          status: (ag.status === 'PROVISIONED' ? 'GOVERNED' : ag.status || 'GOVERNED') as AgentGovernanceStatus,
-          risk: (ag.passport?.riskTier || 'MEDIUM') as AgentRiskTier,
+           framework: ag.framework?.name || 'Unknown',
+           frameworkVersion: ag.framework?.version || 'Unknown',
+           model: ag.passport?.declaredModels?.[0] || ag.discovery?.models?.[0] || 'Unknown',
+           status: status as AgentGovernanceStatus,
+           risk: (ag.passport?.riskTier || ag.discovery?.risk || 'MEDIUM') as AgentRiskTier,
           complianceProfile: ag.complianceProfileId || ag.complianceProfileChecksum || 'CP-COMPILED',
           created: ag.createdAt ? ag.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
-          lastActivity: ag.lastActivity || 'Ativo via Backend',
+           lastActivity: ag.lastActivity || 'No runtime activity reported',
           description: ag.description || `Agente corporativo registrado no ComplyPRO.`,
           access: {
-            models: (ag.passport?.declaredModels || ['gpt-4o']).map((m: string) => ({
+             models: (ag.passport?.declaredModels || ag.discovery?.models || []).map((m: string) => ({
               name: m,
-              allowed: true,
+               allowed: governed,
               provider: 'Model Gateway'
             })),
-            data: (ag.passport?.declaredDataScopes || ['Default Scope']).map((d: string) => ({
+             data: (ag.passport?.declaredDataScopes || []).map((d: string) => ({
               name: d,
-              allowed: true,
+              allowed: governed,
               classification: 'Internal'
             })),
-            tools: tools.length > 0 ? tools : [
-              { name: 'read_resource', status: 'ALLOW', boundary: 'REST Gateway' }
-            ],
-            network: { directInternet: false, description: 'Air-Gapped Sandbox. Tráfego somente via Gateway.' },
-            secrets: { directAccess: false, description: 'Zero injeção de tokens. mTLS gerenciado.' }
+             tools,
+            network: { directInternet: false, description: 'Gateway-mediated access; OS isolation not verified.' },
+            secrets: { directAccess: false, description: 'Credentials remain in server-side gateways; OS isolation not verified.' }
           },
           riskDetails: {
             riskTier: ag.passport?.riskTier || 'MEDIUM',
             riskFactors: [`Perfil de governança ativo: ${ag.complianceProfileId || 'Standard'}`],
             dataClassification: 'Interno',
             highRiskCapabilities: tools.filter((t: any) => t.status === 'HITL').map((t: any) => t.name),
-            openFindings: 0,
+          openFindings: ag.discovery?.openFindings || 0,
             unknowns: ownerName === 'Unknown' ? ['Responsável formal não atribuído'] : []
           },
           governance: {
             complianceProfile: ag.complianceProfileId || 'CP-COMPILED',
-            passportStatus: ag.passport?.status === 'REVOKED' ? 'REVOKED' : 'VERIFIED',
-            passportId: ag.passportId || ag.passport?.passportId || `PASS-${ag.agentId}`,
-            passportFingerprint: ag.passportFingerprint || ag.passport?.passportFingerprint || 'HMAC-SHA256',
-            guardianStatus: 'ACTIVE',
+             passportStatus: !ag.passport ? 'NOT_ISSUED' : ag.passport.status === 'REVOKED' ? 'REVOKED' : ag.passportVerified ? 'VERIFIED' : 'PROVISIONAL',
+             passportId: ag.passportId || ag.passport?.passportId || '',
+             passportFingerprint: ag.passportFingerprint || ag.passport?.passportFingerprint || '',
+             guardianStatus: ag.guardianStatus || 'MONITOR_ONLY',
             policyVersion: '1.0.0',
             hitlRules: ['Operações privilegiadas requerem autorização humana'],
             capabilitiesCount: ag.governedCapabilities || tools.length,
-            governanceStatus: (ag.status === 'PROVISIONED' ? 'GOVERNED' : ag.status || 'GOVERNED') as AgentGovernanceStatus
+            governanceStatus: status as AgentGovernanceStatus
           },
           activity: []
         };
       });
 
-      this.agents = [...mappedAgents, ...localScans];
+      this.agents = mappedAgents;
+      this.serverMetrics = null;
 
       // Also fetch real backend metrics from EvidenceLedger and DurableStore
       try {
@@ -273,23 +266,31 @@ export class AgentInventoryStore {
         // Fall back to local calculation if metrics endpoint is unavailable
       }
 
+      if (PersistenceAdapter.buildScopedKey('agent_inventory', STORAGE_KEY) !== scope) {
+        this.initialize();
+        return [...this.agents];
+      }
+
       this.persist();
       this.notify();
     } catch (e) {
+      if (this.activeScope === scope) {
+        this.agents = [];
+        this.serverMetrics = null;
+        this.notify();
+      }
       console.warn('[AgentInventoryStore] Backend fetch error:', e);
+      throw e;
     }
 
     return [...this.agents];
   }
 
-  static updateAgent(id: string, updates: Partial<InventoryAgent>) {
-    this.initialize();
-    const agent = this.agents.find(a => a.id === id);
-    if (agent) {
-      Object.assign(agent, updates);
-      this.persist();
-      this.notify();
-    }
+  static async updateAgent(id: string, updates: Partial<InventoryAgent>) {
+    const response=await fetch(`/api/v1/agents/${encodeURIComponent(id)}`,{method:'PATCH',
+      headers:{...governanceHeaders(),'Content-Type':'application/json'},body:JSON.stringify(updates)});
+    if(!response.ok) throw new Error(`Agent update was not persisted: HTTP ${response.status}`);
+    await this.fetchFromBackend();
   }
 
   static getAgents(): InventoryAgent[] {
@@ -302,7 +303,21 @@ export class AgentInventoryStore {
     return this.agents.find(a => a.id === id);
   }
 
-  static addAgent(agent: Partial<InventoryAgent> & { name: string }): InventoryAgent {
+  static async addAgent(agent: Partial<InventoryAgent> & { name: string }): Promise<InventoryAgent> {
+    const response = await fetch('/api/v1/agents/import',{method:'POST',
+      headers:{...governanceHeaders(),'Content-Type':'application/json'}, body:JSON.stringify({
+        name:agent.name,framework:agent.framework || 'Unknown',models:agent.model ? [agent.model] : [],
+        owner:agent.owner,description:agent.description,risk:agent.risk
+      })});
+    if (!response.ok) throw new Error(`Import was not persisted: HTTP ${response.status}`);
+    const saved = await response.json();
+    const mapped = await this.fetchFromBackend();
+    const confirmed = mapped.find(item=>item.id===saved.agentId);
+    if (!confirmed) throw new Error('IMPORTED_AGENT_NOT_IN_AUTHORITATIVE_INVENTORY');
+    return confirmed;
+  }
+
+  private static stageAgent(agent: Partial<InventoryAgent> & { name: string }): InventoryAgent {
     this.initialize();
 
     const id = agent.id || ('agt_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6));
@@ -310,59 +325,46 @@ export class AgentInventoryStore {
       id,
       name: agent.name,
       owner: agent.owner || {
-        name: 'Administrador',
-        role: 'AI Owner',
-        department: 'Engineering'
+        name: 'Unknown',
+        role: 'Not assigned',
+        department: 'Unassigned'
       },
-      framework: agent.framework || 'CrewAI',
-      frameworkVersion: agent.frameworkVersion || '1.0.0',
-      model: agent.model || 'gpt-4o',
-      status: agent.status || 'GOVERNED',
+      framework: agent.framework || 'Unknown',
+      frameworkVersion: agent.frameworkVersion || 'Unknown',
+      model: agent.model || 'Unknown',
+      status: agent.status || 'IMPORTED',
       risk: agent.risk || 'HIGH',
-      complianceProfile: agent.complianceProfile || 'CP-EU-AI-ACT-HIGH-RISK-FINANCIAL',
+      complianceProfile: agent.complianceProfile || 'Not assigned',
       created: agent.created || new Date().toISOString().split('T')[0],
       lastActivity: 'Criado agora',
       description: agent.description || `Agente ${agent.name} registrado no ComplyPRO.`,
       access: agent.access || {
-        models: [{ name: agent.model || 'gpt-4o', allowed: true, provider: 'OpenAI Enterprise' }],
-        data: [{ name: 'Default Enterprise Scope', allowed: true, classification: 'Internal' }],
-        tools: [
-          { name: 'read_resource', status: 'ALLOW', boundary: 'REST /api/read' },
-          { name: 'execute_action', status: 'HITL', boundary: 'Requer aprovação humana' },
-          { name: 'admin_delete', status: 'BLOCKED', boundary: 'Ação crítica bloqueada' }
-        ],
-        network: { directInternet: false, description: 'Air-Gapped Sandbox. Tráfego somente via Gateway.' },
-        secrets: { directAccess: false, description: 'Zero injeção de tokens. mTLS gerenciado.' }
+        models: agent.model ? [{ name: agent.model, allowed: false, provider: 'Not provisioned' }] : [],
+        data: [],
+        tools: [],
+        network: { directInternet: false, description: 'Runtime isolation not verified; provisioning required.' },
+        secrets: { directAccess: false, description: 'Gateway credential boundary not verified.' }
       },
       riskDetails: agent.riskDetails || {
         riskTier: agent.risk || 'HIGH',
-        riskFactors: ['Agente recém-criado em monitoramento ativo'],
-        dataClassification: 'Interno',
-        highRiskCapabilities: ['execute_action'],
+        riskFactors: ['Unprovisioned inventory record; governance review required'],
+        dataClassification: 'Unknown',
+        highRiskCapabilities: [],
         openFindings: 0,
-        unknowns: []
+        unknowns: ['No authoritative runtime or passport has been issued']
       },
       governance: agent.governance || {
-        complianceProfile: agent.complianceProfile || 'CP-EU-AI-ACT-HIGH-RISK-FINANCIAL',
-        passportStatus: 'VERIFIED',
-        passportId: `PASS-${id.toUpperCase()}`,
-        passportFingerprint: `SHA256:${id.split('').reverse().join('')}1122334455`,
-        guardianStatus: 'ACTIVE',
-        policyVersion: 'v1.0.0',
-        hitlRules: ['Ações de alto risco exigem confirmação em fila'],
-        capabilitiesCount: 3,
-        governanceStatus: agent.status || 'GOVERNED'
+        complianceProfile: agent.complianceProfile || 'Not assigned',
+        passportStatus: 'NOT_ISSUED',
+        passportId: '',
+        passportFingerprint: '',
+        guardianStatus: 'MONITOR_ONLY',
+        policyVersion: 'Not assigned',
+        hitlRules: [],
+        capabilitiesCount: agent.access?.tools?.length || 0,
+        governanceStatus: agent.status || 'IMPORTED'
       },
-      activity: agent.activity || [
-        {
-          id: `act_${Date.now()}`,
-          timestamp: 'Agora',
-          type: 'EVIDENCE',
-          summary: `Agente provisionado e integrado ao inventário`,
-          verdict: 'ALLOW',
-          evidenceHash: '00112233445566778899'
-        }
-      ]
+      activity: agent.activity || []
     };
 
     this.agents.unshift(newAgent);
@@ -371,26 +373,28 @@ export class AgentInventoryStore {
     return newAgent;
   }
 
-  static updateAgentStatus(id: string, status: AgentGovernanceStatus) {
-    this.initialize();
-    const agent = this.agents.find(a => a.id === id);
-    if (agent) {
-      agent.status = status;
-      agent.governance.governanceStatus = status;
-      agent.lastActivity = `Status atualizado para ${status}`;
-      agent.activity.unshift({
-        id: `act_${Date.now()}`,
-        timestamp: 'Agora',
-        type: status === 'BLOCKED' ? 'BLOCKED' : status === 'PAUSED' ? 'DECISION' : 'EXECUTION',
-        summary: `Status de governança alterado para ${status}`,
-        verdict: status === 'BLOCKED' ? 'BLOCK' : status === 'PAUSED' ? 'REQUIRE_HITL' : 'ALLOW'
-      });
-      this.persist();
-      this.notify();
-    }
+  static async updateAgentStatus(id: string, status: AgentGovernanceStatus) {
+    await this.updateAgent(id, {status});
   }
 
-  static importFromScanResult(result: ScannerResult): InventoryAgent[] {
+  static async importFromScanResult(result: ScannerResult): Promise<InventoryAgent[]> {
+    const imported: InventoryAgent[] = [];
+    for (const agent of result.source?.agents || []) {
+      const response = await fetch('/api/v1/agents/import',{method:'POST',headers:{...governanceHeaders(),'Content-Type':'application/json'},
+        body:JSON.stringify({name:agent.name,framework:agent.framework || 'Unknown',sourceRepository:result.repo?.fullName || result.repo?.name,
+          sourcePath:agent.filePath,description:agent.businessPurpose,tools:agent.tools || [],risk:agent.riskLevel?.toUpperCase(),
+          openFindings:result.violations?.length || 0,owner:result.owner ? {name:result.owner.label,role:result.owner.role,department:result.owner.teams?.[0]} : undefined,
+          models:result.source.aiModels?.map(model=>model.modelId) || []})});
+      if (!response.ok) throw new Error(`Scan import was not persisted: HTTP ${response.status}`);
+      const saved = await response.json();
+      const confirmed = (await this.fetchFromBackend()).find(item=>item.id===saved.agentId);
+      if (!confirmed) throw new Error('IMPORTED_AGENT_NOT_IN_AUTHORITATIVE_INVENTORY');
+      imported.push(confirmed);
+    }
+    return imported;
+  }
+
+  private static stageScanResult(result: ScannerResult): InventoryAgent[] {
     this.initialize();
     const rawAgents = result.source?.agents || [];
     const imported: InventoryAgent[] = [];
@@ -402,7 +406,10 @@ export class AgentInventoryStore {
       // Check if already in inventory
       const existing = this.agents.find(a => a.name.toLowerCase() === cleanName.toLowerCase());
       if (existing) {
-        existing.status = 'GOVERNED';
+        if (existing.governance.passportStatus !== 'VERIFIED') {
+          existing.status = 'IMPORTED';
+          existing.governance.governanceStatus = 'IMPORTED';
+        }
         existing.lastActivity = 'Atualizado via Scan';
         imported.push(existing);
         continue;
@@ -416,9 +423,9 @@ export class AgentInventoryStore {
         id: agentId,
         name: cleanName,
         owner: {
-          name: result.owner?.label || 'Time de Engenharia',
-          role: result.owner?.role || 'Lead Developer',
-          department: result.owner?.teams?.[0] || 'AI Platform'
+          name: result.owner?.label || 'Unknown',
+          role: result.owner?.role || 'Not assigned',
+          department: result.owner?.teams?.[0] || 'Unassigned'
         },
         framework: ag.framework || 'CrewAI',
         frameworkVersion: '1.0.0',
@@ -456,25 +463,16 @@ export class AgentInventoryStore {
         },
         governance: {
           complianceProfile: isHighRisk ? 'CP-EU-AI-ACT-HIGH-RISK-FINANCIAL' : 'CP-INTERNAL-GOVERNANCE-L2',
-          passportStatus: 'PROVISIONAL',
-          passportId: `PASS-SCAN-${agentId.toUpperCase().slice(-6)}`,
-          passportFingerprint: `SHA256:scan_${agentId}_${Date.now()}`,
-          guardianStatus: 'ACTIVE',
+          passportStatus: 'NOT_ISSUED',
+          passportId: '',
+          passportFingerprint: '',
+          guardianStatus: 'MONITOR_ONLY',
           policyVersion: 'v1.0.0',
           hitlRules: ['Operações privilegiadas requerem aprovação'],
           capabilitiesCount: (ag.tools || []).length || 1,
           governanceStatus: 'IMPORTED'
         },
-        activity: [
-          {
-            id: `act_${Date.now()}_${idx}`,
-            timestamp: 'Agora',
-            type: 'EVIDENCE',
-            summary: `Descoberto no scan do repositório ${result.repo?.name || 'Local'} e importado para o ComplyPRO`,
-            verdict: 'ALLOW',
-            evidenceHash: `scan_${idx}_hash`
-          }
-        ]
+        activity: []
       };
 
       this.agents.unshift(newAgent);
@@ -487,6 +485,7 @@ export class AgentInventoryStore {
   }
 
   private static syncWithIngestedScans() {
+    if (ScanGovernanceBridge.getLastIngestion()?.tenantId !== PersistenceAdapter.getContext().tenantId) return;
     const ingested = ScanGovernanceBridge.getIngestedAgents();
     if (ingested && ingested.length > 0) {
       for (const ing of ingested) {
@@ -592,7 +591,7 @@ export class AgentInventoryStore {
   private static persist() {
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.agents));
+        localStorage.setItem(this.activeScope, JSON.stringify(this.agents));
       } catch (e) {
         console.warn('[AgentInventoryStore] Storage write warning:', e);
       }

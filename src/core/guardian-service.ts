@@ -645,7 +645,8 @@ export class GuardianService {
         verdict: params.verdict
       }, params.input.context?.tenantId);
     } catch (err) {
-      // Fallback safely
+      if (process.env.NODE_ENV === 'production') throw err;
+      // Non-production presentation fixture may remain in memory.
     }
 
     return {

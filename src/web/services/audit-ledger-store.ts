@@ -56,6 +56,8 @@ function rightRotate(value: number, amount: number) {
 
 // Pure universal FIPS 180-4 standard SHA-256 implementation
 export function pureSha256(ascii: string): string {
+  // SHA-256 operates on UTF-8 bytes, not JavaScript UTF-16 code units.
+  ascii = Array.from(new TextEncoder().encode(ascii), byte => String.fromCharCode(byte)).join('');
   const mathPow = Math.pow;
   const maxWord = mathPow(2, 32);
   let i = 0, j = 0;
@@ -309,7 +311,7 @@ export class AuditLedgerStore {
     if (tenantId) {
       PersistenceAdapter.setContext({ tenantId });
     }
-    let list: AuditBlock[] = BASELINE_BLOCKS;
+    let list: AuditBlock[] = [];
     if (this.memoryOverride) {
       list = JSON.parse(JSON.stringify(this.memoryOverride));
     } else {
@@ -389,8 +391,15 @@ export class AuditLedgerStore {
 
     for (let i = 0; i < blocks.length; i++) {
       const current = blocks[i];
-      if (current.isTampered) {
+      const payloadHash = computeDeterministicHash(JSON.stringify(current.payloadData));
+      const blockHash = computeDeterministicHash(current.previousHash + payloadHash);
+      if (current.isTampered || current.payloadHash !== payloadHash || current.blockHash !== blockHash) {
         hashMismatches++;
+        tamperedBlockId = current.blockId;
+      }
+
+      if (i === 0 && current.previousHash !== GENESIS_PREV_HASH) {
+        brokenLinks++;
         tamperedBlockId = current.blockId;
       }
 

@@ -7,6 +7,7 @@
 import { DecisionStore } from './decision-store';
 import { PersistenceAdapter } from './persistence-adapter';
 import { ProtectedEvidenceRecord } from '../../core/governance-control-plane';
+import { AuditLedgerStore, computeDeterministicHash } from './audit-ledger-store';
 
 export type EvidenceType = 
   | 'ASSESSMENT_EVIDENCE'
@@ -259,9 +260,11 @@ export class EvidenceStore {
     if (tenantId) {
       PersistenceAdapter.setContext({ tenantId });
     }
-    let list: ComprehensiveEvidenceRecord[] = BASELINE_EVIDENCE;
-    if (this.scanEvidenceOverride) {
-      list = JSON.parse(JSON.stringify(this.scanEvidenceOverride));
+    const scope = tenantId || PersistenceAdapter.getContext().tenantId;
+    let list: ComprehensiveEvidenceRecord[] = [];
+    const override = this.scanEvidenceOverride.get(scope);
+    if (override) {
+      list = JSON.parse(JSON.stringify(override));
     } else {
       const saved = PersistenceAdapter.read<ComprehensiveEvidenceRecord[]>('evidence_catalog', STORAGE_KEY_EVIDENCE);
       if (saved && Array.isArray(saved) && saved.length > 0) {
@@ -269,10 +272,7 @@ export class EvidenceStore {
       }
     }
 
-    if (tenantId) {
-      return list.filter(r => !r.tenantId || r.tenantId === tenantId);
-    }
-    return list;
+    return list.filter(r => !r.tenantId || r.tenantId === scope);
   }
 
   static getRecordById(evidenceId: string, tenantId?: string): ComprehensiveEvidenceRecord | undefined {
@@ -280,24 +280,27 @@ export class EvidenceStore {
     return list.find(r => r.evidenceId === evidenceId || (r as any).id === evidenceId);
   }
 
-    private static scanEvidenceOverride: ComprehensiveEvidenceRecord[] | null = null;
+    private static scanEvidenceOverride = new Map<string, ComprehensiveEvidenceRecord[]>();
 
   static ingestEvidence(records: ComprehensiveEvidenceRecord[], tenantId?: string) {
     if (tenantId) {
       PersistenceAdapter.setContext({ tenantId });
     }
     const current = this.getEvidenceRecords(tenantId);
-    const combined = [...records, ...current.filter(c => !records.some(r => r.evidenceId === c.evidenceId))];
-    this.scanEvidenceOverride = combined;
+    const scope = tenantId || PersistenceAdapter.getContext().tenantId;
+    const scoped = records.filter(r => !r.tenantId || r.tenantId === scope)
+      .map(r => ({ ...r, tenantId: scope }));
+    const combined = [...scoped, ...current.filter(c => !scoped.some(r => r.evidenceId === c.evidenceId))];
+    this.scanEvidenceOverride.set(scope, combined);
     PersistenceAdapter.write('evidence_catalog', combined, STORAGE_KEY_EVIDENCE);
     this.notify();
   }
 
   static resetToBaseline(tenantId?: string) {
-    this.scanEvidenceOverride = null;
     if (tenantId) {
       PersistenceAdapter.setContext({ tenantId });
     }
+    this.scanEvidenceOverride.delete(tenantId || PersistenceAdapter.getContext().tenantId);
     PersistenceAdapter.delete('evidence_catalog', STORAGE_KEY_EVIDENCE);
     this.notify();
   }
@@ -307,10 +310,13 @@ static verifyRecordIntegrity(evidenceId: string): { verified: boolean; computedH
     const record = list.find(r => r.evidenceId === evidenceId);
     if (!record) throw new Error(`Evidence ${evidenceId} not found`);
 
-    return {
-      verified: true,
-      computedHash: record.integrityDigest,
-      matchesLedger: true
-    };
+    const computedHash = computeDeterministicHash(JSON.stringify(record.payloadData));
+    const scope = PersistenceAdapter.getContext().tenantId;
+    const blocks = AuditLedgerStore.getBlocks(scope);
+    const matchesLedger = blocks.some(block => block.evidenceRef === evidenceId &&
+      block.payloadHash === computedHash &&
+      block.blockHash === computeDeterministicHash(block.previousHash + block.payloadHash)) &&
+      AuditLedgerStore.verifyEntireLedger(scope).isChainValid;
+    return { verified: computedHash === record.integrityDigest, computedHash, matchesLedger };
   }
 }

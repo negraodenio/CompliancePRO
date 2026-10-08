@@ -17,6 +17,7 @@
  * 13. Tampering/inconsistent Passport prevents execution
  */
 
+import { assertRuntimeParents, assertStoredSession } from './test-supabase-fixtures';
 import { AgentProvisioner, AgentDefinition } from '../src/core/agent-provisioner';
 import { RuntimeManager } from '../src/core/runtime-manager';
 import { IsolatedWorker } from '../src/core/isolated-worker';
@@ -25,6 +26,7 @@ import { ExecutionAdapterRegistry } from '../src/server/routes/execution';
 import { EvidenceLedger } from '../src/core/evidence-ledger';
 import { ComplianceProfileRegistry } from '../src/core/compliance-compiler';
 import { createServerApp } from '../src/server/app';
+import { DurableStore } from '../src/server/db/durable-store';
 import assert from 'assert';
 
 console.log('==================================================================');
@@ -62,6 +64,9 @@ const runtimeInstance = RuntimeManager.createRuntime(provisioned.runtimeSpec, pr
 const startedRuntime = RuntimeManager.startRuntime(runtimeInstance.runtimeId);
 const worker = RuntimeManager.getWorker(startedRuntime.runtimeId)!;
 assert.ok(worker, 'Worker must be alive');
+await DurableStore.flushPendingWrites();
+await assertRuntimeParents({ agentId: provisioned.agentId, passportId: provisioned.passportId,
+  runtimeId: runtimeInstance.runtimeId, tenantId: provisioned.tenantId });
 
 // ----------------------------------------------------------------------------
 // TEST 1: CrewAI starts inside IsolatedWorker
@@ -222,7 +227,7 @@ const tamperedPassport = {
 const tamperedWorker = new IsolatedWorker({
   agentId: provisioned.agentId,
   passportId: provisioned.passportId,
-  runtimeId: 'rt_tampered_test',
+  runtimeId: runtimeInstance.runtimeId,
   passport: tamperedPassport
 });
 
@@ -266,6 +271,10 @@ assert.strictEqual(apiResume.status, 'COMPLETED');
 assert.strictEqual(apiResume.toolExecuted, true);
 console.log('  [PASS]: REST execution registry and approve/resume endpoints verified');
 
+await DurableStore.flushPendingWrites();
+for (const storedSession of [session1, session2, session3, tamperedSession, restSession]) {
+  await assertStoredSession(storedSession);
+}
 console.log('\n==================================================================');
 console.log('>>> ALL 14 CREWAI RUNTIME ADAPTER TESTS PASSED WITH 100% <<<');
 console.log('==================================================================\n');

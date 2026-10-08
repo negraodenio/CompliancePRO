@@ -907,7 +907,7 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
                 <div className="flex items-start gap-2.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
                   <div>
-                    <strong className="text-white">Hash-Chained Sequence:</strong> Blocks link to previous entries via SHA-256 hashes, creating an immutable audit trail.
+                    <strong className="text-white">Hash-Chained Sequence:</strong> Blocks link to previous entries via SHA-256 hashes, creating a tamper-evident audit trail.
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">

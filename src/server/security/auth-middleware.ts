@@ -17,6 +17,7 @@ import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import { IdentityProvider } from './identity-provider';
 import { EnterpriseRole } from './identity-types';
+import { DurableStore } from '../db/durable-store';
 
 export type AppRole = 'developer' | 'compliance_officer' | 'auditor';
 
@@ -88,6 +89,8 @@ export class ApiKeyRegistry {
   public static initialize(): void {
     if (this.initialized) return;
 
+    // Documented fixture credentials must never authenticate production callers.
+    if (process.env.NODE_ENV !== 'production') {
     // Baseline enterprise test keys
     this.register('dev-key-tenant-default', {
       userId: 'USR-ENG-03',
@@ -143,6 +146,7 @@ export class ApiKeyRegistry {
       tenantId: 'TENANT-B',
       roles: ['auditor', 'AUDITOR']
     });
+    }
 
     // Pre-populate with CODEGUARD_API_KEYS if present in environment
     const envKeys = process.env.CODEGUARD_API_KEYS;
@@ -183,7 +187,7 @@ export class ApiKeyRegistry {
  * Inspects Authorization: Bearer <token> or X-API-Key: <key>.
  * Fails closed with 401 Unauthorized if missing, revoked, expired, or invalid.
  */
-export function authenticateTokenOrKey(req: Request, res: Response, next: NextFunction) {
+export async function authenticateTokenOrKey(req: Request, res: Response, next: NextFunction) {
   ApiKeyRegistry.initialize();
 
   const authHeader = req.headers?.authorization;
@@ -248,6 +252,31 @@ export function authenticateTokenOrKey(req: Request, res: Response, next: NextFu
       error: 'SESSION_EXPIRED',
       message: 'Authentication failed: session has expired or timed out.'
     });
+  }
+
+  // Same Supabase Native Auth and organization_members authority used by course/main_api.py.
+  const organization = (req.headers['x-organization-id'] || req.headers['x-tenant-id']) as string;
+  if (rawToken.split('.').length === 3 && organization && process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
+    try {
+      const userResponse = await fetch(`${process.env.SUPABASE_URL}/auth/v1/user`, {
+        headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${rawToken}` },
+        signal: AbortSignal.timeout(10000)
+      });
+      if (userResponse.ok) {
+        const user = await userResponse.json();
+        const membership = await DurableStore.getOrganizationMembership(user.id, organization);
+        if (!membership) return res.status(403).json({ ok: false, error: 'CROSS_TENANT_ACCESS_DENIED' });
+        const rawRole = String(membership.role || 'VIEWER');
+        const enterpriseRole = rawRole.includes(':') ? rawRole.split(':')[1] : rawRole;
+        const adminRole = rawRole.split(':')[0].toLowerCase();
+        const roles = ['owner','admin'].includes(adminRole) ? ['ADMIN',enterpriseRole === 'owner' || enterpriseRole === 'admin' ? 'CISO' : enterpriseRole] : [enterpriseRole];
+        req.principal = { userId: user.id, tenantId: organization, roles };
+        req.tenantId = organization;
+        return next();
+      }
+    } catch {
+      return res.status(503).json({ ok: false, error: 'IDENTITY_AUTHORITY_UNAVAILABLE' });
+    }
   }
 
   return res.status(401).json({

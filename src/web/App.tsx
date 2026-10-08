@@ -154,15 +154,6 @@ const AppInner: React.FC = () => {
     }
   }, []);
 
-  // Settings nav item opens the existing SettingsModal overlay
-  // (SettingsModal is an overlay, not a dedicated page view)
-  useEffect(() => {
-    if (pageMode === 'app' && activeView === 'settings') {
-      setShowSettings(true);
-      setActiveView('ai-agents');
-    }
-  }, [activeView, pageMode]);
-
   const triggerConfetti = () => {
     confetti({
       particleCount: 50,
@@ -666,7 +657,7 @@ const AppInner: React.FC = () => {
                 )}
 
                 {activeView === 'settings' && (
-                  <SettingsView />
+                  <SettingsView onNavigate={setActiveView} />
                 )}
 
                 {/* Universal MCP — Informational Status View */}

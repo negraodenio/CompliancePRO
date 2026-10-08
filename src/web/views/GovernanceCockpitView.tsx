@@ -67,16 +67,7 @@ export const GovernanceCockpitView: React.FC = () => {
     policy: string;
     customerMasked: string;
     requestedAt: string;
-  } | null>({
-    executionId: 'exec_credit_01',
-    gateId: 'GATE-EU-8819-HITL',
-    capability: 'credit.approve',
-    risk: 'HIGH',
-    amount: '€25,000',
-    policy: 'HITL required for automated facilities > €10,000 (CP-EU-AI-ACT-HIGH-RISK-FINANCIAL)',
-    customerMasked: '********4721',
-    requestedAt: '10:31:07'
-  });
+  } | null>(null);
 
   // Load Real Data from Backend Endpoints
   const refreshAgentData = async (targetId?: string) => {
@@ -84,6 +75,7 @@ export const GovernanceCockpitView: React.FC = () => {
     try {
       // 1. Fetch Agents List from real GET /api/v1/agents
       const agentsRes = await fetch('/api/v1/agents');
+      if (!agentsRes.ok) throw new Error(`Agent inventory request failed: HTTP ${agentsRes.status}`);
       let currentId = targetId || selectedAgentId;
       if (agentsRes.ok) {
         const data = await agentsRes.json();
@@ -96,9 +88,11 @@ export const GovernanceCockpitView: React.FC = () => {
       }
 
       if (!currentId) {
-        // Fallback default agent id
-        currentId = 'agt_credit_analyst';
-        setSelectedAgentId(currentId);
+        setAgentData(null);
+        setRuntimeData(null);
+        setEvidenceEntries([]);
+        setActiveHitlGate(null);
+        return;
       }
 
       // 2. Fetch Active Agent Details
@@ -125,7 +119,11 @@ export const GovernanceCockpitView: React.FC = () => {
         setEvidenceEntries(evData.entries || []);
       }
     } catch (err: any) {
-      console.warn('Backend fetch fallback (loading deterministic demo state):', err);
+      setAgentData(null);
+      setRuntimeData(null);
+      setEvidenceEntries([]);
+      setActiveHitlGate(null);
+      setActionMessage(`Backend data unavailable: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -143,36 +141,20 @@ export const GovernanceCockpitView: React.FC = () => {
       const res = await fetch('/api/v1/evidence/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId: selectedAgentId || 'agt_credit_analyst' })
+        body: JSON.stringify({ agentId: selectedAgentId })
       });
+      if (!res.ok) throw new Error(`Evidence verification failed: HTTP ${res.status}`);
       const data = await res.json();
       setVerificationResult(data);
       if (data.auditPack) {
         setAuditPackData(data.auditPack);
       }
-      setActionMessage('Cryptographic proof verified against ComplyPRO Evidence Ledger.');
+      setActionMessage(data.chain?.valid && data.chain?.totalEntries > 0
+        ? 'Backend hash-chain verification completed.' : 'No successful non-empty evidence verification was reported.');
     } catch (err: any) {
-      // Deterministic authoritative verification payload
-      setVerificationResult({
-        ok: true,
-        chain: { valid: true, totalEntries: evidenceEntries.length || 15 },
-        auditPack: {
-          packId: 'PACK-CGAG-AUDIT-2026-01',
-          merkleRoot: 'd39cf2a0b778f527c90b44a1bb81335f6087791ee3078ebf5c8ac2ef971fa843',
-          report: {
-            valid: true,
-            agentId: selectedAgentId || 'agt_credit_analyst',
-            checks: {
-              hashIntegrity: true,
-              merkleInclusion: true,
-              passportBinding: true,
-              profileChecksumMatch: true,
-              causalChainValid: true
-            }
-          }
-        }
-      });
-      setActionMessage('Verified using backend verifier specifications.');
+      setVerificationResult(null);
+      setAuditPackData(null);
+      setActionMessage(`Evidence verification unavailable: ${err.message}`);
     } finally {
       setIsVerifying(false);
     }
@@ -193,12 +175,10 @@ export const GovernanceCockpitView: React.FC = () => {
         setActiveHitlGate(null);
         refreshAgentData();
       } else {
-        setActionMessage(`Action recorded: Gate marked as ${decision}.`);
-        setActiveHitlGate(null);
+        setActionMessage(`Approval request failed: HTTP ${res.status}. No successful authorization was confirmed.`);
       }
     } catch (err: any) {
-      setActionMessage(`Action recorded: Gate marked as ${decision}.`);
-      setActiveHitlGate(null);
+      setActionMessage(`Approval request failed: ${err.message}. No successful authorization was confirmed.`);
     }
   };
 
@@ -217,7 +197,7 @@ export const GovernanceCockpitView: React.FC = () => {
     { sequence: 11, eventType: 'CAPABILITY_REQUESTED', verdict: 'BLOCK', timestamp: '10:31:20', capability: 'DIRECT_DB_DDL', eventHash: '0812aa77cc011988223400...', latencyMs: 0.6, risk: 'CRITICAL', policy: 'ForbiddenActions: DIRECT_DB_DDL', details: 'Direct SQL DDL rejected by Guardian' }
   ];
 
-  const rawEntries = evidenceEntries.length > 0 ? evidenceEntries : defaultEntries;
+  const rawEntries = evidenceEntries;
 
   const totalDecisions = rawEntries.filter(e => e.verdict || e.eventType === 'CAPABILITY_REQUESTED' || e.eventType === 'GUARDIAN_DECISION').length;
   const allowCount = rawEntries.filter(e => e.verdict === 'ALLOW' || e.verdict === 'SUCCESS').length;
@@ -257,18 +237,18 @@ export const GovernanceCockpitView: React.FC = () => {
               </select>
             ) : (
               <h1 className="text-2xl font-black text-white tracking-tight">
-                {agentData?.name || 'credit-risk-analyst'}
+                {agentData?.name || 'No agent selected'}
               </h1>
             )}
 
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              {runtimeData?.status || 'RUNNING'}
+              {runtimeData?.status || 'UNKNOWN'}
             </span>
 
             <span className="px-2.5 py-1 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-mono font-bold flex items-center gap-1">
               <FileBadge className="w-3.5 h-3.5" />
-              PASSPORT VERIFIED
+              {agentData?.passportFingerprint ? 'PASSPORT LOADED' : 'PASSPORT NOT LOADED'}
             </span>
 
             <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-xs font-mono">
@@ -277,13 +257,13 @@ export const GovernanceCockpitView: React.FC = () => {
           </div>
 
           <div className="text-xs text-slate-400 font-mono flex flex-wrap items-center gap-2 pt-1">
-            <span>Framework: <strong className="text-slate-200">CrewAI 0.102.0</strong></span>
+            <span>Framework: <strong className="text-slate-200">{agentData?.framework?.name || 'Unknown'} {agentData?.framework?.version || ''}</strong></span>
             <span>·</span>
-            <span>Runtime: <strong className="text-slate-200">{runtimeData?.runtimeId || agentData?.runtimeId || 'rt_8c26d9eb'}</strong></span>
+            <span>Runtime: <strong className="text-slate-200">{runtimeData?.runtimeId || agentData?.runtimeId || 'Not loaded'}</strong></span>
             <span>·</span>
-            <span>Profile: <strong className="text-sky-400">CP-EU-AI-ACT-HIGH-RISK-FINANCIAL</strong></span>
+            <span>Profile: <strong className="text-sky-400">{agentData?.complianceProfileId || 'Not loaded'}</strong></span>
             <span>·</span>
-            <span>Checksum: <strong className="text-slate-400">SHA-256: d0c33e6a98da...</strong></span>
+            <span>Checksum: <strong className="text-slate-400">{agentData?.complianceProfileChecksum || 'Not loaded'}</strong></span>
           </div>
         </div>
 
@@ -342,7 +322,7 @@ export const GovernanceCockpitView: React.FC = () => {
       {/* ========================================================================= */}
       {/* 6. OVERVIEW PERSPECTIVE (First View after Studio) */}
       {/* ========================================================================= */}
-      {perspective === 'OVERVIEW' && (
+      {perspective === 'OVERVIEW' && agentData && (
         <div className="space-y-6 animate-fadeIn font-mono">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* GOVERNANCE SUMMARY */}
@@ -352,20 +332,20 @@ export const GovernanceCockpitView: React.FC = () => {
                   <Shield className="w-4 h-4 text-sky-400" />
                   GOVERNANCE
                 </span>
-                <span className="text-[11px] text-sky-400 font-bold">CP-EU-AI-ACT-HIGH-RISK-FINANCIAL</span>
+                <span className="text-[11px] text-sky-400 font-bold">{agentData.complianceProfileId}</span>
               </div>
               <div className="space-y-2.5 text-xs">
                 <div className="flex justify-between py-1 border-b border-slate-800/60">
                   <span className="text-slate-400">Profile:</span>
-                  <span className="text-white font-bold">HIGH-RISK (Financial)</span>
+                  <span className="text-white font-bold">{agentData.passport?.riskTier || 'Unknown'}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-800/60">
                   <span className="text-slate-400">Guardian Policy:</span>
-                  <span className="text-emerald-400 font-bold">ACTIVE & ENFORCED</span>
+                  <span className="text-emerald-400 font-bold">{agentData.guardianStatus || 'Unknown'}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-800/60">
                   <span className="text-slate-400">Capabilities Bound:</span>
-                  <span className="text-white font-bold">3 Active (1 HITL, 1 Blocked)</span>
+                  <span className="text-white font-bold">{agentData.governedCapabilities ?? 'Unknown'}</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-slate-400">Human Oversight (HITL):</span>
@@ -381,24 +361,24 @@ export const GovernanceCockpitView: React.FC = () => {
                   <Cpu className="w-4 h-4 text-indigo-400" />
                   RUNTIME
                 </span>
-                <span className="text-[11px] text-emerald-400 font-bold">RUNNING</span>
+                <span className="text-[11px] text-emerald-400 font-bold">{runtimeData?.status || 'Unknown'}</span>
               </div>
               <div className="space-y-2.5 text-xs">
                 <div className="flex justify-between py-1 border-b border-slate-800/60">
                   <span className="text-slate-400">Worker Architecture:</span>
-                  <span className="text-white font-bold">IsolatedWorker (Separate PID)</span>
+                  <span className="text-white font-bold">Runtime metadata; OS isolation not verified</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-800/60">
                   <span className="text-slate-400">Resource Ceiling:</span>
-                  <span className="text-slate-200 font-bold">CPU: 50% · Memory: 512 MB</span>
+                  <span className="text-slate-200 font-bold">CPU: {runtimeData?.resources?.cpu ?? 'Unknown'} · Memory: {runtimeData?.resources?.memoryMb ?? 'Unknown'} MB</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-800/60">
                   <span className="text-slate-400">Session Uptime:</span>
-                  <span className="text-slate-200 font-bold">04:31 min</span>
+                  <span className="text-slate-200 font-bold">{runtimeData?.startedAt || 'Not recorded'}</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-slate-400">Direct Network Access:</span>
-                  <span className="text-rose-400 font-bold">DENIED (Air-gapped)</span>
+                  <span className="text-rose-400 font-bold">Declared policy: {runtimeData?.isolation?.network || 'Unknown'}</span>
                 </div>
               </div>
             </div>
@@ -407,8 +387,8 @@ export const GovernanceCockpitView: React.FC = () => {
           {/* RECENT DECISIONS SUMMARY */}
           <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <span className="font-bold text-white tracking-wider">RECENT GUARDIAN DECISIONS</span>
-              <span className="text-slate-400 text-xs">Decisions taken in execution path</span>
+              <span className="font-bold text-white tracking-wider">ILLUSTRATIVE POLICY CASES</span>
+              <span className="text-slate-400 text-xs">Credit-governance examples</span>
             </div>
 
             <div className="space-y-2 text-xs">
@@ -447,7 +427,7 @@ export const GovernanceCockpitView: React.FC = () => {
             <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
               <div>
                 <span className="text-slate-400 text-xs block">EVIDENCE LEDGER</span>
-                <span className="text-white font-bold text-sm mt-0.5 block">✓ Chain Cryptographically Verified</span>
+                <span className="text-white font-bold text-sm mt-0.5 block">{verificationResult?.chain?.valid && verificationResult.chain.totalEntries > 0 ? 'Backend chain check passed' : 'Verification not established'}</span>
                 <span className="text-slate-500 text-[11px]">{rawEntries.length} events anchored</span>
               </div>
               <button
@@ -461,7 +441,7 @@ export const GovernanceCockpitView: React.FC = () => {
             <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
               <div>
                 <span className="text-slate-400 text-xs block">AGENT PASSPORT</span>
-                <span className="text-white font-bold text-sm mt-0.5 block">✓ Verified & Signed by Provisioner</span>
+                <span className="text-white font-bold text-sm mt-0.5 block">{agentData.passportFingerprint ? 'Passport supplied by backend' : 'Not loaded'}</span>
                 <span className="text-slate-500 text-[11px]">HMAC-SHA256 Binding</span>
               </div>
               <button
@@ -478,39 +458,39 @@ export const GovernanceCockpitView: React.FC = () => {
       {/* ========================================================================= */}
       {/* 1. DEVELOPER PERSPECTIVE */}
       {/* ========================================================================= */}
-      {perspective === 'DEVELOPER' && (
+      {perspective === 'DEVELOPER' && agentData && (
         <div className="space-y-6 animate-fadeIn font-mono">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
               <span className="text-[11px] text-slate-400">AGENT PROCESS</span>
-              <div className="text-base font-extrabold text-white">credit-risk-analyst</div>
-              <div className="text-[10px] text-emerald-400">● RUNNING</div>
+              <div className="text-base font-extrabold text-white">{agentData.name}</div>
+              <div className="text-[10px] text-emerald-400">{runtimeData?.status || 'Unknown'}</div>
             </div>
 
             <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
               <span className="text-[11px] text-slate-400">FRAMEWORK</span>
-              <div className="text-base font-extrabold text-white">CrewAI 0.102.0</div>
-              <div className="text-[10px] text-sky-400">Runtime: {runtimeData?.runtimeId || 'rt_8c26d9eb'}</div>
+              <div className="text-base font-extrabold text-white">{agentData.framework?.name} {agentData.framework?.version}</div>
+              <div className="text-[10px] text-sky-400">Runtime: {runtimeData?.runtimeId || 'Not loaded'}</div>
             </div>
 
             <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
               <span className="text-[11px] text-slate-400">CAPABILITIES</span>
-              <div className="text-base font-extrabold text-white">3 active</div>
-              <div className="text-[10px] text-amber-400">1 HITL · 1 blocked by policy</div>
+              <div className="text-base font-extrabold text-white">{agentData.governedCapabilities ?? 'Unknown'} declared</div>
+              <div className="text-[10px] text-amber-400">{hitlCount} HITL · {blockCount} blocking events</div>
             </div>
 
             <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
               <span className="text-[11px] text-slate-400">DECISION LATENCY</span>
-              <div className="text-base font-extrabold text-indigo-400">&lt; 1.2 ms avg</div>
-              <div className="text-[10px] text-emerald-400">In-memory Gateway Fastpath</div>
+              <div className="text-base font-extrabold text-indigo-400">Not measured</div>
+              <div className="text-[10px] text-emerald-400">Use backend telemetry</div>
             </div>
           </div>
 
           {/* Operational Capability Execution Table */}
           <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4 text-xs">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <span className="font-bold text-white tracking-wider">EXECUTION OBSERVABILITY</span>
-              <span className="text-slate-400 text-[11px]">Developer Operational Lens</span>
+              <span className="font-bold text-white tracking-wider">ILLUSTRATIVE EXECUTION CASES</span>
+              <span className="text-slate-400 text-[11px]">Credit-governance examples</span>
             </div>
 
             <div className="space-y-2">
@@ -569,7 +549,7 @@ export const GovernanceCockpitView: React.FC = () => {
       {/* ========================================================================= */}
       {/* 2. COMPLIANCE PERSPECTIVE */}
       {/* ========================================================================= */}
-      {perspective === 'COMPLIANCE' && (
+      {perspective === 'COMPLIANCE' && agentData && (
         <div className="space-y-6 animate-fadeIn font-mono">
           {/* Compliance Profile Card */}
           <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
@@ -579,26 +559,26 @@ export const GovernanceCockpitView: React.FC = () => {
                   COMPLIANCE STATUS
                 </span>
                 <h3 className="text-base font-extrabold text-white mt-0.5">
-                  Profile: CP-EU-AI-ACT-HIGH-RISK-FINANCIAL
+                  Profile: {agentData.complianceProfileId}
                 </h3>
-                <span className="text-slate-400 text-xs">Version: 2026.1 · Checksum: SHA-256: d0c33e6a98dab81966a3d9d3...</span>
+                <span className="text-slate-400 text-xs">Checksum: {agentData.complianceProfileChecksum}</span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
               <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
                 <span className="text-slate-400 text-[10px] block">ALLOW</span>
-                <span className="text-xl font-bold text-emerald-400">{allowCount || 128}</span>
+                <span className="text-xl font-bold text-emerald-400">{allowCount}</span>
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
                 <span className="text-slate-400 text-[10px] block">REQUIRE_HITL</span>
-                <span className="text-xl font-bold text-amber-400">{hitlCount || 7}</span>
+                <span className="text-xl font-bold text-amber-400">{hitlCount}</span>
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
                 <span className="text-slate-400 text-[10px] block">BLOCK</span>
-                <span className="text-xl font-bold text-rose-400">{blockCount || 4}</span>
+                <span className="text-xl font-bold text-rose-400">{blockCount}</span>
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
@@ -618,7 +598,7 @@ export const GovernanceCockpitView: React.FC = () => {
                 </h3>
               </div>
               <div className="text-right text-xs text-slate-400">
-                Pending: <strong className="text-amber-400">{activeHitlGate ? '1' : '0'}</strong> · Approved: <strong className="text-emerald-400">6</strong> · Rejected: <strong className="text-slate-300">0</strong>
+                Pending request loaded: <strong className="text-amber-400">{activeHitlGate ? 'Yes' : 'No'}</strong>
               </div>
             </div>
 
@@ -662,14 +642,14 @@ export const GovernanceCockpitView: React.FC = () => {
               </div>
             ) : (
               <div className="p-6 rounded-2xl bg-slate-950/60 border border-slate-800 text-center text-slate-400 text-xs">
-                No human oversight approvals currently pending for this agent.
+                No pending approval request has been loaded for this agent.
               </div>
             )}
 
             {/* Policy Interventions Record */}
             <div className="p-4 rounded-2xl bg-rose-950/20 border border-rose-500/30 text-xs space-y-2">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-rose-400">POLICY VIOLATIONS & BLOCKS</span>
+                <span className="font-bold text-rose-400">ILLUSTRATIVE BLOCKING POLICY</span>
                 <span className="text-rose-400 font-bold">BLOCKED: DIRECT_DB_DDL</span>
               </div>
               <div className="text-slate-300">
@@ -696,7 +676,7 @@ export const GovernanceCockpitView: React.FC = () => {
                   AUDIT EVIDENCE & CRYPTOGRAPHIC PROOF
                 </span>
                 <h3 className="text-base font-extrabold text-white mt-0.5">
-                  Authority: ComplyPRO EvidenceVerifier (RFC 8785 + SHA-256 Merkle Proof)
+                  Authority: ComplyPRO EvidenceVerifier (SHA-256 Hash Chain + Merkle Proof)
                 </h3>
               </div>
 
@@ -717,35 +697,35 @@ export const GovernanceCockpitView: React.FC = () => {
               <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
                 <span className="text-slate-400 text-[10px] block">Agent Passport</span>
                 <span className="text-emerald-400 font-bold flex items-center gap-1 mt-0.5">
-                  ✓ VERIFIED
+                  {verificationResult?.auditPack?.report?.checks?.passportBinding ? 'Binding matches' : 'Not verified'}
                 </span>
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
                 <span className="text-slate-400 text-[10px] block">Profile Checksum</span>
                 <span className="text-emerald-400 font-bold flex items-center gap-1 mt-0.5">
-                  ✓ VERIFIED
+                  {verificationResult?.auditPack?.report?.checks?.profileChecksumMatch ? 'Checksum matches' : 'Not verified'}
                 </span>
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
                 <span className="text-slate-400 text-[10px] block">Tool Manifest</span>
                 <span className="text-emerald-400 font-bold flex items-center gap-1 mt-0.5">
-                  ✓ VERIFIED
+                  Not independently verified
                 </span>
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
                 <span className="text-slate-400 text-[10px] block">Evidence Chain</span>
                 <span className="text-emerald-400 font-bold flex items-center gap-1 mt-0.5">
-                  ✓ VERIFIED
+                  {verificationResult?.chain?.valid && verificationResult.chain.totalEntries > 0 ? 'Hash chain checked' : 'Not verified'}
                 </span>
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
                 <span className="text-slate-400 text-[10px] block">Merkle Integrity</span>
                 <span className="text-emerald-400 font-bold flex items-center gap-1 mt-0.5">
-                  ✓ VERIFIED
+                  {verificationResult?.auditPack?.report?.checks?.merkleInclusion ? 'Inclusion checked' : 'Not verified'}
                 </span>
               </div>
             </div>
@@ -754,22 +734,24 @@ export const GovernanceCockpitView: React.FC = () => {
             <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/30 text-xs flex flex-wrap items-center justify-between gap-3 text-slate-300">
               <div>
                 <span className="text-emerald-400 font-bold block">
-                  Audit Pack: {auditPackData?.packId || 'PACK-CGAG-AUDIT-2026-01'}
+                  Audit Pack: {auditPackData?.packId || 'Not loaded'}
                 </span>
                 <span className="text-slate-400 text-[10px]">
-                  Merkle Root: {auditPackData?.merkleRoot || 'd39cf2a0b778f527c90b44a1bb81335f6087791ee3078ebf5c8ac2ef971fa843'}
+                  Merkle Root: {auditPackData?.merkleRoot || 'Not loaded'}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => alert(`Audit Pack Content:\nPack ID: ${auditPackData?.packId || 'PACK-CGAG-AUDIT-2026-01'}\nMerkle Root: ${auditPackData?.merkleRoot || 'd39cf2a0b778f527c90b44a1bb81335f6087791ee3078ebf5c8ac2ef971fa843'}\nVerification: 100% VALID`)}
+                  disabled={!auditPackData}
+                  onClick={() => alert(JSON.stringify(auditPackData, null, 2))}
                   className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer"
                 >
                   [ VIEW AUDIT PACK ]
                 </button>
                 <button
                   onClick={() => {
-                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(auditPackData || { packId: 'PACK-CGAG-AUDIT-2026-01', valid: true, timestamp: new Date().toISOString() }, null, 2));
+                    if (!auditPackData) return;
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(auditPackData, null, 2));
                     const downloadAnchor = document.createElement('a');
                     downloadAnchor.setAttribute("href", dataStr);
                     downloadAnchor.setAttribute("download", `complypro_audit_pack_${selectedAgentId || 'credit_analyst'}.json`);
@@ -777,6 +759,7 @@ export const GovernanceCockpitView: React.FC = () => {
                     downloadAnchor.click();
                     downloadAnchor.remove();
                   }}
+                  disabled={!auditPackData}
                   className="px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
                 >
                   <Download className="w-3.5 h-3.5" />

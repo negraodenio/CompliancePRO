@@ -13,12 +13,13 @@
 
 import crypto from 'crypto';
 import { AgentPassport } from './compliance-contract';
-import { RuntimeSpecification } from './agent-provisioner';
+import { RuntimeSpecification, AgentProvisioner } from './agent-provisioner';
 import { IsolatedWorker, WorkerResourceLimits } from './isolated-worker';
 import { EvidenceLedger } from './evidence-ledger';
 import { ComplianceProfileRegistry } from './compliance-compiler';
 import { DurableStore } from '../server/db/durable-store';
 import { SandboxManager } from './sandbox/sandbox-manager';
+import { PassportSigner } from './passport-signer';
 
 export type RuntimeLifecycleStatus = 
   | 'PROVISIONED'
@@ -117,8 +118,8 @@ export class RuntimeManager {
         action: 'EXECUTE',
         verdict: 'ALLOW'
       }, tenantId || instance.tenantId);
-    } catch {
-      // Memory safe fallback
+    } catch (error) {
+      if (process.env.NODE_ENV === 'production') throw error;
     }
 
     // Persist to DurableStore
@@ -173,6 +174,14 @@ export class RuntimeManager {
       this.recordFailedStartup(instance, passport, 'Passport checksum does not match any registered ComplianceProfile', tenantId);
       instance.status = 'FAILED';
       throw new Error(`RUNTIME_START_DENIED: ComplianceProfile binding failure for checksum "${passport.complianceProfileChecksum}"`);
+    }
+
+    const signature = PassportSigner.verify(passport.passportFingerprint,
+      PassportSigner.toSignInput(passport, instance.agentId, profile.version));
+    if (!signature.valid) {
+      this.recordFailedStartup(instance, passport, signature.reason || 'Invalid passport signature', tenantId);
+      instance.status = 'FAILED';
+      throw new Error(`RUNTIME_START_DENIED: Passport cryptographic verification failed: ${signature.reason}`);
     }
 
     // 4. Transition: STARTING -> RUNNING
@@ -271,9 +280,9 @@ export class RuntimeManager {
           capability: 'runtime.stop',
           action: 'EXECUTE',
           verdict: 'ALLOW'
-        }, tenantId);
-      } catch {
-        // Safe fallback
+        }, tenantId || instance.tenantId);
+      } catch (error) {
+        if (process.env.NODE_ENV === 'production') throw error;
       }
     }
 
@@ -317,9 +326,9 @@ export class RuntimeManager {
           action: 'EXECUTE',
           verdict: 'BLOCK',
           payloadDigest: crypto.createHash('sha256').update(reason).digest('hex')
-        }, tenantId);
-      } catch {
-        // Safe fallback
+        }, tenantId || instance.tenantId);
+      } catch (error) {
+        if (process.env.NODE_ENV === 'production') throw error;
       }
     }
 
@@ -382,9 +391,9 @@ export class RuntimeManager {
           stoppedAt: stored.stopped_at,
           error: stored.error
         };
-        const passRec = DurableStore.getPassport(stored.passport_id);
-        if (passRec) {
-          this.injectRuntime(instance, passRec as any);
+        const agent = AgentProvisioner.getAgent(stored.agent_id,tenantClaim);
+        if (agent) {
+          this.injectRuntime(instance, agent.passport);
         } else {
           this.instances.set(runtimeId, instance);
         }

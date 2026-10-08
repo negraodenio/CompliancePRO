@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ActiveNavView } from '../components/AppShell';
 import { 
   Building, 
   Key, 
@@ -9,7 +10,13 @@ import {
   ChevronRight,
   Check,
   CheckCircle2,
-  Server
+  Server,
+  Layers,
+  ArrowUpRight,
+  Users,
+  AlertTriangle,
+  FileCheck,
+  Sliders
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useIndustry } from '../context/IndustryContext';
@@ -21,7 +28,30 @@ import {
   AVAILABLE_MODELS 
 } from '../services/siliconflow';
 
-export const SettingsView: React.FC = () => {
+interface SettingsViewProps {
+  onNavigate?: (view: ActiveNavView) => void;
+}
+
+const ADVANCED_WORKSPACES: Array<{
+  id: ActiveNavView;
+  name: string;
+  category: string;
+  description: string;
+}> = [
+  { id: 'cockpit-control', name: 'Governance Cockpit', category: 'Executive', description: 'Real-time telemetry, threat levels, and active perimeters' },
+  { id: 'overview-center', name: 'Governance Center', category: 'Executive', description: 'Central governance health overview and compliance posture' },
+  { id: 'govern-controls', name: '12 Controls Matrix', category: 'Controls', description: 'CG-AGF 12 Controls framework assessment and enforcement status' },
+  { id: 'govern-risk', name: 'Risk Engine', category: 'Risk', description: 'Multi-dimensional risk scoring across EU AI Act tiers' },
+  { id: 'govern-policies', name: 'Policy Engine', category: 'Policies', description: 'Enterprise policy rules, constraints, and runtime evaluation' },
+  { id: 'operate-approvals', name: 'Human Approvals (HITL)', category: 'Runtime', description: 'Supervisory authorization queue for sensitive agent actions' },
+  { id: 'operate-incidents', name: 'Failsafe & Incidents', category: 'Runtime', description: 'Kill switches, containment perimeters, and incident logs' },
+  { id: 'tools-integrations', name: 'Universal MCP', category: 'Integrations', description: 'Model Context Protocol endpoints, tools, and resource bridges' },
+  { id: 'manage-team', name: 'Team & RBAC', category: 'Access', description: 'Role-based access control, tenant users, and organization members' },
+  { id: 'learn-academy', name: 'Governance Academy', category: 'Knowledge', description: 'Compliance blueprints, guides, and enterprise standards' },
+  { id: 'studio-builder', name: 'Agent Studio', category: 'Builder', description: 'Native agent creation workspace with built-in governance passport' },
+];
+
+export const SettingsView: React.FC<SettingsViewProps> = ({ onNavigate }) => {
   const { user, activeOrganization, enterpriseRole } = useAuth();
   const { activeProfile, setActiveProfile, environment, setEnvironment } = useIndustry();
 
@@ -35,7 +65,8 @@ export const SettingsView: React.FC = () => {
     general: true,
     auth: false,
     providers: true,
-    governance: false
+    governance: false,
+    advanced: false
   });
 
   const toggleSection = (section: string) => {
@@ -166,6 +197,18 @@ export const SettingsView: React.FC = () => {
                 <span className="text-slate-500 dark:text-slate-400">Tenant Isolation Level</span>
                 <span className="font-mono text-slate-700 dark:text-slate-300">RLS Strict Isolation (Active)</span>
               </div>
+              {onNavigate && (
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => onNavigate('manage-team')}
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                  >
+                    <Users className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Manage Team & RBAC Permissions</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -294,6 +337,66 @@ export const SettingsView: React.FC = () => {
                   <span className="text-[11px] text-slate-400">Cryptographic audit log retention policy</span>
                 </div>
                 <span className="font-mono text-slate-700 dark:text-slate-300 font-semibold">7 Years (Immutable)</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 5. ADVANCED GOVERNANCE & WORKSPACES */}
+        <div className="bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => toggleSection('advanced')}
+            className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-50 dark:hover:bg-slate-800/40 transition cursor-pointer"
+          >
+            <div className="flex items-center space-x-3">
+              <Layers className="w-4 h-4 text-slate-500" />
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Advanced Governance & Workspaces</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Deep telemetry, 12 controls matrix, policy & risk engines, runtime failsafes, and universal MCP</p>
+              </div>
+            </div>
+            {openSections.advanced ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+          </button>
+
+          {openSections.advanced && (
+            <div className="p-5 border-t border-slate-100 dark:border-slate-800 space-y-3 text-xs">
+              <p className="text-slate-500 dark:text-slate-400 leading-relaxed">
+                Advanced governance infrastructure components operate under progressive disclosure. All underlying engines, matrices, and gateways remain active and can be accessed directly below.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                {ADVANCED_WORKSPACES.map((ws) => (
+                  <div
+                    key={ws.id}
+                    className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex flex-col justify-between space-y-2 hover:border-slate-300 dark:hover:border-slate-700 transition"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-slate-900 dark:text-white text-xs">{ws.name}</span>
+                        <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-medium bg-slate-100 dark:bg-slate-800 text-slate-500">
+                          {ws.category}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+                        {ws.description}
+                      </p>
+                    </div>
+
+                    {onNavigate && (
+                      <div className="pt-1 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => onNavigate(ws.id)}
+                          className="inline-flex items-center space-x-1 text-[11px] font-semibold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer"
+                        >
+                          <span>Open Workspace</span>
+                          <ArrowUpRight className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}

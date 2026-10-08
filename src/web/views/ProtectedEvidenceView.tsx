@@ -39,7 +39,7 @@ export const ProtectedEvidenceView: React.FC<{ result?: ScannerResult | null }> 
   const [filterModule, setFilterModule] = useState<string>('ALL');
   const [selectedRecord, setSelectedRecord] = useState<ComprehensiveEvidenceRecord | null>(null);
   const [activeDrawerTab, setActiveDrawerTab] = useState<'overview' | 'provenance' | 'payload' | 'integrity' | 'retention' | 'audit'>('overview');
-  const [verificationFeedback, setVerificationFeedback] = useState<{ verified: boolean; hash: string } | null>(null);
+  const [verificationFeedback, setVerificationFeedback] = useState<{ verified: boolean; hash: string; matchesLedger: boolean } | null>(null);
 
   const refreshState = () => {
     const list = EvidenceStore.getEvidenceRecords();
@@ -83,7 +83,7 @@ export const ProtectedEvidenceView: React.FC<{ result?: ScannerResult | null }> 
 
   const handleVerifyIntegrity = (evidenceId: string) => {
     const res = EvidenceStore.verifyRecordIntegrity(evidenceId);
-    setVerificationFeedback({ verified: res.verified, hash: res.computedHash });
+    setVerificationFeedback({ verified: res.verified, hash: res.computedHash, matchesLedger: res.matchesLedger });
     setTimeout(() => setVerificationFeedback(null), 5000);
   };
 
@@ -118,25 +118,29 @@ export const ProtectedEvidenceView: React.FC<{ result?: ScannerResult | null }> 
             </span>
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Tamper-evident cryptographic ledger of agent actions, decisions, and policy enforcement proofs.
+            Hash-linked evidence catalog with verifiable payload digests and recorded governance metadata.
           </p>
         </div>
 
         <div className="flex items-center space-x-2 text-xs">
           <span className="px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-600 dark:text-slate-300 font-mono text-[11px] flex items-center gap-1.5">
             <Lock className="w-3.5 h-3.5 text-emerald-500" />
-            <span>SHA-256 Ledger Active</span>
+            <span>{totalRecords ? 'SHA-256 Evidence Records' : 'No Evidence Recorded'}</span>
           </span>
         </div>
       </div>
 
       {/* Verification Feedback Toast */}
       {verificationFeedback && (
-        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 rounded-xl text-xs text-emerald-900 dark:text-emerald-200 flex items-center justify-between shadow-sm animate-fadeIn">
+        <div className={`p-3 border rounded-xl text-xs flex items-center justify-between shadow-sm animate-fadeIn ${verificationFeedback.verified
+          ? 'bg-emerald-50 dark:bg-emerald-950/70 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200'
+          : 'bg-rose-50 dark:bg-rose-950/70 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200'}`}>
           <div className="flex items-center space-x-2.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+            {verificationFeedback.verified ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" /> : <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />}
             <div>
-              <span className="font-semibold">Cryptographic Integrity Re-Verified: 100% Match with Audit Ledger.</span>
+              <span className="font-semibold">{verificationFeedback.verified
+                ? verificationFeedback.matchesLedger ? 'Payload digest and local hash-chain linkage verified.' : 'Payload digest verified; ledger linkage not established.'
+                : 'Payload integrity verification failed.'}</span>
               <span className="ml-2 font-mono-code text-[11px] text-emerald-700 dark:text-emerald-300">
                 Digest: <strong>{verificationFeedback.hash}</strong>
               </span>
@@ -182,8 +186,8 @@ export const ProtectedEvidenceView: React.FC<{ result?: ScannerResult | null }> 
             <span className="font-semibold text-slate-700 dark:text-slate-300">Canonicalization</span>
             <Binary className="w-4 h-4 text-emerald-500" />
           </div>
-          <div className="mt-2 text-base font-bold text-emerald-600 dark:text-emerald-400">RFC 8785 JSON</div>
-          <div className="text-[11px] text-slate-500 mt-1">Deterministic Hashing Standard</div>
+          <div className="mt-2 text-base font-bold text-emerald-600 dark:text-emerald-400">JSON Payload Digest</div>
+          <div className="text-[11px] text-slate-500 mt-1">SHA-256 of Stored Payload</div>
         </div>
       </div>
 

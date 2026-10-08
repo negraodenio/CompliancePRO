@@ -352,7 +352,8 @@ export class AgentProvisioner {
   }
 
   public static getAgent(agentId: string, tenantClaim?: string): AgentProvisioningResponse | undefined {
-    let memory = this.agentsStore.get(agentId);
+    // Production callers hydrate DurableStore first; stale process state is not authority.
+    let memory = process.env.NODE_ENV === 'production' ? undefined : this.agentsStore.get(agentId);
     if (!memory) {
       const stored = DurableStore.getAgent(agentId, tenantClaim);
       if (stored) {
@@ -364,6 +365,8 @@ export class AgentProvisioner {
             complianceProfileChecksum: passRec.compliance_profile_checksum,
             declaredTools: passRec.declared_tools,
             governedCapabilities: passRec.governed_capabilities,
+            declaredModels: passRec.runtime_spec?.passportSnapshot?.declaredModels,
+            declaredDataScopes: passRec.runtime_spec?.passportSnapshot?.declaredDataScopes,
             runtime: {
               framework: stored.framework_name,
               frameworkVersion: stored.framework_version,

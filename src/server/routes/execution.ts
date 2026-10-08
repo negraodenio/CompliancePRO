@@ -48,6 +48,7 @@ export async function getOrRecoverAdapter(executionId: string): Promise<{ adapte
   if (!worker) {
     const runtime = DurableStore.getRuntime(stored.runtime_id);
     const passportRec = DurableStore.getPassport(stored.passport_id);
+    const agentRec = DurableStore.getAgent(stored.agent_id);
     if (runtime && passportRec) {
       const passport = {
         passportId: passportRec.passport_id,
@@ -55,10 +56,12 @@ export async function getOrRecoverAdapter(executionId: string): Promise<{ adapte
         complianceProfileChecksum: passportRec.compliance_profile_checksum,
         declaredTools: passportRec.declared_tools,
         governedCapabilities: passportRec.governed_capabilities,
+        declaredModels: passportRec.runtime_spec?.passportSnapshot?.declaredModels,
+        declaredDataScopes: passportRec.runtime_spec?.passportSnapshot?.declaredDataScopes,
         runtime: {
-          framework: 'crewai',
-          frameworkVersion: '0.102.0',
-          runtimeVersion: 'complypro-runtime-v1.0'
+          framework: passportRec.runtime_spec?.passportSnapshot?.runtime?.framework || agentRec?.framework_name || 'Unknown',
+          frameworkVersion: passportRec.runtime_spec?.passportSnapshot?.runtime?.frameworkVersion || agentRec?.framework_version,
+          runtimeVersion: passportRec.runtime_spec?.passportSnapshot?.runtime?.runtimeVersion || 'complypro-runtime-v1.0'
         },
         toolManifestHash: passportRec.tool_manifest_hash,
         riskTier: passportRec.risk_tier as any,
@@ -305,7 +308,7 @@ executionRouter.get('/:executionId', requireRoles('developer', 'compliance_offic
  */
 executionRouter.post('/:executionId/approve', requireRoles('compliance_officer'), defaultRateLimiter.middleware(), async (req: Request, res: Response) => {
   const { executionId } = req.params;
-  const { operatorId = req.principal?.userId || 'OP-HUMAN-OFFICER', notes } = req.body || {};
+  const operatorId = req.principal!.userId;
 
   const { adapter, session } = await getOrRecoverAdapter(executionId);
   if (!adapter || !session) {
@@ -344,7 +347,7 @@ executionRouter.post('/:executionId/approve', requireRoles('compliance_officer')
  */
 executionRouter.post('/:executionId/reject', requireRoles('compliance_officer'), defaultRateLimiter.middleware(), async (req: Request, res: Response) => {
   const { executionId } = req.params;
-  const { operatorId = req.principal?.userId || 'OP-HUMAN-OFFICER', reason = 'Rejected by supervisor' } = req.body || {};
+  const operatorId = req.principal!.userId;
 
   const { adapter, session } = await getOrRecoverAdapter(executionId);
   if (!adapter || !session) {

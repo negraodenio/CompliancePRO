@@ -36,7 +36,7 @@ export interface AuthContextType {
   refreshProfile: () => Promise<void>;
 }
 
-const API_BASE = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = (import.meta as any).env?.VITE_API_URL || '';
 
 const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,

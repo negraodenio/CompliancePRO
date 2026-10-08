@@ -14,6 +14,7 @@ import { GuardianService } from './guardian-service';
 import { ComplianceProfileRegistry } from './compliance-compiler';
 import { AgentPassport } from './compliance-contract';
 import { EvidenceLedger, canonicalizeJson } from './evidence-ledger';
+import { DurableStore } from '../server/db/durable-store';
 
 export type ModelProvider = 'openai' | 'azure-openai' | 'openrouter';
 
@@ -61,6 +62,7 @@ export interface ModelInvocationResponse {
   decisionLatencyMs: number;
   gateId?: string;
   error?: string;
+  providerCallCount?: number;
 }
 
 export interface ProviderCredentials {
@@ -177,7 +179,8 @@ export class ModelGateway {
     const res = await fetch(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(options?.timeoutMs || 30000)
     });
 
     if (!res.ok) {
@@ -186,7 +189,8 @@ export class ModelGateway {
     }
 
     const data = await res.json();
-    const content = data.choices?.[0]?.message?.content || '';
+    const content = data.choices?.[0]?.message?.content;
+    if (typeof content !== 'string') throw new Error('REAL_PROVIDER_RESPONSE_INVALID: Missing model response.');
     const promptTokens = data.usage?.prompt_tokens ?? Math.ceil(JSON.stringify(messages).length / 4);
     const completionTokens = data.usage?.completion_tokens ?? Math.ceil(content.length / 4);
     const totalTokens = data.usage?.total_tokens ?? (promptTokens + completionTokens);
@@ -229,6 +233,8 @@ export class ModelGateway {
   public static async invokeModel(request: ModelInvocationRequest): Promise<ModelInvocationResponse> {
     const startTime = Date.now();
     const executionId = request.executionId || `exec_mod_${crypto.randomBytes(4).toString('hex')}`;
+    const evidenceTenant = request.tenantId || request.passport?.tenantId || 'TENANT-DEFAULT';
+    await EvidenceLedger.prepareTenant(evidenceTenant);
 
     // 1. Validation of Core Identity
     if (!request.agentId || !request.passport || !request.model) {
@@ -263,6 +269,7 @@ export class ModelGateway {
       evidenceId: `ev_mreq_${crypto.randomBytes(4).toString('hex')}`,
       timestamp: new Date().toISOString(),
       eventType: 'MODEL_REQUEST',
+      executionId,
       agentId: request.agentId,
       passportFingerprint: request.passport.passportFingerprint,
       complianceProfileId: profileId,
@@ -272,7 +279,7 @@ export class ModelGateway {
       action: 'EXECUTE',
       verdict: 'ALLOW',
       payloadDigest: requestDigest
-    });
+    }, evidenceTenant);
 
     if (!profile) {
       const errorMsg = `UNRESOLVED_COMPLIANCE_PROFILE: Profile checksum "${request.passport.complianceProfileChecksum}" could not be matched`;
@@ -280,6 +287,7 @@ export class ModelGateway {
         evidenceId: `ev_merr_${crypto.randomBytes(4).toString('hex')}`,
         timestamp: new Date().toISOString(),
         eventType: 'MODEL_ERROR',
+        executionId,
         agentId: request.agentId,
         passportFingerprint: request.passport.passportFingerprint,
         complianceProfileId: profileId,
@@ -290,7 +298,8 @@ export class ModelGateway {
         verdict: 'BLOCK',
         executionResult: 'FAILED',
         payloadDigest: crypto.createHash('sha256').update(errorMsg).digest('hex')
-      });
+      }, evidenceTenant);
+      await EvidenceLedger.flushPendingWrites(evidenceTenant);
 
       return {
         status: 'FAILED',
@@ -300,6 +309,7 @@ export class ModelGateway {
         model: request.model,
         latencyMs: Date.now() - startTime,
         decisionLatencyMs: 0,
+        providerCallCount: 0,
         error: errorMsg
       };
     }
@@ -337,6 +347,7 @@ export class ModelGateway {
         evidenceId: `ev_merr_${crypto.randomBytes(4).toString('hex')}`,
         timestamp: new Date().toISOString(),
         eventType: 'MODEL_ERROR',
+        executionId,
         agentId: request.agentId,
         passportFingerprint: request.passport.passportFingerprint,
         complianceProfileId: profileId,
@@ -347,7 +358,8 @@ export class ModelGateway {
         verdict: guardianVerdict.verdict,
         executionResult: 'BLOCKED',
         payloadDigest: crypto.createHash('sha256').update(guardianVerdict.reason).digest('hex')
-      });
+      }, evidenceTenant);
+      await EvidenceLedger.flushPendingWrites(evidenceTenant);
 
       return {
         status: 'BLOCKED',
@@ -357,11 +369,13 @@ export class ModelGateway {
         model: request.model,
         latencyMs: Date.now() - startTime,
         decisionLatencyMs,
+        providerCallCount: 0,
         error: guardianVerdict.reason
       };
     }
 
     if (guardianVerdict.verdict === 'REQUIRE_HITL') {
+      await EvidenceLedger.flushPendingWrites(evidenceTenant);
       return {
         status: 'PAUSED',
         verdict: 'REQUIRE_HITL',
@@ -371,6 +385,7 @@ export class ModelGateway {
         model: request.model,
         latencyMs: Date.now() - startTime,
         decisionLatencyMs,
+        providerCallCount: 0,
         error: guardianVerdict.reason
       };
     }
@@ -380,6 +395,11 @@ export class ModelGateway {
     if (!creds && !this.customDispatcher) {
       // If neither credentials nor dispatcher are provided, throw specific gateway error
       const errorMsg = `PROVIDER_CREDENTIALS_MISSING: Gateway possesses no credentials for provider "${request.provider}"`;
+      EvidenceLedger.append({evidenceId:`ev_merr_${crypto.randomUUID()}`,timestamp:new Date().toISOString(),
+        eventType:'MODEL_ERROR',executionId,agentId:request.agentId,passportFingerprint:request.passport.passportFingerprint,
+        complianceProfileId:profileId,complianceProfileChecksum:request.passport.complianceProfileChecksum,
+        channel:'MODEL',capability:request.model,verdict:'ALLOW',executionResult:'FAILED'},evidenceTenant);
+      await EvidenceLedger.flushPendingWrites(evidenceTenant);
       return {
         status: 'FAILED',
         verdict: 'ALLOW',
@@ -388,6 +408,7 @@ export class ModelGateway {
         model: request.model,
         latencyMs: Date.now() - startTime,
         decisionLatencyMs,
+        providerCallCount: 0,
         error: errorMsg
       };
     }
@@ -396,10 +417,16 @@ export class ModelGateway {
 
     let content = '';
     let usage: ModelTokenUsage = { promptTokens: estimatedPromptTokens, completionTokens: 48, totalTokens: estimatedPromptTokens + 48 };
+    let providerCallCount = 0;
 
     try {
-      if (this.customDispatcher) {
-        const dispatchRes = await this.customDispatcher(
+      await EvidenceLedger.flushPendingWrites(evidenceTenant);
+      await DurableStore.requireExecutionAuthority(request);
+      const dispatcher = this.customDispatcher ||
+        (process.env.NODE_ENV !== 'test' ? this.realHttpDispatcher : undefined);
+      if (dispatcher) {
+        providerCallCount = 1;
+        const dispatchRes = await dispatcher(
           request.provider,
           request.model,
           request.messages,
@@ -408,8 +435,13 @@ export class ModelGateway {
         );
         content = dispatchRes.content;
         usage = dispatchRes.usage;
+        if (typeof content !== 'string' || !usage ||
+            ![usage.promptTokens,usage.completionTokens,usage.totalTokens].every(value=>Number.isFinite(value) && value>=0)) {
+          throw new Error('MODEL_PROVIDER_RESPONSE_INVALID');
+        }
       } else {
-        // Default deterministic execution engine when live API key is mock or in test mode
+        // Explicit test environment only; never selected for development/production.
+        providerCallCount = 1;
         content = `[ComplyPRO Governed Output via ${request.provider}/${request.model}]: Analysis complete under profile ${profile.profileId}.`;
         const completionTokens = Math.ceil(content.length / 4);
         usage = {
@@ -420,10 +452,12 @@ export class ModelGateway {
       }
     } catch (dispatchErr: any) {
       const errorMsg = `MODEL_EXECUTION_ERROR: ${dispatchErr.message}`;
+      const denied = dispatchErr.message?.startsWith('CURRENT_EXECUTION_AUTHORITY_DENIED');
       EvidenceLedger.append({
         evidenceId: `ev_merr_${crypto.randomBytes(4).toString('hex')}`,
         timestamp: new Date().toISOString(),
         eventType: 'MODEL_ERROR',
+        executionId,
         agentId: request.agentId,
         passportFingerprint: request.passport.passportFingerprint,
         complianceProfileId: profileId,
@@ -431,19 +465,21 @@ export class ModelGateway {
         channel: 'MODEL',
         capability: request.model,
         action: 'EXECUTE',
-        verdict: 'ALLOW',
-        executionResult: 'FAILED',
+        verdict: denied ? 'BLOCK' : 'ALLOW',
+        executionResult: denied ? 'BLOCKED' : 'FAILED',
         payloadDigest: crypto.createHash('sha256').update(errorMsg).digest('hex')
-      });
+      }, evidenceTenant);
+      await EvidenceLedger.flushPendingWrites(evidenceTenant);
 
       return {
-        status: 'FAILED',
-        verdict: 'ALLOW',
+        status: denied ? 'BLOCKED' : 'FAILED',
+        verdict: denied ? 'BLOCK' : 'ALLOW',
         executionId,
         provider: request.provider,
         model: request.model,
         latencyMs: Date.now() - startTime,
         decisionLatencyMs,
+        providerCallCount,
         error: errorMsg
       };
     }
@@ -466,6 +502,7 @@ export class ModelGateway {
       evidenceId: `ev_mres_${crypto.randomBytes(4).toString('hex')}`,
       timestamp: new Date().toISOString(),
       eventType: 'MODEL_RESPONSE',
+      executionId,
       agentId: request.agentId,
       passportFingerprint: request.passport.passportFingerprint,
       complianceProfileId: profileId,
@@ -476,7 +513,8 @@ export class ModelGateway {
       verdict: 'ALLOW',
       executionResult: 'SUCCESS',
       payloadDigest: responseDigest
-    });
+    }, evidenceTenant);
+    await EvidenceLedger.flushPendingWrites(evidenceTenant);
 
     return {
       status: 'COMPLETED',
@@ -488,7 +526,8 @@ export class ModelGateway {
       tokenUsage: usage,
       estimatedCostEur,
       latencyMs: totalLatencyMs,
-      decisionLatencyMs
+      decisionLatencyMs,
+      providerCallCount
     };
   }
 }

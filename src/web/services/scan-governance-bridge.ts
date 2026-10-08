@@ -12,7 +12,7 @@ import { DecisionStore, OperationalFinding } from './decision-store';
 import { HitlStore, HITLApprovalRequest } from './hitl-store';
 import { RemediationStore, RemediationAction } from './remediation-store';
 import { EvidenceStore, ComprehensiveEvidenceRecord } from './evidence-store';
-import { AuditLedgerStore, AuditBlock } from './audit-ledger-store';
+import { AuditLedgerStore, AuditBlock, computeDeterministicHash } from './audit-ledger-store';
 import { FinOpsStore } from './finops-store';
 import { DossierStore } from './dossier-store';
 import { PersistenceAdapter } from './persistence-adapter';
@@ -447,14 +447,7 @@ export class ScanGovernanceBridge {
       workspaceId
     };
 
-    let hashNum = 0;
-    const str = JSON.stringify(evidencePayload);
-    for (let i = 0; i < str.length; i++) {
-      hashNum = ((hashNum << 5) - hashNum) + str.charCodeAt(i);
-      hashNum |= 0;
-    }
-    const hexHash = Math.abs(hashNum).toString(16).padStart(8, '0');
-    const fullDigest = 'SHA256:' + hexHash + (hexHash + hexHash + hexHash).substring(0, 56);
+    const fullDigest = computeDeterministicHash(JSON.stringify(evidencePayload));
 
     const scanEvidence: ComprehensiveEvidenceRecord = {
       evidenceId: 'EV-SCAN-' + Date.now().toString(36).toUpperCase(),
@@ -483,7 +476,7 @@ export class ScanGovernanceBridge {
       sourceRepository
     } as any;
 
-    EvidenceStore.ingestEvidence([scanEvidence]);
+    EvidenceStore.ingestEvidence([scanEvidence], tenantId);
 
     // 9. Append Block to Audit Ledger Chain
     const newBlock = AuditLedgerStore.appendScanBlock(
@@ -491,7 +484,8 @@ export class ScanGovernanceBridge {
       evidencePayload,
       'AST Ingestion Scanner',
       'PASSPORT_ISSUED',
-      'CG-AG-12'
+      'CG-AG-12',
+      tenantId
     );
 
     // 10. Atomic Persistence Commit via PersistenceAdapter
