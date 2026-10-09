@@ -150,9 +150,61 @@ export class EvidenceLedger {
   private static durableQueues = new Map<string, Promise<void>>();
   private static durableErrors = new Map<string, Error>();
   private static durablePreparations = new Map<string, Promise<void>>();
+  private static durablePending = new Map<string, EvidenceLedgerEntry[]>();
+  private static durableRecoveries = new Map<string, Promise<void>>();
+
+  /**
+   * D2 remediation: bounded, ordered recovery of a previously failed durable write.
+   * Re-attempts every entry still pending for the tenant, in original append order,
+   * at most once per call. Success clears the cached failure; failure refreshes it.
+   * Never throws: callers keep their existing fail-closed checks on durableErrors.
+   */
+  private static async attemptDurableRecovery(tenantId: string): Promise<void> {
+    const running = this.durableRecoveries.get(tenantId);
+    if (running) return running;
+    const attempt = (async () => {
+      const previous = this.durableQueues.get(tenantId);
+      if (previous) {
+        try { await previous; } catch { /* The prior failure is the recovery target. */ }
+      }
+      const pending = [...(this.durablePending.get(tenantId) || [])];
+      if (!pending.length) {
+        this.durableErrors.delete(tenantId);
+        this.durableQueues.set(tenantId, Promise.resolve());
+        return;
+      }
+      let chain: Promise<void> = Promise.resolve();
+      for (const entry of pending) {
+        chain = chain.then(() => DurableStore.appendRuntimeEvidence(tenantId, entry)
+          .then(() => this.removeDurablePending(tenantId, entry.evidenceId)));
+      }
+      // Repoint the queue so concurrent appends chain after the recovery writes (order preserved).
+      this.durableQueues.set(tenantId, chain);
+      try {
+        await chain;
+        this.durableErrors.delete(tenantId);
+      } catch (error: any) {
+        this.durableErrors.set(tenantId, error);
+      }
+    })();
+    const tracked = attempt.finally(() => { this.durableRecoveries.delete(tenantId); });
+    this.durableRecoveries.set(tenantId, tracked);
+    return tracked;
+  }
+
+  private static removeDurablePending(tenantId: string, evidenceId: string): void {
+    const pending = this.durablePending.get(tenantId);
+    if (!pending) return;
+    const index = pending.findIndex(entry => entry.evidenceId === evidenceId);
+    if (index >= 0) pending.splice(index, 1);
+    if (!pending.length) this.durablePending.delete(tenantId);
+  }
 
   public static async prepareTenant(tenantId: string): Promise<void> {
-    if (process.env.NODE_ENV !== 'production' || this.durableTenants.has(tenantId)) return;
+    if (process.env.NODE_ENV !== 'production') return;
+    // D2: attempt bounded recovery of a failed durable write before reusing the tenant.
+    if (this.durableErrors.has(tenantId)) await this.attemptDurableRecovery(tenantId);
+    if (this.durableTenants.has(tenantId)) return;
     let preparation = this.durablePreparations.get(tenantId);
     if (!preparation) {
       preparation = (async () => {
@@ -171,6 +223,8 @@ export class EvidenceLedger {
 
   public static async flushPendingWrites(tenantId: string): Promise<void> {
     if (process.env.NODE_ENV !== 'production') return;
+    // D2: one bounded recovery pass before declaring a previous durable failure final.
+    if (this.durableErrors.has(tenantId)) await this.attemptDurableRecovery(tenantId);
     if (this.durableErrors.has(tenantId)) throw this.durableErrors.get(tenantId);
     await this.durableQueues.get(tenantId);
     if (this.durableErrors.has(tenantId)) throw this.durableErrors.get(tenantId);
@@ -276,10 +330,16 @@ export class EvidenceLedger {
     chain.push(entry);
 
     if (process.env.NODE_ENV === 'production') {
+      const pendingForTenant = this.durablePending.get(resolvedTenant) || [];
+      pendingForTenant.push(entry);
+      this.durablePending.set(resolvedTenant, pendingForTenant);
       const previous = this.durableQueues.get(resolvedTenant) || Promise.resolve();
       const next = previous.then(() => DurableStore.appendRuntimeEvidence(resolvedTenant, entry));
       this.durableQueues.set(resolvedTenant, next);
-      next.catch(error => { this.durableErrors.set(resolvedTenant, error); });
+      next.then(
+        () => this.removeDurablePending(resolvedTenant, entry.evidenceId),
+        error => { this.durableErrors.set(resolvedTenant, error); }
+      );
       return entry; // Tentative until the mandatory gateway/API durability barrier resolves.
     }
 

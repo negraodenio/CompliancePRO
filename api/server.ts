@@ -25,8 +25,15 @@ export default async function handler(req: Request, res: Response) {
     }
     application ||= server.createServerApp();
     req.url = route + original.search;
-    // Vercel may already have parsed/consumed the JSON request stream.
-    if (req.body !== undefined) (req as any)._body = true;
+    // Vercel's Node.js runtime (VERCEL=1) always pre-parses the request body before the handler runs.
+    // Accessing req.body in Vercel triggers their body parser which has a bug with JSON objects (D1).
+    // In non-Vercel environments, Express handles body parsing via express.json() middleware.
+    if (process.env.VERCEL) {
+      try { void req.body; } catch {}
+      (req as any)._body = true;
+    } else if (req.body !== undefined) {
+      (req as any)._body = true;
+    }
     return application(req,res);
   } catch { return res.status(503).json({ok:false,error:'SERVER_CONFIGURATION_UNAVAILABLE'}); }
 }
