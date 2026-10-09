@@ -109,14 +109,34 @@ executionRouter.post('/demo-live', requireRoles('developer', 'compliance_officer
     const { AgentProvisioner } = await import('../../core/agent-provisioner');
     const { RuntimeManager } = await import('../../core/runtime-manager');
     const { EvidenceLedger } = await import('../../core/evidence-ledger');
+    const { ToolGateway } = await import('../../core/tool-gateway');
+    const { CapabilityRegistry } = await import('../../core/capability-registry');
 
     const tenantId = req.tenantId || req.principal?.tenantId || 'TENANT-DEFAULT';
+
+    // Validate provider availability before provisioning
+    const requiredCapabilities = ['crm.read_customer', 'credit_bureau_query', 'credit.approve'];
+    const missingProviders: string[] = [];
+    for (const capId of requiredCapabilities) {
+      const cap = CapabilityRegistry.get(capId);
+      if (cap && cap.channel === 'TOOL' && !ToolGateway.getProvider(cap.provider)) {
+        missingProviders.push(`${capId} → ${cap.provider}`);
+      }
+    }
+    if (missingProviders.length > 0) {
+      return res.status(503).json({
+        error: 'PROVIDER_CONFIGURATION_MISSING',
+        message: 'Demo requires tool providers that are not registered in this deployment',
+        missingProviders,
+        requiredAction: 'Register provider adapters via ToolGateway.registerProvider() before executing this demo'
+      });
+    }
 
     const provisioned = AgentProvisioner.provision({
       name: 'credit-risk-agent',
       framework: { name: 'crewai', version: '0.102.0' },
       complianceProfile: 'CP-EU-AI-ACT-HIGH-RISK-FINANCIAL',
-      capabilities: ['crm.read_customer', 'credit_bureau_query', 'credit.approve'],
+      capabilities: requiredCapabilities,
       budget: { maxCostPerRunEur: 10.0, maxTokensPerStep: 4096, maxCallsPerMinute: 30 },
       environment: 'sandbox',
       tenantId
@@ -140,6 +160,10 @@ executionRouter.post('/demo-live', requireRoles('developer', 'compliance_officer
       payload: { customerId: 'CUST-EU-9921' }
     });
 
+    // Reset session to RUNNING for next step (multi-step demo pattern)
+    session.status = 'RUNNING';
+    session.updatedAt = new Date().toISOString();
+
     // Step 2: Query bureau
     const step2 = await adapter.execute(session, {
       taskId: 'step-credit-bureau',
@@ -148,6 +172,10 @@ executionRouter.post('/demo-live', requireRoles('developer', 'compliance_officer
       actionType: 'READ',
       payload: { customerId: 'CUST-EU-9921' }
     });
+
+    // Reset session to RUNNING for next step
+    session.status = 'RUNNING';
+    session.updatedAt = new Date().toISOString();
 
     // Step 3: High-risk approve €25k -> Pauses with REQUIRE_HITL
     const step3 = await adapter.execute(session, {
