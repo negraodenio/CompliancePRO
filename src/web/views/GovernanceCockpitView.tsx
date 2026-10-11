@@ -55,6 +55,7 @@ export const GovernanceCockpitView: React.FC = () => {
   const [verificationResult, setVerificationResult] = useState<any | null>(null);
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [showAuditPack, setShowAuditPack] = useState<boolean>(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   // Active HITL Gate State for Interactive Resolution
@@ -743,10 +744,10 @@ export const GovernanceCockpitView: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   disabled={!auditPackData}
-                  onClick={() => alert(JSON.stringify(auditPackData, null, 2))}
+                  onClick={() => setShowAuditPack((v) => !v)}
                   className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer"
                 >
-                  [ VIEW AUDIT PACK ]
+                  {showAuditPack ? '[ HIDE AUDIT PACK ]' : '[ VIEW AUDIT PACK ]'}
                 </button>
                 <button
                   onClick={() => {
@@ -767,6 +768,28 @@ export const GovernanceCockpitView: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {showAuditPack && auditPackData && (
+              <div
+                data-testid="audit-pack-viewer"
+                className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[11px] text-emerald-400 uppercase tracking-wider">
+                    Audit Pack JSON
+                  </span>
+                  <button
+                    onClick={() => setShowAuditPack(false)}
+                    className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition cursor-pointer"
+                  >
+                    [ CLOSE ]
+                  </button>
+                </div>
+                <pre className="max-h-80 overflow-auto text-[11px] leading-relaxed text-slate-300 bg-slate-900 border border-slate-800 rounded-xl p-3 whitespace-pre-wrap break-all">
+                  {JSON.stringify(auditPackData, null, 2)}
+                </pre>
+              </div>
+            )}
           </div>
         </div>
       )}

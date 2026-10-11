@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import type { ScannerResult } from '../../core/types';
 import { AgentInventoryStore } from '../services/agent-inventory-store';
+import { InlineStatus } from './InlineStatus';
 
 interface DiscoveredAgentsBannerProps {
   scanResult: ScannerResult;
@@ -28,6 +29,7 @@ export const DiscoveredAgentsBanner: React.FC<DiscoveredAgentsBannerProps> = ({
   const [ignoredNames, setIgnoredNames] = useState<Record<string, boolean>>({});
   const [reviewedName, setReviewedName] = useState<string | null>(null);
   const [isImportingAll, setIsImportingAll] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const rawAgents = scanResult.source?.agents || [];
   const repoName = scanResult.repo?.name || 'Local Repository';
@@ -35,17 +37,19 @@ export const DiscoveredAgentsBanner: React.FC<DiscoveredAgentsBannerProps> = ({
   const visibleAgents = rawAgents.filter(a => !ignoredNames[a.name]);
 
   const handleImportSingle = async (agent: any, idx: number) => {
+    setImportError(null);
     try {
       const [newAgent] = await AgentInventoryStore.importFromScanResult({
         ...scanResult, source: {...scanResult.source, agents:[{...agent,name:agent.name || `Discovered Agent ${idx + 1}`}]} as ScannerResult['source']
       });
       setImportedIds(prev => ({ ...prev, [agent.name]: newAgent.id }));
     } catch {
-      window.alert('Agent import could not be confirmed. Please retry when the backend is available.');
+      setImportError('Agent import could not be confirmed. Please retry when the backend is available.');
     }
   };
 
   const handleImportAll = async () => {
+    setImportError(null);
     setIsImportingAll(true);
     try {
       const imported = await AgentInventoryStore.importFromScanResult(scanResult);
@@ -53,7 +57,7 @@ export const DiscoveredAgentsBanner: React.FC<DiscoveredAgentsBannerProps> = ({
       imported.forEach(a => { idMap[a.name] = a.id; });
       setImportedIds(prev => ({ ...prev, ...idMap }));
     } catch {
-      window.alert('Inventory import could not be confirmed. Please retry; confirmed records will not be duplicated.');
+      setImportError('Inventory import could not be confirmed. Please retry; confirmed records will not be duplicated.');
     } finally {
       setIsImportingAll(false);
     }
@@ -96,6 +100,14 @@ export const DiscoveredAgentsBanner: React.FC<DiscoveredAgentsBannerProps> = ({
           </button>
         </div>
       </div>
+
+      {importError && (
+        <InlineStatus
+          tone="error"
+          message={importError}
+          onDismiss={() => setImportError(null)}
+        />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
         {visibleAgents.map((agent, idx) => {

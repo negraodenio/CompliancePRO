@@ -31,6 +31,16 @@ import type { ScannerResult } from '../../core/types';
 import { useIndustry } from '../context/IndustryContext';
 import { EvidenceStore, ComprehensiveEvidenceRecord, EvidenceType } from '../services/evidence-store';
 
+// Human-readable drawer tab labels; tab IDs stay unchanged (UX audit F9).
+const EVIDENCE_TAB_LABELS: Record<string, string> = {
+  overview: 'Overview',
+  provenance: 'Provenance & Lineage',
+  payload: 'Evidence Payload',
+  integrity: 'Integrity Verification',
+  retention: 'Retention & Custody',
+  audit: 'Audit Link'
+};
+
 export const ProtectedEvidenceView: React.FC<{ result?: ScannerResult | null }> = ({ result }) => {
   const { activeProfile, environment } = useIndustry();
   const [evidenceList, setEvidenceList] = useState<ComprehensiveEvidenceRecord[]>([]);
@@ -371,7 +381,7 @@ export const ProtectedEvidenceView: React.FC<{ result?: ScannerResult | null }> 
                         : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
-                    {tab === 'integrity' ? 'Integrity Verification' : (tab === 'retention' ? 'Retention & Custody' : (tab === 'audit' ? 'Audit Link' : tab))}
+                    {EVIDENCE_TAB_LABELS[tab]}
                   </button>
                 ))}
               </div>

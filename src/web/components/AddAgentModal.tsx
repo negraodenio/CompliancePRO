@@ -9,6 +9,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { AgentInventoryStore, AgentRiskTier } from '../services/agent-inventory-store';
+import { InlineStatus } from './InlineStatus';
 
 interface AddAgentModalProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ export const AddAgentModal: React.FC<AddAgentModalProps> = ({
   const [risk, setRisk] = useState<AgentRiskTier>('HIGH');
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -44,6 +46,7 @@ export const AddAgentModal: React.FC<AddAgentModalProps> = ({
     if (!name.trim()) return;
 
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       const newAgent = await AgentInventoryStore.addAgent({
       name: name.trim(),
@@ -64,7 +67,7 @@ export const AddAgentModal: React.FC<AddAgentModalProps> = ({
       onClose();
       if (onAgentCreated) onAgentCreated(newAgent.id);
     } catch {
-      window.alert('Agent import could not be confirmed. Please retry when the backend is available.');
+      setSubmitError('Agent import could not be confirmed. Please retry when the backend is available.');
     } finally {
       setIsSubmitting(false);
     }
@@ -279,6 +282,14 @@ export const AddAgentModal: React.FC<AddAgentModalProps> = ({
                   />
                 </div>
               </div>
+
+              {submitError && (
+                <InlineStatus
+                  tone="error"
+                  message={submitError}
+                  onDismiss={() => setSubmitError(null)}
+                />
+              )}
 
               <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end space-x-2">
                 <button

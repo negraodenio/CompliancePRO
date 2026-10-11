@@ -3,6 +3,7 @@ import {
   X, GraduationCap, ShieldCheck, CheckCircle2, 
   Download, BookOpen, Video, Award, Clock, ArrowRight, Sparkles, Terminal, FileText
 } from 'lucide-react';
+import { InlineStatus } from './InlineStatus';
 
 interface AcademyModalProps {
   onClose: () => void;
@@ -11,6 +12,7 @@ interface AcademyModalProps {
 export const AcademyModal: React.FC<AcademyModalProps> = ({ onClose }) => {
   const [activeModule, setActiveModule] = useState(1);
   const [licenseActivated, setLicenseActivated] = useState(true);
+  const [handoutsInfo, setHandoutsInfo] = useState<string | null>(null);
 
   const modules = [
     {
@@ -227,18 +229,26 @@ export const AcademyModal: React.FC<AcademyModalProps> = ({ onClose }) => {
             <div className="flex items-center space-x-2.5">
               <FileText className="w-5 h-5 text-slate-700 shrink-0" />
               <div>
-                <span className="font-bold text-slate-900 block">Kit do Aluno Completo Disponível:</span>
-                <span className="text-slate-600">Templates de RIPD (LGPD Art. 38), Matriz RACI de Agentes e Scripts de CI/CD</span>
+                <span className="font-bold text-slate-900 block">Kit do Aluno Completo — Indisponível nesta build:</span>
+                <span className="text-slate-600">Planejado: Templates de RIPD (LGPD Art. 38), Matriz RACI de Agentes e Scripts de CI/CD</span>
               </div>
             </div>
             <button
-              onClick={() => alert('Os arquivos do curso foram gerados com sucesso na pasta /course do seu projeto!')}
+              onClick={() => setHandoutsInfo('Kit do Aluno indisponível: nenhum arquivo foi gerado nesta build — download não habilitado.')}
               className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold flex items-center space-x-1.5 shrink-0 cursor-pointer shadow-xs"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Baixar Pacote do Aluno</span>
+              <span>Pacote do Aluno (indisponível)</span>
             </button>
           </div>
+
+          {handoutsInfo && (
+            <InlineStatus
+              tone="info"
+              message={handoutsInfo}
+              onDismiss={() => setHandoutsInfo(null)}
+            />
+          )}
 
         </div>
 

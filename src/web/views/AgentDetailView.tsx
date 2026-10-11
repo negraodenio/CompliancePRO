@@ -9,8 +9,6 @@ import {
   Lock, 
   Database, 
   Cpu, 
-  Play, 
-  Pause, 
   ChevronDown, 
   ChevronRight,
   ExternalLink,
@@ -166,17 +164,8 @@ export const AgentDetailView: React.FC<AgentDetailViewProps> = ({
                   : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
-              {agent.status === 'PAUSED' ? (
-                <>
-                  <Play className="w-3.5 h-3.5" />
-                  <span>Review Runtime Controls</span>
-                </>
-              ) : (
-                <>
-                  <Pause className="w-3.5 h-3.5" />
-                  <span>Runtime Controls</span>
-                </>
-              )}
+              <Cpu className="w-3.5 h-3.5" />
+              <span>Review Runtime Controls</span>
             </button>
           </div>
         </div>
@@ -369,7 +358,7 @@ export const AgentDetailView: React.FC<AgentDetailViewProps> = ({
           onClick={onOpenEvidence}
           className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 font-semibold text-xs transition cursor-pointer shrink-0 shadow-xs"
         >
-          View audit evidence →
+          View Evidence
         </button>
       </div>
 

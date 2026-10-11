@@ -32,6 +32,7 @@ import {
 import { FunnelAnalytics } from '../services/funnel-analytics';
 import { DEMO_PROJECTS, DemoProject } from '../services/demo-projects';
 import { FreeScanSnapshotView } from '../components/FreeScanSnapshotView';
+import { InlineStatus } from '../components/InlineStatus';
 import { GovernedAgentProofSurface } from '../components/GovernedAgentProofSurface';
 import type { ScannerResult } from '../../core/types';
 
@@ -44,6 +45,8 @@ interface CommercialLandingViewProps {
   scanProgress: { message: string; percent: number };
   scanResult: ScannerResult | null;
   onResetScan: () => void;
+  scanError?: string | null;
+  onDismissScanError?: () => void;
   onOpenAuth: (mode?: 'login' | 'signup') => void;
   onEnterApp: () => void;
   onGovernFindings?: () => void;
@@ -59,6 +62,8 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
   scanProgress,
   scanResult,
   onResetScan,
+  scanError,
+  onDismissScanError,
   onOpenAuth,
   onEnterApp,
   onGovernFindings,
@@ -646,6 +651,14 @@ export const CommercialLandingView: React.FC<CommercialLandingViewProps> = ({
                     />
                   </div>
                 </div>
+              )}
+
+              {scanError && (
+                <InlineStatus
+                  tone="error"
+                  message={scanError}
+                  onDismiss={onDismissScanError}
+                />
               )}
             </div>
 

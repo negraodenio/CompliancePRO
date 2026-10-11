@@ -10,6 +10,18 @@ import { AppShell, ActiveNavView } from './components/AppShell';
 import { AgentInventoryPageView } from './views/AgentInventoryPageView';
 import { AgentDetailView } from './views/AgentDetailView';
 import { DiscoveredAgentsBanner } from './components/DiscoveredAgentsBanner';
+import { ScanSuccessPanel } from './components/ScanSuccessPanel';
+import { InlineStatus } from './components/InlineStatus';
+import { ViewContextBar } from './components/ViewContextBar';
+import { getViewContext } from './navigation/view-context';
+import {
+  initialRouteState,
+  nextUrlForState,
+  normalizePath,
+  parseRoute,
+  shouldPushPath,
+  hasSavedSession
+} from './navigation/routes';
 import { GovernanceCenter } from './views/GovernanceCenter';
 import { AgentStudioView } from './views/AgentStudioView';
 import { GovernanceCockpitView } from './views/GovernanceCockpitView';
@@ -56,7 +68,7 @@ import { ScanGovernanceBridge } from './services/scan-governance-bridge';
 import { sanitizeScanForWorkspacePromotion, assertValidAuthenticatedTenant } from './services/scan-security-boundary';
 import { DEMO_PROJECTS, DemoProject } from './services/demo-projects';
 import type { ScannerResult } from '../core/types';
-import { Lock, Sparkles, Terminal, FileBadge, CheckSquare, Layers, CheckCircle2, Bot, ShieldCheck } from 'lucide-react';
+import { Lock, Sparkles, Terminal, FileBadge, CheckSquare, Layers, Bot, ShieldCheck } from 'lucide-react';
 
 interface AuthSessionGuardProps {
   pageMode: 'landing' | 'app';
@@ -81,69 +93,72 @@ const AuthSessionGuard: React.FC<AuthSessionGuardProps> = ({
   return <>{children}</>;
 };
 
+// Single source of truth for page-load state: refresh / deep-link initialization
+// (UX audit F3). Falls back to the public landing experience on unknown paths
+// or when no saved session exists — protected content is only entered when
+// localStorage already holds a session token (AuthSessionGuard re-checks it).
+const INITIAL_ROUTE_STATE = initialRouteState(
+  typeof window !== 'undefined' ? window.location.pathname : '/',
+  hasSavedSession()
+);
+
 const AppInner: React.FC = () => {
   const { isAuthenticated, activeOrganization, user } = useAuth();
-  const [pageMode, setPageMode] = useState<'landing' | 'app'>('landing');
-  const [activeView, setActiveView] = useState<ActiveNavView>('ai-agents');
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      const p = window.location.pathname.replace(/\/$/, '') || '/';
-      if (p.startsWith('/agents/')) {
-        return p.replace('/agents/', '');
-      }
-    }
-    return null;
-  });
-  const [currentPath, setCurrentPath] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return window.location.pathname.replace(/\/$/, '') || '/';
-    }
-    return '/';
-  });
+  const [pageMode, setPageMode] = useState<'landing' | 'app'>(INITIAL_ROUTE_STATE.pageMode);
+  const [activeView, setActiveView] = useState<ActiveNavView>(INITIAL_ROUTE_STATE.activeView);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(INITIAL_ROUTE_STATE.selectedAgentId);
+  const [currentPath, setCurrentPath] = useState<string>(INITIAL_ROUTE_STATE.currentPath);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup' | null>(null);
   const [authContextBanner, setAuthContextBanner] = useState<{ title: string; description: string } | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState({ message: '', percent: 0 });
   const [scanResult, setScanResult] = useState<ScannerResult | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const [showSettings, setShowSettings] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showAcademy, setShowAcademy] = useState(false);
 
   useEffect(() => {
+    // Back/Forward: recompute the exact same state used on page load and apply
+    // it (state only — popstate never writes history, so no loops).
     const handlePopState = () => {
-      const p = window.location.pathname.replace(/\/$/, '') || '/';
-      setCurrentPath(p);
-      if (p.startsWith('/agents/')) {
-        const id = p.replace('/agents/', '');
-        if (id) {
-          setSelectedAgentId(id);
-          setActiveView('ai-agents');
-          setPageMode('app');
-        }
-      } else if (p === '/agents') {
-        setSelectedAgentId(null);
-        setActiveView('ai-agents');
-        setPageMode('app');
-      }
+      const next = initialRouteState(window.location.pathname, hasSavedSession());
+      setCurrentPath(next.currentPath);
+      setSelectedAgentId(next.selectedAgentId);
+      setActiveView(next.activeView);
+      setPageMode(next.pageMode);
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  // URL synchronization: whenever the app settles on a canonical section,
+  // push its pathname (client-side, no reload). Landing mode, open agent
+  // details, internal views, and already-matching paths are left untouched.
+  useEffect(() => {
+    const next = nextUrlForState({
+      pageMode,
+      activeView,
+      selectedAgentId,
+      pathname: window.location.pathname
+    });
+    if (next) {
+      window.history.pushState({}, '', next);
+      setCurrentPath(next);
+    }
+  }, [pageMode, activeView, selectedAgentId]);
+
   const handleNavigate = (path: string) => {
-    window.history.pushState({}, '', path);
-    const normalized = path.replace(/\/$/, '') || '/';
+    const normalized = normalizePath(path);
+    if (shouldPushPath(window.location.pathname, normalized)) {
+      window.history.pushState({}, '', normalized);
+    }
     setCurrentPath(normalized);
-    if (normalized.startsWith('/agents/')) {
-      const id = normalized.replace('/agents/', '');
-      if (id) {
-        setSelectedAgentId(id);
-        setActiveView('ai-agents');
-      }
-    } else if (normalized === '/agents') {
-      setSelectedAgentId(null);
-      setActiveView('ai-agents');
+    const route = parseRoute(normalized);
+    if (route) {
+      setSelectedAgentId(route.agentId);
+      setActiveView(route.view);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -165,6 +180,8 @@ const AppInner: React.FC = () => {
 
   const handleScanGitHub = async (url: string) => {
     setIsScanning(true);
+    setScanResult(null);
+    setScanError(null);
     FunnelAnalytics.track('SCAN_STARTED', { inputType: 'github' });
     setScanProgress({ message: 'Connecting to GitHub repository...', percent: 10 });
     try {
@@ -189,11 +206,8 @@ const AppInner: React.FC = () => {
       });
       setScanProgress({ message: 'Scan Complete!', percent: 100 });
       triggerConfetti();
-      if (pageMode === 'app') {
-        setActiveView('overview-center');
-      }
     } catch (err: any) {
-      alert(`GitHub Scan Error: ${err.message}`);
+      setScanError(`GitHub Scan Error: ${err.message}`);
     } finally {
       setIsScanning(false);
     }
@@ -201,6 +215,8 @@ const AppInner: React.FC = () => {
 
   const handleScanZip = async (file: File) => {
     setIsScanning(true);
+    setScanResult(null);
+    setScanError(null);
     setScanProgress({ message: 'Extracting ZIP archive...', percent: 20 });
     try {
       const files = await readZipFile(file, (msg, pct) => {
@@ -216,11 +232,8 @@ const AppInner: React.FC = () => {
       ScanGovernanceBridge.ingestScan(result);
       setScanProgress({ message: 'Scan Complete!', percent: 100 });
       triggerConfetti();
-      if (pageMode === 'app') {
-        setActiveView('overview-center');
-      }
     } catch (err: any) {
-      alert(`ZIP Scan Error: ${err.message}`);
+      setScanError(`ZIP Scan Error: ${err.message}`);
     } finally {
       setIsScanning(false);
     }
@@ -228,6 +241,8 @@ const AppInner: React.FC = () => {
 
   const handleScanFolder = async (fileList: FileList) => {
     setIsScanning(true);
+    setScanResult(null);
+    setScanError(null);
     setScanProgress({ message: 'Reading directory files...', percent: 20 });
     try {
       const files = await readFolderFiles(fileList, (msg, pct) => {
@@ -242,11 +257,8 @@ const AppInner: React.FC = () => {
       ScanGovernanceBridge.ingestScan(result);
       setScanProgress({ message: 'Scan Complete!', percent: 100 });
       triggerConfetti();
-      if (pageMode === 'app') {
-        setActiveView('overview-center');
-      }
     } catch (err: any) {
-      alert(`Folder Scan Error: ${err.message}`);
+      setScanError(`Folder Scan Error: ${err.message}`);
     } finally {
       setIsScanning(false);
     }
@@ -254,6 +266,8 @@ const AppInner: React.FC = () => {
 
   const handleSelectDemo = async (demo: DemoProject) => {
     setIsScanning(true);
+    setScanResult(null);
+    setScanError(null);
     setScanProgress({ message: `Loading ${demo.name}...`, percent: 40 });
     try {
       const fileMap = new Map(Object.entries(demo.files));
@@ -264,9 +278,6 @@ const AppInner: React.FC = () => {
       ScanGovernanceBridge.ingestScan(result);
       setScanProgress({ message: 'Loaded!', percent: 100 });
       triggerConfetti();
-      if (pageMode === 'app') {
-        setActiveView('overview-center');
-      }
     } catch (err: any) {
       console.error('Demo load error:', err);
     } finally {
@@ -343,6 +354,7 @@ const AppInner: React.FC = () => {
 
   const totalAgentsCount = scanResult?.source?.agents?.length || 27;
   const criticalGapsCount = scanResult?.violations?.filter(v => (v.severity as any) === 'critical' || (v.severity as any) === 'high').length || 3;
+  const viewContext = getViewContext(activeView);
 
   return (
     <RoleLensProvider onNavigate={(view) => setActiveView(view)}>
@@ -384,6 +396,8 @@ const AppInner: React.FC = () => {
                 scanProgress={scanProgress}
                 scanResult={scanResult}
                 onResetScan={() => setScanResult(null)}
+                scanError={scanError}
+                onDismissScanError={() => setScanError(null)}
                 onOpenAuth={handleOpenAuth}
                 onEnterApp={handleEnterApp}
                 onGovernFindings={handleGovernFindings}
@@ -418,6 +432,12 @@ const AppInner: React.FC = () => {
               setActiveView('ai-agents');
             }}
           >
+                {!selectedAgentId && viewContext && (
+                  <ViewContextBar
+                    context={viewContext}
+                    onReturn={() => setActiveView(viewContext.returnTo)}
+                  />
+                )}
                 {selectedAgentId ? (
                   <AgentDetailView
                     agentId={selectedAgentId}
@@ -532,8 +552,24 @@ const AppInner: React.FC = () => {
                           scanProgress={scanProgress}
                         />
 
+                        {scanError && (
+                          <InlineStatus
+                            tone="error"
+                            message={scanError}
+                            onDismiss={() => setScanError(null)}
+                          />
+                        )}
+
                         {scanResult && (
                           <div className="space-y-6 animate-fadeIn">
+                            <ScanSuccessPanel
+                              scanResult={scanResult}
+                              onReviewAgents={() => {
+                                setSelectedAgentId(null);
+                                setActiveView('ai-agents');
+                              }}
+                            />
+
                             <DiscoveredAgentsBanner
                               scanResult={scanResult}
                               onNavigateToAgent={(agentId) => {
@@ -547,24 +583,6 @@ const AppInner: React.FC = () => {
                                 handleNavigate('/agents');
                               }}
                             />
-
-                            <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs">
-                              <div className="flex items-center space-x-2">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                                <span>
-                                  Repository <strong>{scanResult.repo?.name || 'Local Repository'}</strong> mapped to Agent Inventory.
-                                </span>
-                              </div>
-                              <button
-                                onClick={() => {
-                                  setSelectedAgentId(null);
-                                  setActiveView('ai-agents');
-                                }}
-                                className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition shrink-0 cursor-pointer shadow-xs"
-                              >
-                                View in AI Agents →
-                              </button>
-                            </div>
                           </div>
                         )}
                       </div>
@@ -743,7 +761,7 @@ const AppInner: React.FC = () => {
                   </div>
                 )}
 
-                {!['overview-center', 'discover-inventory', 'discover-agents', 'discover-passports', 'discover-assessments', 'govern-risk', 'govern-policies', 'govern-compliance', 'operate-decisions', 'operate-approvals', 'operate-actions', 'tools-scanner', 'govern-controls', 'assure-simulator', 'assure-reports', 'assure-audit', 'assure-evidence', 'operate-runtime', 'operate-incidents', 'manage-team', 'learn-academy', 'tools-operations', 'tools-deployment', 'assure-readiness', 'tools-integrations', 'settings', 'studio-builder', 'cockpit-control'].includes(activeView) && (
+                {!['ai-agents', 'overview-center', 'discover-inventory', 'discover-agents', 'discover-passports', 'discover-assessments', 'govern-risk', 'govern-policies', 'govern-compliance', 'operate-decisions', 'operate-approvals', 'operate-actions', 'tools-scanner', 'govern-controls', 'assure-simulator', 'assure-reports', 'assure-audit', 'assure-evidence', 'operate-runtime', 'operate-incidents', 'manage-team', 'learn-academy', 'tools-operations', 'tools-deployment', 'assure-readiness', 'tools-integrations', 'settings', 'studio-builder', 'cockpit-control'].includes(activeView) && (
                   <div className="p-12 text-center bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-slate-800 elevation-card space-y-4">
                     <div className="w-12 h-12 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center mx-auto">
                       <Lock className="w-6 h-6" />

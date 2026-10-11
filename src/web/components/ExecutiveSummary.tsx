@@ -13,6 +13,7 @@ import {
 import { calculateMaturityLevel } from '../services/maturity-calculator';
 import { EnterpriseLeadModal } from './EnterpriseLeadModal';
 import { OrganizationalAssessmentModal } from './OrganizationalAssessmentModal';
+import { InlineStatus } from './InlineStatus';
 
 interface ExecutiveSummaryProps {
   result: ScannerResult;
@@ -36,6 +37,7 @@ const REGULATION_DEFINITIONS = [
 export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) => {
   const [aiReport, setAiReport] = useState<string | null>(null);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
   const [showFormulaModal, setShowFormulaModal] = useState(false);
   const [showMaturityFormulaModal, setShowMaturityFormulaModal] = useState(false);
   const [showEnterpriseModal, setShowEnterpriseModal] = useState(false);
@@ -77,11 +79,12 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
 
   const handleGenerateAIReport = async () => {
     setIsGeneratingReport(true);
+    setReportError(null);
     try {
       const report = await generateExecutiveSummaryWithAI(result);
       setAiReport(report);
     } catch (e: any) {
-      alert(`Falha ao gerar parecer: ${e.message}`);
+      setReportError(`Falha ao gerar parecer: ${e.message}`);
     } finally {
       setIsGeneratingReport(false);
     }
@@ -252,6 +255,13 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
                 </>
               )}
             </button>
+            {reportError && (
+              <InlineStatus
+                tone="error"
+                message={reportError}
+                onDismiss={() => setReportError(null)}
+              />
+            )}
             <p className="text-[10.5px] text-slate-500 text-center">
               Consolidação jurídica para DPOs e CISOs
             </p>

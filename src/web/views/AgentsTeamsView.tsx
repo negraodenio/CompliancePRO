@@ -29,6 +29,7 @@ import type { ScannerResult } from '../../core/types';
 import { useIndustry } from '../context/IndustryContext';
 import { ScanGovernanceBridge } from '../services/scan-governance-bridge';
 import { getAgentBusinessAndSipoc } from '../services/agent-sipoc-mapper';
+import { InlineStatus } from '../components/InlineStatus';
 
 export interface AgentEntity {
   id: string;
@@ -223,6 +224,22 @@ const INITIAL_AGENTS: AgentEntity[] = [
   }
 ];
 
+// Honest feedback for the passport hash action: this view holds static
+// workspace passport data and performs no backend verification, so the
+// action must never claim a verified result (UX audit F5).
+const PASSPORT_VERIFICATION_UNAVAILABLE =
+  'Verification unavailable: no backend check runs for this passport in this workspace. The hash shown is the stored passport signature and has not been independently verified against a tamper-evident root.';
+
+// Human-readable drawer tab labels; tab IDs stay unchanged (UX audit F9).
+const DRAWER_TAB_LABELS: Record<string, string> = {
+  topology: 'Topology',
+  autonomy: 'Autonomy',
+  tools: 'Tools',
+  hitl: 'HITL Gates',
+  controls: 'Controls',
+  passport: 'Governance Passport'
+};
+
 export const AgentsTeamsView: React.FC<{ result?: ScannerResult | null }> = ({ result }) => {
   const { activeProfile } = useIndustry();
 
@@ -259,6 +276,7 @@ export const AgentsTeamsView: React.FC<{ result?: ScannerResult | null }> = ({ r
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [selectedAgent, setSelectedAgent] = useState<AgentEntity | null>(null);
   const [activeDrawerTab, setActiveDrawerTab] = useState<'topology' | 'sipoc' | 'autonomy' | 'tools' | 'hitl' | 'controls' | 'passport'>('topology');
+  const [verifyFeedback, setVerifyFeedback] = useState<{ passportId: string; message: string } | null>(null);
 
   const ingestedAgents = ScanGovernanceBridge.getIngestedAgents();
   const allAgents = useMemo(() => {
@@ -527,7 +545,7 @@ const matchSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) 
                         : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
-                    {tab === 'passport' ? '🪪 Governance Passport' : tab}
+                    {DRAWER_TAB_LABELS[tab]}
                   </button>
                 ))}
               </div>
@@ -987,6 +1005,14 @@ const matchSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) 
                       </div>
                     </div>
 
+                    {verifyFeedback && verifyFeedback.passportId === selectedAgent.passport.passportId && (
+                      <InlineStatus
+                        tone="info"
+                        message={verifyFeedback.message}
+                        onDismiss={() => setVerifyFeedback(null)}
+                      />
+                    )}
+
                     <div className="pt-2 flex flex-wrap justify-end gap-2">
                       <button
                         onClick={() => handleExportPassport(selectedAgent)}
@@ -996,7 +1022,7 @@ const matchSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) 
                         <span>Export Digital Passport (JSON)</span>
                       </button>
                       <button
-                        onClick={() => alert(`Passport [${selectedAgent.passport.passportId}] Verified against tamper-evident root hash!`)}
+                        onClick={() => setVerifyFeedback({ passportId: selectedAgent.passport.passportId, message: PASSPORT_VERIFICATION_UNAVAILABLE })}
                         className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
                       >
                         <ShieldCheck className="w-3.5 h-3.5" />

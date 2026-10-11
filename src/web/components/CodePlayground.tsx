@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { runLocalScan } from '../services/scanner-bridge';
 import { generateRemediationWithAI } from '../services/siliconflow';
+import { InlineStatus } from './InlineStatus';
 
 interface SnippetPreset {
   name: string;
@@ -238,6 +239,7 @@ export const CodePlayground: React.FC = () => {
   const [selectedPresetIndex, setSelectedPresetIndex] = useState(0);
   const [code, setCode] = useState(SNIPPET_PRESETS[0].code);
   const [isAuditing, setIsAuditing] = useState(false);
+  const [auditError, setAuditError] = useState<string | null>(null);
   const [auditResult, setAuditResult] = useState<any | null>(null);
   const [copiedOriginal, setCopiedOriginal] = useState(false);
   const [copiedFixed, setCopiedFixed] = useState(false);
@@ -262,6 +264,7 @@ export const CodePlayground: React.FC = () => {
 
   const handleRunCustomAudit = async (snippetCode: string) => {
     setIsAuditing(true);
+    setAuditError(null);
 
     try {
       // 1. Analyze code dynamically for custom inputs
@@ -343,7 +346,7 @@ export const CodePlayground: React.FC = () => {
       });
 
     } catch (e: any) {
-      alert(`Erro na auditoria: ${e.message}`);
+      setAuditError(`Erro na auditoria: ${e.message}`);
     } finally {
       setIsAuditing(false);
     }
@@ -447,6 +450,14 @@ export const CodePlayground: React.FC = () => {
               )}
             </button>
           </div>
+
+          {auditError && (
+            <InlineStatus
+              tone="error"
+              message={auditError}
+              onDismiss={() => setAuditError(null)}
+            />
+          )}
         </div>
 
         {/* Right Column: Audit Results & Suggested Fix */}
