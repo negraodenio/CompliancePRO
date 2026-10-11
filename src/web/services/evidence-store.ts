@@ -269,6 +269,10 @@ export class EvidenceStore {
       const saved = PersistenceAdapter.read<ComprehensiveEvidenceRecord[]>('evidence_catalog', STORAGE_KEY_EVIDENCE);
       if (saved && Array.isArray(saved) && saved.length > 0) {
         list = saved;
+      } else if (tenantId === undefined || tenantId === 'TENANT-DEFAULT') {
+        // Default-scope reads and the default tenant are seeded with the canonical
+        // baseline catalog. Any other explicit tenant starts empty (never seeded).
+        list = JSON.parse(JSON.stringify(BASELINE_EVIDENCE));
       }
     }
 

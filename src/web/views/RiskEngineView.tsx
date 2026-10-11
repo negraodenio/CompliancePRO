@@ -35,6 +35,7 @@ import {
 import type { ScannerResult } from '../../core/types';
 import { useIndustry } from '../context/IndustryContext';
 import { DecisionStore, OperationalFinding } from '../services/decision-store';
+import { isComputedEvidenceDigest } from '../services/evidence-digest';
 
 type AttentionCategory = 'critical-impact' | 'unverified-scope' | 'missing-hitl';
 
@@ -572,7 +573,11 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
                 Tamper-Evident Ledger
               </p>
               <span className="text-[10px] font-mono text-slate-400 block truncate pt-0.5">
-                SHA-256: {activeInvestigatedFinding?.evidenceDigest?.slice(0, 14) || 'a129206c6d4358'}...
+                {activeInvestigatedFinding?.evidenceDigest
+                  ? (isComputedEvidenceDigest(activeInvestigatedFinding.evidenceDigest)
+                      ? `SHA-256 Digest: ${activeInvestigatedFinding.evidenceDigest}`
+                      : `Digest identifier (not a computed hash): ${activeInvestigatedFinding.evidenceDigest}`)
+                  : 'Evidence digest: not available'}
               </span>
             </div>
           </div>
@@ -693,11 +698,19 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
 
                 {activeDeepDisclosure === 'evidence' && (
                   <div className="space-y-1.5">
-                    <span className="font-bold text-slate-200 block">RFC 8785 Canonical Evidence</span>
+                    <span className="font-bold text-slate-200 block">Canonical Evidence Digest</span>
                     <p className="text-[11px] font-mono text-sky-400 bg-slate-900 p-2 rounded border border-slate-800 break-all">
-                      SHA-256 Digest: {activeInvestigatedFinding?.evidenceDigest}
+                      {activeInvestigatedFinding?.evidenceDigest
+                        ? (isComputedEvidenceDigest(activeInvestigatedFinding.evidenceDigest)
+                            ? `SHA-256 Digest: ${activeInvestigatedFinding.evidenceDigest}`
+                            : `Digest identifier (not a computed hash): ${activeInvestigatedFinding.evidenceDigest}`)
+                        : 'Evidence digest: not available'}
                     </p>
-                    <p className="text-[11px] text-slate-400">Recorded into a verifiable session ledger with human accountability timestamp.</p>
+                    <p className="text-[11px] text-slate-400">
+                      {activeInvestigatedFinding?.evidenceDigest && isComputedEvidenceDigest(activeInvestigatedFinding.evidenceDigest)
+                        ? 'Recomputable from the finding record fields; human accountability timestamp stored on the record.'
+                        : 'Static baseline record: no computed hash is recorded for this finding.'}
+                    </p>
                   </div>
                 )}
 
@@ -1206,10 +1219,16 @@ export const RiskEngineView: React.FC<{ result?: ScannerResult | null }> = ({ re
                       <span>Tamper-Evident Evidence & Audit Link</span>
                     </div>
                     <div className="font-mono text-[11px] p-2.5 bg-slate-900 rounded border border-slate-800 text-sky-400 break-all">
-                      RFC 8785 SHA-256 Digest: {selectedFinding.evidenceDigest}
+                      {selectedFinding.evidenceDigest
+                        ? (isComputedEvidenceDigest(selectedFinding.evidenceDigest)
+                            ? `SHA-256 Digest: ${selectedFinding.evidenceDigest}`
+                            : `Digest identifier (not a computed hash): ${selectedFinding.evidenceDigest}`)
+                        : 'Evidence digest: not available'}
                     </div>
                     <p className="text-[11px] text-slate-400">
-                      Chained into the Tamper-Evident Session Ledger upon risk identification and human decision registration.
+                      {selectedFinding.evidenceDigest && isComputedEvidenceDigest(selectedFinding.evidenceDigest)
+                        ? 'Recomputable from the finding record fields; recorded with human decision registration.'
+                        : 'Static baseline record: no computed digest or ledger chain entry exists for this finding.'}
                     </p>
                   </div>
                 )}

@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import type { ScannerResult } from '../../core/types';
 import { useIndustry } from '../context/IndustryContext';
-import { HitlStore, HITLApprovalRequest, GateStatus } from '../services/hitl-store';
+import { HitlStore, HITLApprovalRequest, GateStatus, isComputedHitlDigest } from '../services/hitl-store';
 
 export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({ result }) => {
   const { activeProfile, environment } = useIndustry();
@@ -143,7 +143,9 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
             <div>
               <span className="font-semibold">{feedback.message}</span>
               <span className="ml-2 font-mono-code text-[11px] text-emerald-700 dark:text-emerald-300">
-                Gate ID: <strong>{feedback.gateId}</strong> | Integrity Hash: <strong>{feedback.digest}</strong>
+                Gate ID: <strong>{feedback.gateId}</strong> | {isComputedHitlDigest(feedback.digest)
+                  ? <>Integrity Hash: <strong>{feedback.digest}</strong></>
+                  : <>Integrity Hash: <strong>indisponível (não calculado)</strong></>}
               </span>
             </div>
           </div>
@@ -520,14 +522,18 @@ export const HitlApprovalsView: React.FC<{ result?: ScannerResult | null }> = ({
                   <div className="space-y-4">
                     <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
                       <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                        <Lock className="w-4 h-4 text-emerald-500" />
+                        <Lock className={`w-4 h-4 ${isComputedHitlDigest(selectedGate.approvalOutcome?.evidenceDigest) ? 'text-emerald-500' : 'text-slate-400'}`} />
                         <span>Tamper-Evident Gate Digest</span>
                       </div>
                       <div className="font-mono-code text-[11px] p-2.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300">
-                        Integrity Hash: {selectedGate.approvalOutcome?.evidenceDigest || 'DIGEST-GATE-PENDING-SIGNATURE'}
+                        {isComputedHitlDigest(selectedGate.approvalOutcome?.evidenceDigest)
+                          ? <>Integrity Hash: {selectedGate.approvalOutcome?.evidenceDigest}</>
+                          : <span className="text-amber-700 dark:text-amber-400">Digest indisponível — nenhum hash foi calculado para este gate.</span>}
                       </div>
                       <p className="text-[11px] text-slate-500">
-                        Cryptographically recorded upon gate resolution and chained into the audit ledger.
+                        {isComputedHitlDigest(selectedGate.approvalOutcome?.evidenceDigest)
+                          ? 'SHA-256 calculado sobre a decisão canônica do gate (gateId, ação, responsável, decisão, justificativa e carimbo temporal) e gravado junto do registro desta aprovação. Não é encadeado em ledger de auditoria.'
+                          : 'Sem digest criptográfico: nenhuma integridade é alegada até que a decisão seja resolvida com hash calculado.'}
                       </p>
                     </div>
                   </div>

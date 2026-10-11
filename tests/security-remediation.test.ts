@@ -85,16 +85,22 @@ if (prevFlag) process.env.CGAG_ALLOW_TEST_TOKENS = prevFlag;
 // 4. SEC-P1-04: Tenant Partitioning in Evidence & Ledger Stores
 section('SEC-P1-04: Tenant Partitioning in Evidence & Ledger Stores');
 EvidenceStore.resetToBaseline();
-const allRecords = EvidenceStore.getEvidenceRecords('TENANT-ACME');
+const allRecords = EvidenceStore.getEvidenceRecords('TENANT-DEFAULT');
 assert(Array.isArray(allRecords), 'Evidence records returned as array');
 
-const record = EvidenceStore.getRecordById('EV-2026-0042', 'TENANT-ACME');
-assert(record !== undefined, 'Baseline record accessible by tenant');
+const record = EvidenceStore.getRecordById('EV-2026-0042', 'TENANT-DEFAULT');
+assert(record !== undefined, 'Baseline record accessible by owning tenant (TENANT-DEFAULT)');
 assert(record?.evidenceId === 'EV-2026-0042', 'Evidence ID matches query');
+
+const foreignRecord = EvidenceStore.getRecordById('EV-2026-0042', 'TENANT-ACME');
+assert(foreignRecord === undefined, 'Baseline record NOT accessible by foreign tenant (TENANT-ACME)');
 
 AuditLedgerStore.restoreCanonicalLedger();
 const blocks = AuditLedgerStore.getBlocks('TENANT-DEFAULT');
 assert(blocks.length > 0, 'Audit blocks partitioned for tenant');
+
+const foreignBlocks = AuditLedgerStore.getBlocks('TENANT-ACME');
+assert(foreignBlocks.length === 0, 'Foreign tenant sees no baseline audit blocks');
 
 const block = AuditLedgerStore.getBlockByHeight(1, 'TENANT-DEFAULT');
 assert(block !== undefined, 'Block height 1 found for tenant');

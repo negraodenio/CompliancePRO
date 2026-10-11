@@ -6,6 +6,7 @@
 import { DecisionStore } from './decision-store';
 import { PersistenceAdapter } from './persistence-adapter';
 import { ProtectedEvidenceRecord } from '../../core/governance-control-plane';
+import { computeEvidenceDigest } from './evidence-digest';
 
 export type PolicyType = 
   | 'GOVERNANCE'
@@ -565,7 +566,7 @@ export class PolicyStore {
 
     const targetPolicy = policies[policyIndex];
     const exceptionId = `EXC-${Date.now().toString(36).toUpperCase()}`;
-    const hash = Math.random().toString(36).substring(2, 10).toUpperCase();
+    const createdDate = new Date().toISOString();
 
     // Record decision via DecisionStore for human accountability
     const decisionResult = DecisionStore.recordDecision(
@@ -577,15 +578,18 @@ export class PolicyStore {
       tenantId
     );
 
-    const exception: PolicyException = {
+    const exceptionDigestSource = {
       exceptionId,
       reason,
       accountableOwner,
       decisionId: decisionResult.decision.decisionId,
-      createdDate: new Date().toISOString(),
+      createdDate,
       expiryDate,
-      status: 'ACTIVE',
-      evidenceDigest: `DIGEST-${hash}-SHA256`
+      status: 'ACTIVE' as const
+    };
+    const exception: PolicyException = {
+      ...exceptionDigestSource,
+      evidenceDigest: computeEvidenceDigest(exceptionDigestSource)
     };
 
     const updatedPolicy: GovernancePolicy = {

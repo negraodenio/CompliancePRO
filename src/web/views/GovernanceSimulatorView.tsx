@@ -139,11 +139,11 @@ export const GovernanceSimulatorView: React.FC = () => {
           </div>
 
           <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5">
-            <div className="text-xs text-slate-400 font-medium">Evidence & Ledger Proofs</div>
+            <div className="text-xs text-slate-400 font-medium">Evidence Digests (simulated run)</div>
             <div className="text-xl font-bold text-indigo-400 mt-1">
-              {activeRun ? `${activeRun.evidenceGenerated} / ${activeRun.ledgerBlocksCreated}` : '0 / 0'}
+              {activeRun ? `${activeRun.evidenceGenerated} digests` : '0 digests'}
             </div>
-            <div className="text-[11px] text-indigo-400/80 mt-0.5">SHA-256 Canonical Sealed</div>
+            <div className="text-[11px] text-indigo-400/80 mt-0.5">SHA-256 computed per event - no Audit Ledger writes</div>
           </div>
         </div>
       </div>

@@ -6,6 +6,7 @@
 import { DecisionStore } from './decision-store';
 import { PersistenceAdapter } from './persistence-adapter';
 import { ProtectedEvidenceRecord } from '../../core/governance-control-plane';
+import { computeEvidenceDigest } from './evidence-digest';
 
 export type IncidentSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 export type ContainmentStatus = 'DETECTED' | 'CONTAINED' | 'INVESTIGATING' | 'RECOVERY_PENDING' | 'RECOVERED' | 'TERMINATED';
@@ -193,35 +194,44 @@ export class IncidentStore {
     }
 
     const target = incidents[index];
-    const hash = Math.random().toString(36).substring(2, 10).toUpperCase();
-    const digest = `DIGEST-INC-RESUME-${hash}-SHA256`;
+    const resumedAt = new Date().toISOString();
+    const recoveryDigest = computeEvidenceDigest({
+      incidentId: target.incidentId,
+      containmentStatus: 'RECOVERED',
+      resumedAt,
+      resumeApprovedBy: approvedBy,
+      recoveryRationale
+    });
 
     const updated: AIIncident = {
       ...target,
       containmentStatus: 'RECOVERED',
       investigation: {
         ...(target.investigation || { investigator: approvedBy, role: 'CISO', rootCause: 'Incident investigated' }),
-        resumedAt: new Date().toISOString(),
+        resumedAt,
         resumeApprovedBy: approvedBy,
         recoveryRationale,
-        evidenceDigest: digest
+        evidenceDigest: recoveryDigest
       }
     };
 
     incidents[index] = updated;
     PersistenceAdapter.write('incidents', incidents, STORAGE_KEY_INCIDENTS);
 
-    // Record Protected Evidence in Ledger
-    const evidence: ProtectedEvidenceRecord = {
+    // Record Protected Evidence in Ledger with a genuine content digest
+    const content: Omit<ProtectedEvidenceRecord, 'tamperEvidentSignature'> = {
       evidenceId: `EV-INC-${Date.now().toString(36).toUpperCase()}`,
       entityType: 'AGENT',
       entityId: target.entityId,
       controlId: target.controlId,
       eventType: 'CIRCUIT_BREAK',
       timestamp: new Date().toISOString(),
-      tamperEvidentSignature: digest,
       payloadSummary: `AI Incident Formally Recovered [${target.incidentId}] on ${target.affectedEntity} by ${approvedBy}: ${recoveryRationale}`,
       retentionDays: 1825
+    };
+    const evidence: ProtectedEvidenceRecord = {
+      ...content,
+      tamperEvidentSignature: computeEvidenceDigest(content)
     };
 
     const ledger = [evidence, ...DecisionStore.getEvidenceLedger(tenantId)];

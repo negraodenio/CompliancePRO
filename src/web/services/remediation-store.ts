@@ -6,6 +6,7 @@
 import { DecisionStore } from './decision-store';
 import { PersistenceAdapter } from './persistence-adapter';
 import { ProtectedEvidenceRecord } from '../../core/governance-control-plane';
+import { computeEvidenceDigest } from './evidence-digest';
 
 export type RemediationStatus = 'OPEN' | 'IN_PROGRESS' | 'PENDING_VERIFICATION' | 'VERIFIED_CLOSED' | 'OVERDUE';
 export type VerificationMethod = 'AUTOMATED_RESCAN' | 'PEER_SECURITY_REVIEW' | 'AUDIT_ATTESTATION';
@@ -208,35 +209,45 @@ static verifyAndCloseAction(
     }
 
     const target = actions[index];
-    const hash = Math.random().toString(36).substring(2, 10).toUpperCase();
-    const digest = `DIGEST-REMED-CLOSE-${hash}-SHA256`;
+    const verifiedAt = new Date().toISOString();
+    const closureDigest = computeEvidenceDigest({
+      actionId: target.actionId,
+      status: 'VERIFIED_CLOSED',
+      verifiedBy,
+      verifiedAt,
+      testOutcome,
+      closureRationale
+    });
 
     const updated: RemediationAction = {
       ...target,
       status: 'VERIFIED_CLOSED',
       verificationDetails: {
         verifiedBy,
-        verifiedAt: new Date().toISOString(),
+        verifiedAt,
         testOutcome,
         closureRationale,
-        evidenceDigest: digest
+        evidenceDigest: closureDigest
       }
     };
 
     actions[index] = updated;
     PersistenceAdapter.write('remediations', actions, STORAGE_KEY_REMEDIATIONS);
 
-    // Record Protected Evidence in Ledger
-    const evidence: ProtectedEvidenceRecord = {
+    // Record Protected Evidence in Ledger with a genuine content digest
+    const content: Omit<ProtectedEvidenceRecord, 'tamperEvidentSignature'> = {
       evidenceId: `EV-REMED-${Date.now().toString(36).toUpperCase()}`,
       entityType: target.entityType,
       entityId: target.affectedEntity,
       controlId: target.controlId,
       eventType: 'DECISION_EXECUTION',
       timestamp: new Date().toISOString(),
-      tamperEvidentSignature: digest,
       payloadSummary: `Remediation Verified & Closed [${target.actionId}] by ${verifiedBy}: ${closureRationale}`,
       retentionDays: 1825
+    };
+    const evidence: ProtectedEvidenceRecord = {
+      ...content,
+      tamperEvidentSignature: computeEvidenceDigest(content)
     };
 
     const ledger = [evidence, ...DecisionStore.getEvidenceLedger(tenantId)];

@@ -13,6 +13,7 @@ import { HitlStore, HITLApprovalRequest } from './hitl-store';
 import { RemediationStore, RemediationAction } from './remediation-store';
 import { EvidenceStore, ComprehensiveEvidenceRecord } from './evidence-store';
 import { AuditLedgerStore, AuditBlock, computeDeterministicHash } from './audit-ledger-store';
+import { computeEvidenceDigest } from './evidence-digest';
 import { FinOpsStore } from './finops-store';
 import { DossierStore } from './dossier-store';
 import { PersistenceAdapter } from './persistence-adapter';
@@ -247,7 +248,7 @@ export class ScanGovernanceBridge {
           targetDueDate: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
           status: 'PLANNED'
         },
-        evidenceDigest: 'DIGEST-SCAN-' + fid + '-SHA256',
+        evidenceDigest: computeEvidenceDigest({ findingId: fid, scanId, sourceRepository, createdAt: timestamp, sourceType: 'REAL_SCAN' }),
         createdAt: timestamp,
         updatedAt: timestamp,
         sourceType: 'REAL_SCAN',
@@ -289,7 +290,7 @@ export class ScanGovernanceBridge {
           targetDueDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
           status: 'PLANNED'
         },
-        evidenceDigest: 'DIGEST-SHADOW-' + fid + '-SHA256',
+        evidenceDigest: computeEvidenceDigest({ findingId: fid, scanId, sourceRepository, createdAt: timestamp, sourceType: 'REAL_SCAN' }),
         createdAt: timestamp,
         updatedAt: timestamp,
         sourceType: 'REAL_SCAN',
@@ -331,7 +332,7 @@ export class ScanGovernanceBridge {
           targetDueDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
           status: 'PLANNED'
         },
-        evidenceDigest: 'DIGEST-PII-' + fid + '-SHA256',
+        evidenceDigest: computeEvidenceDigest({ findingId: fid, scanId, sourceRepository, createdAt: timestamp, sourceType: 'REAL_SCAN' }),
         createdAt: timestamp,
         updatedAt: timestamp,
         sourceType: 'REAL_SCAN',

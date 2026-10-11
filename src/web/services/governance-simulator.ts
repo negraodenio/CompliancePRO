@@ -12,6 +12,7 @@ import { IncidentStore } from './incident-store';
 import { FinOpsStore } from './finops-store';
 import { EvidenceStore } from './evidence-store';
 import { AuditLedgerStore } from './audit-ledger-store';
+import { computeEvidenceDigest } from './evidence-digest';
 
 export type SimulationEventType =
   | 'TOOL_CALL'
@@ -241,8 +242,7 @@ export class GovernanceSimulator {
             payload: { amountBRL: 120000, recipient: 'PJ-CORP-9881', policyLimitBRL: 50000 },
             policyEvaluated: 'POL-CG-AG-03-01',
             governanceAction: 'HITL_INTERCEPTED',
-            evidenceDigest: 'SHA256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069',
-            ledgerRef: 'LEDGER-BLK-0089',
+            evidenceDigest: computeEvidenceDigest({ eventType: 'HIGH_VALUE_TRANSACTION', sourceAgentId: scenario.targetAgentId, targetResource: '/api/v1/credit/disburse', payload: { amountBRL: 120000, recipient: 'PJ-CORP-9881', policyLimitBRL: 50000 }, governanceAction: 'HITL_INTERCEPTED' }),
             latencyMs: 14
           };
           run.events.push(ev);
@@ -251,7 +251,7 @@ export class GovernanceSimulator {
           run.eventsEscalated = 1;
           run.detectionLatencyMs = 14;
           run.evidenceGenerated = 1;
-          run.ledgerBlocksCreated = 1;
+          run.ledgerBlocksCreated = 0;
           break;
         }
 
@@ -266,8 +266,7 @@ export class GovernanceSimulator {
             payload: { recordCount: 15000, safeBatchCap: 5000 },
             policyEvaluated: 'POL-CG-AG-05-01',
             governanceAction: 'HITL_INTERCEPTED',
-            evidenceDigest: 'SHA256:4b227777dcbf81d11f5d2b1f818818f21919a7e6b8c919191919191919191919',
-            ledgerRef: 'LEDGER-BLK-0074',
+            evidenceDigest: computeEvidenceDigest({ eventType: 'BULK_OPERATION', sourceAgentId: scenario.targetAgentId, targetResource: '/db/enrichment/batch_update', payload: { recordCount: 15000, safeBatchCap: 5000 }, governanceAction: 'HITL_INTERCEPTED' }),
             latencyMs: 18
           };
           run.events.push(ev);
@@ -276,7 +275,7 @@ export class GovernanceSimulator {
           run.eventsEscalated = 1;
           run.detectionLatencyMs = 18;
           run.evidenceGenerated = 1;
-          run.ledgerBlocksCreated = 1;
+          run.ledgerBlocksCreated = 0;
           break;
         }
 
@@ -291,8 +290,7 @@ export class GovernanceSimulator {
             payload: { query: 'DROP TABLE corporate_ledgers CASCADE', riskTier: 'CRITICAL' },
             policyEvaluated: 'POL-CG-AG-09-01',
             governanceAction: 'BLOCKED',
-            evidenceDigest: 'SHA256:9b71d22419191919191919191919191919191919191919191919191919191919',
-            ledgerRef: 'LEDGER-BLK-0062',
+            evidenceDigest: computeEvidenceDigest({ eventType: 'DDL_ATTEMPT', sourceAgentId: scenario.targetAgentId, targetResource: 'postgres:prod/public/schema', payload: { query: 'DROP TABLE corporate_ledgers CASCADE', riskTier: 'CRITICAL' }, governanceAction: 'BLOCKED' }),
             latencyMs: 8
           };
           run.events.push(ev);
@@ -300,7 +298,7 @@ export class GovernanceSimulator {
           run.eventsBlocked = 1;
           run.detectionLatencyMs = 8;
           run.evidenceGenerated = 1;
-          run.ledgerBlocksCreated = 1;
+          run.ledgerBlocksCreated = 0;
           break;
         }
 
@@ -315,6 +313,7 @@ export class GovernanceSimulator {
               targetResource: 'agent_runner:invoke_subtool',
               payload: { iteration: i, loopThreshold: 10 },
               governanceAction: i > 10 ? 'CONTAINED' : 'ALLOWED',
+              evidenceDigest: computeEvidenceDigest({ eventType: 'TOOL_LOOP', sourceAgentId: scenario.targetAgentId, targetResource: 'agent_runner:invoke_subtool', iteration: i, governanceAction: i > 10 ? 'CONTAINED' : 'ALLOWED' }),
               latencyMs: 2
             });
           }
@@ -325,7 +324,7 @@ export class GovernanceSimulator {
           run.detectionLatencyMs = 12;
           run.containmentLatencyMs = 24;
           run.evidenceGenerated = 1;
-          run.ledgerBlocksCreated = 1;
+          run.ledgerBlocksCreated = 0;
           break;
         }
 
@@ -340,8 +339,7 @@ export class GovernanceSimulator {
             payload: { tokensPerMin: 284000, quotaPerMin: 100000, actionTaken: 'SAFE_FALLBACK' },
             policyEvaluated: 'POL-CG-AG-06-01',
             governanceAction: 'CONTAINED',
-            evidenceDigest: 'SHA256:ef2d127d19191919191919191919191919191919191919191919191919191919',
-            ledgerRef: 'LEDGER-BLK-0012',
+            evidenceDigest: computeEvidenceDigest({ eventType: 'TOKEN_SPIKE', sourceAgentId: scenario.targetAgentId, targetResource: 'model:claude-3-5-sonnet', payload: { tokensPerMin: 284000, quotaPerMin: 100000, actionTaken: 'SAFE_FALLBACK' }, governanceAction: 'CONTAINED' }),
             latencyMs: 16
           };
           run.events.push(ev);
@@ -350,7 +348,7 @@ export class GovernanceSimulator {
           run.detectionLatencyMs = 16;
           run.containmentLatencyMs = 32;
           run.evidenceGenerated = 1;
-          run.ledgerBlocksCreated = 1;
+          run.ledgerBlocksCreated = 0;
           break;
         }
 
@@ -365,7 +363,7 @@ export class GovernanceSimulator {
             payload: { destination: 'UNAUTHORIZED_PUBLIC_ENDPOINT', requiredGateway: 'https://ai-gateway.corp.internal' },
             policyEvaluated: 'POL-CG-AG-06-01',
             governanceAction: 'BLOCKED',
-            evidenceDigest: 'SHA256:2c62423219191919191919191919191919191919191919191919191919191919',
+            evidenceDigest: computeEvidenceDigest({ eventType: 'DIRECT_EXTERNAL_EGRESS', sourceAgentId: scenario.targetAgentId, targetResource: 'https://api.openai.com/v1/chat/completions', payload: { destination: 'UNAUTHORIZED_PUBLIC_ENDPOINT', requiredGateway: 'https://ai-gateway.corp.internal' }, governanceAction: 'BLOCKED' }),
             latencyMs: 9
           };
           run.events.push(ev);
@@ -387,7 +385,7 @@ export class GovernanceSimulator {
             payload: { sensitiveFieldsDetected: ['CPF', 'CREDIT_CARD_NUM'], sanitizerAction: 'AUTO_MASKED' },
             policyEvaluated: 'POL-CG-AG-04-01',
             governanceAction: 'BLOCKED',
-            evidenceDigest: 'SHA256:c3ab8ff119191919191919191919191919191919191919191919191919191919',
+            evidenceDigest: computeEvidenceDigest({ eventType: 'PII_ACCESS', sourceAgentId: scenario.targetAgentId, targetResource: 'tool:database_query', payload: { sensitiveFieldsDetected: ['CPF', 'CREDIT_CARD_NUM'], sanitizerAction: 'AUTO_MASKED' }, governanceAction: 'BLOCKED' }),
             latencyMs: 11
           };
           run.events.push(ev);
@@ -410,6 +408,7 @@ export class GovernanceSimulator {
               payload: { attempt: i, amountBRL: 49999, cumulativeBRL: i * 49999, limitBRL: 50000 },
               policyEvaluated: 'POL-CG-AG-03-01',
               governanceAction: i >= 3 ? 'BYPASS_DETECTED' : 'ALLOWED',
+              evidenceDigest: computeEvidenceDigest({ eventType: 'POLICY_BYPASS_ATTEMPT', sourceAgentId: scenario.targetAgentId, targetResource: '/api/v1/credit/disburse', attempt: i, governanceAction: i >= 3 ? 'BYPASS_DETECTED' : 'ALLOWED' }),
               latencyMs: 8
             });
           }

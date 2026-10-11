@@ -105,15 +105,15 @@ export const GovernedAgentProofSurface: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-mono text-sm font-extrabold text-white tracking-wider">COMPLYPRO EXECUTION SURFACE</span>
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-400 uppercase tracking-widest">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                LIVE
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-500/10 border border-slate-400/30 text-[10px] font-mono text-slate-300 uppercase tracking-widest">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-pulse"></span>
+                DEMO
               </span>
             </div>
             <div className="text-xs text-slate-400 flex items-center gap-2 font-mono mt-0.5">
               <span>Framework: CrewAI 0.102.0</span>
               <span>•</span>
-              <span className="text-sky-400">Passport: VERIFIED (SIG-SHA256)</span>
+              <span className="text-sky-400">Passport: fixture (SIG-SHA256 format)</span>
               <span>•</span>
               <span className="text-indigo-400">Runtime: IsolatedWorker</span>
             </div>
@@ -154,7 +154,7 @@ export const GovernedAgentProofSurface: React.FC = () => {
           onClick={() => setActiveTab('evidence')}
           className={`pb-2.5 transition border-b-2 cursor-pointer ${activeTab === 'evidence' ? 'text-sky-400 border-sky-400 font-bold' : 'text-slate-400 border-transparent hover:text-slate-200'}`}
         >
-          EVIDENCE LEDGER (15 EVENTS)
+          EVIDENCE LEDGER (DEMO)
         </button>
         <button
           onClick={() => setActiveTab('passport')}
@@ -166,6 +166,11 @@ export const GovernedAgentProofSurface: React.FC = () => {
 
       {/* Main Execution Surface Body */}
       <div className="p-6">
+        {/* Persistent demonstration-data notice */}
+        <div className="mb-4 px-3.5 py-2 rounded-lg bg-slate-800/70 border border-slate-700 text-[11px] font-mono text-slate-300 flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>
+          Demonstration data — all rows, hashes, verdicts and statuses on this surface are static fixtures from a simulated sequence, not live execution or verified evidence.
+        </div>
         {activeTab === 'timeline' && (
           <div className="space-y-4">
             {/* Idle Welcome State */}
@@ -342,14 +347,14 @@ export const GovernedAgentProofSurface: React.FC = () => {
           <div className="space-y-3 font-mono text-xs">
             <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
               <div>
-                <div className="text-slate-400 text-[11px]">CHAIN INTEGRITY</div>
-                <div className="text-emerald-400 font-bold flex items-center gap-1.5 mt-0.5">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>SHA-256 HASH CHAIN 100% VALID (15 EVENTS)</span>
+                <div className="text-slate-400 text-[11px]">CHAIN INTEGRITY (DEMO FIXTURE)</div>
+                <div className="text-slate-300 font-bold flex items-center gap-1.5 mt-0.5">
+                  <AlertTriangle className="w-4 h-4 text-slate-400" />
+                  <span>HASH CHAIN NOT VERIFIED — SAMPLE ROWS ONLY</span>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-slate-400 text-[11px]">GENESIS ANCHOR</div>
+                <div className="text-slate-400 text-[11px]">GENESIS ANCHOR (FIXTURE)</div>
                 <div className="text-slate-300 text-[11px] font-bold">00000000000000000000...</div>
               </div>
             </div>
@@ -394,8 +399,8 @@ export const GovernedAgentProofSurface: React.FC = () => {
                 <span className="text-slate-400 text-[11px] block">PASSPORT FINGERPRINT</span>
                 <span className="font-bold text-sky-400 text-sm">SIG-SHA256-BE887C085CFB8970</span>
               </div>
-              <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-[10px]">
-                SIGNED & VERIFIABLE
+              <span className="px-2.5 py-1 rounded-full bg-slate-500/10 border border-slate-400/30 text-slate-300 font-bold text-[10px]">
+                FIXTURE (NOT A LIVE PASSPORT)
               </span>
             </div>
 
@@ -425,12 +430,12 @@ export const GovernedAgentProofSurface: React.FC = () => {
       <div className="px-6 py-3.5 bg-slate-900/70 border-t border-slate-800 flex flex-wrap items-center justify-between text-xs font-mono text-slate-400 gap-2">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span>Evidence: <strong className="text-white">15 events</strong> (Hash Verified)</span>
+            <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+            <span>Evidence: <strong className="text-white">demo fixture</strong> (unverified)</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span>Passport: <strong className="text-white">VERIFIED</strong></span>
+            <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+            <span>Passport: <strong className="text-white">demo fixture</strong></span>
           </div>
         </div>
 

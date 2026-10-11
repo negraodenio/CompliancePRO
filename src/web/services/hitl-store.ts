@@ -5,6 +5,7 @@
 
 import { DecisionStore } from './decision-store';
 import { PersistenceAdapter } from './persistence-adapter';
+import { computeDeterministicHash } from './audit-ledger-store';
 import { ProtectedEvidenceRecord } from '../../core/governance-control-plane';
 
 export type GateStatus = 'PENDING_REVIEW' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'EXPIRED_BLOCKED';
@@ -52,6 +53,41 @@ export interface HITLApprovalRequest {
 }
 
 const STORAGE_KEY_HITL = 'cg_ag_hitl_gates_v2';
+
+/** Explicit sentinel: no valid digest exists for this decision (never a fabricated hash). */
+export const HITL_DIGEST_UNAVAILABLE = 'UNAVAILABLE';
+
+const HITL_DIGEST_PATTERN = /^SHA256:[0-9a-f]{64}$/;
+
+export function isComputedHitlDigest(digest: string | undefined): boolean {
+  return !!digest && HITL_DIGEST_PATTERN.test(digest);
+}
+
+/**
+ * Genuine SHA-256 digest over the canonical HITL decision payload, using the
+ * established audit-ledger implementation (computeDeterministicHash).
+ * Returns HITL_DIGEST_UNAVAILABLE when calculation fails — never a fake digest.
+ */
+export function buildHitlDecisionDigest(decisionData: {
+  gateId: string;
+  agentId: string;
+  controlId: string;
+  actionTitle: string;
+  decision: 'APPROVE' | 'REJECT';
+  rationale: string;
+  decidedBy: string;
+  role: string;
+  decidedAt: string;
+  executionState: 'AUTHORIZATION_GRANTED' | 'EXECUTION_BLOCKED';
+}): string {
+  try {
+    const canonical = JSON.stringify(decisionData);
+    const digest = computeDeterministicHash(canonical);
+    return HITL_DIGEST_PATTERN.test(digest) ? digest : HITL_DIGEST_UNAVAILABLE;
+  } catch {
+    return HITL_DIGEST_UNAVAILABLE;
+  }
+}
 
 const BASELINE_GATES: HITLApprovalRequest[] = [
   {
@@ -136,7 +172,18 @@ const BASELINE_GATES: HITLApprovalRequest[] = [
       decision: 'REJECT',
       rationale: 'Unscheduled table reindex on production database blocked. Must be performed during designated maintenance window.',
       executionState: 'EXECUTION_BLOCKED',
-      evidenceDigest: 'DIGEST-GATE-8799-REJECT-SHA256'
+      evidenceDigest: buildHitlDecisionDigest({
+        gateId: 'GATE-2026-8799',
+        agentId: 'AGT-OPS-1102',
+        controlId: 'CG-AG-02',
+        actionTitle: 'Automated Production Database Index Rebuild',
+        decision: 'REJECT',
+        rationale: 'Unscheduled table reindex on production database blocked. Must be performed during designated maintenance window.',
+        decidedBy: 'Roberto Silva',
+        role: 'CISO & Accountable Lead',
+        decidedAt: '2026-08-27T14:15:00Z',
+        executionState: 'EXECUTION_BLOCKED'
+      })
     }
   }
 ];
@@ -245,8 +292,20 @@ export class HitlStore {
     }
 
     const targetGate = gates[index];
-    const hash = Math.random().toString(36).substring(2, 10).toUpperCase();
-    const digest = `DIGEST-HITL-${decision}-${hash}-SHA256`;
+    const executionState = decision === 'APPROVE' ? 'AUTHORIZATION_GRANTED' : 'EXECUTION_BLOCKED';
+    const decidedAt = new Date().toISOString();
+    const digest = buildHitlDecisionDigest({
+      gateId: targetGate.gateId,
+      agentId: targetGate.agentId,
+      controlId: targetGate.controlId,
+      actionTitle: targetGate.actionTitle,
+      decision,
+      rationale,
+      decidedBy,
+      role,
+      decidedAt,
+      executionState
+    });
 
     const updatedGate: HITLApprovalRequest = {
       ...targetGate,
@@ -254,10 +313,10 @@ export class HitlStore {
       approvalOutcome: {
         decidedBy,
         role,
-        decidedAt: new Date().toISOString(),
+        decidedAt,
         decision,
         rationale,
-        executionState: decision === 'APPROVE' ? 'AUTHORIZATION_GRANTED' : 'EXECUTION_BLOCKED',
+        executionState,
         evidenceDigest: digest
       }
     };

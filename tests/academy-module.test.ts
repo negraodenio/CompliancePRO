@@ -1,4 +1,67 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+/**
+ * COMPLYPRO R5 - dependency-free describe/it/expect harness.
+ * vitest is NOT a declared dependency of this repository (house rule: zero
+ * new dependencies), so the original vitest-style test bodies are preserved
+ * verbatim while the runner is provided locally. Every failure propagates to
+ * the process exit code so the governance runner reports it.
+ */
+let harnessChecks = 0;
+const harnessFailures: string[] = [];
+const beforeEachHooks: Array<() => void> = [];
+
+const describe = (_name: string, fn: () => void): void => { fn(); };
+const beforeEach = (fn: () => void): void => { beforeEachHooks.push(fn); };
+const it = (name: string, fn: () => void): void => {
+  try {
+    for (const hook of beforeEachHooks) hook();
+    fn();
+    harnessChecks++;
+    console.log(`  [PASS ${harnessChecks}]: ${name}`);
+  } catch (err) {
+    harnessFailures.push(name);
+    console.error(`  [FAIL]: ${name} -> ${(err as Error).stack || String(err)}`);
+  }
+};
+const expect = (actual: unknown) => ({
+  toBe: (expected: unknown): void => {
+    if (!Object.is(actual, expected)) {
+      throw new Error(`expected ${JSON.stringify(expected)} but received ${JSON.stringify(actual)}`);
+    }
+  },
+  toBeDefined: (): void => {
+    if (actual === undefined || actual === null) throw new Error('expected value to be defined');
+  },
+  toBeUndefined: (): void => {
+    if (actual !== undefined) throw new Error(`expected undefined but received ${JSON.stringify(actual)}`);
+  },
+  toBeGreaterThan: (bound: number): void => {
+    if (typeof actual !== 'number' || !(actual > bound)) {
+      throw new Error(`expected ${String(actual)} to be greater than ${bound}`);
+    }
+  },
+  toBeGreaterThanOrEqual: (bound: number): void => {
+    if (typeof actual !== 'number' || !(actual >= bound)) {
+      throw new Error(`expected ${String(actual)} to be greater than or equal to ${bound}`);
+    }
+  },
+  toBeLessThan: (bound: number): void => {
+    if (typeof actual !== 'number' || !(actual < bound)) {
+      throw new Error(`expected ${String(actual)} to be less than ${bound}`);
+    }
+  },
+  toContain: (part: string | number): void => {
+    if (Array.isArray(actual)) {
+      if (!actual.includes(part)) {
+        throw new Error(`expected array to contain ${JSON.stringify(part)}`);
+      }
+      return;
+    }
+    if (typeof actual !== 'string' || !actual.includes(String(part))) {
+      throw new Error(`expected ${JSON.stringify(actual)} to contain ${JSON.stringify(part)}`);
+    }
+  }
+});
+
 import {
   ACADEMY_MODULES,
   AcademyStore
@@ -113,3 +176,11 @@ describe('CG-AG Academy: In-Product Instructional Learning Center', () => {
     expect(Object.keys(reset.quizScores).length).toBe(0);
   });
 });
+
+console.log('==================================================================');
+if (harnessFailures.length > 0) {
+  console.error(`>>> ACADEMY-MODULE: ${harnessFailures.length} FAILED / ${harnessChecks} PASSED <<<`);
+  process.exitCode = 1;
+} else {
+  console.log(`>>> ACADEMY-MODULE: ALL ${harnessChecks} CHECKS PASSED <<<`);
+}

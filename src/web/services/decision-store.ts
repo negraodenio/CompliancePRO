@@ -5,6 +5,7 @@
 
 import { GovernanceDecision, ProtectedEvidenceRecord, GovernanceControlPlane } from '../../core/governance-control-plane';
 import { PersistenceAdapter } from './persistence-adapter';
+import { computeEvidenceDigest } from './evidence-digest';
 
 export interface OperationalFinding {
   sourceType?: 'REAL_SCAN' | 'CANONICAL_BASELINE' | 'SIMULATION';
@@ -335,18 +336,21 @@ export class DecisionStore {
     }
     PersistenceAdapter.write('findings', findings, STORAGE_KEY_FINDINGS);
 
-    // Emit real protected evidence record into ledger
-    const hash = Math.random().toString(36).substring(2, 10).toUpperCase();
-    const evidence: ProtectedEvidenceRecord = {
+    // Emit real protected evidence record into ledger with a genuine,
+    // recomputable content digest (SHA-256 over the record's own fields).
+    const content: Omit<ProtectedEvidenceRecord, 'tamperEvidentSignature'> = {
       evidenceId: `EV-${Date.now().toString(36).toUpperCase()}`,
       entityType: 'DECISION',
       entityId: decision.decisionId,
       controlId: target.controlId,
       eventType: 'DECISION_EXECUTION',
       timestamp: new Date().toISOString(),
-      tamperEvidentSignature: `DIGEST-${hash}-SHA256`,
       payloadSummary: `Governance Decision [${decisionType}] recorded on ${target.finding.substring(0, 42)}... by ${decider.name}`,
       retentionDays: 1825
+    };
+    const evidence: ProtectedEvidenceRecord = {
+      ...content,
+      tamperEvidentSignature: computeEvidenceDigest(content)
     };
 
     const ledger = [evidence, ...this.getEvidenceLedger(tenantId)];

@@ -6,6 +6,7 @@
 import { DecisionStore } from './decision-store';
 import { PersistenceAdapter } from './persistence-adapter';
 import { ProtectedEvidenceRecord } from '../../core/governance-control-plane';
+import { computeEvidenceDigest } from './evidence-digest';
 
 export type FinOpsStatus = 'WITHIN_LIMIT' | 'APPROACHING_LIMIT' | 'LIMIT_EXCEEDED' | 'THROTTLED' | 'FALLBACK_ACTIVE';
 export type FinOpsEnforcementMode = 'RUNTIME_ENFORCED' | 'OBSERVED_ONLY' | 'STATIC_POLICY' | 'HYBRID';
@@ -253,8 +254,6 @@ export class FinOpsStore {
     }
 
     const target = list[index];
-    const hash = Math.random().toString(36).substring(2, 10).toUpperCase();
-    const digest = `DIGEST-FINOPS-QUOTA-${hash}-SHA256`;
 
     const updated: FinOpsEntityUsage = {
       ...target,
@@ -267,17 +266,20 @@ export class FinOpsStore {
     list[index] = updated;
     PersistenceAdapter.write('finops', list, STORAGE_KEY_FINOPS);
 
-    // Record Protected Evidence in Ledger
-    const evidence: ProtectedEvidenceRecord = {
+    // Record Protected Evidence in Ledger with a genuine content digest
+    const content: Omit<ProtectedEvidenceRecord, 'tamperEvidentSignature'> = {
       evidenceId: `EV-FINOPS-${Date.now().toString(36).toUpperCase()}`,
       entityType: 'AGENT',
       entityId: target.entityId,
       controlId: target.controlId,
       eventType: 'DECISION_EXECUTION',
       timestamp: new Date().toISOString(),
-      tamperEvidentSignature: digest,
       payloadSummary: `FinOps Budget/Quota re-calibrated for ${target.entityName} to $${newBudgetUSD} / ${newTokenQuota} tokens by ${updatedBy}: ${rationale}`,
       retentionDays: 1825
+    };
+    const evidence: ProtectedEvidenceRecord = {
+      ...content,
+      tamperEvidentSignature: computeEvidenceDigest(content)
     };
 
     const ledger = [evidence, ...DecisionStore.getEvidenceLedger(tenantId)];
