@@ -29,6 +29,7 @@ import {
 import type { ScannerResult } from '../../core/types';
 import { useIndustry } from '../context/IndustryContext';
 import { FinOpsStore, FinOpsEntityUsage, FinOpsStatus, FinOpsEnforcementMode } from '../services/finops-store';
+import { isComputedEvidenceDigest } from '../services/evidence-digest';
 
 export const RuntimeFinOpsView: React.FC<{ result?: ScannerResult | null }> = ({ result }) => {
   const { activeProfile, environment } = useIndustry();
@@ -143,7 +144,9 @@ export const RuntimeFinOpsView: React.FC<{ result?: ScannerResult | null }> = ({
             <div>
               <span className="font-semibold">{feedback.message}</span>
               <span className="ml-2 font-mono-code text-[11px] text-emerald-700 dark:text-emerald-300">
-                Entity ID: <strong>{feedback.entityId}</strong> | Ledger Hash: <strong>{feedback.digest}</strong>
+                Entity ID: <strong>{feedback.entityId}</strong> | Ledger Hash: <strong>{isComputedEvidenceDigest(feedback.digest)
+            ? feedback.digest
+            : 'unavailable (not computed)'}</strong>
               </span>
             </div>
           </div>
@@ -612,10 +615,10 @@ export const RuntimeFinOpsView: React.FC<{ result?: ScannerResult | null }> = ({
                         <span>Tamper-Evident FinOps Digest</span>
                       </div>
                       <div className="font-mono-code text-[11px] p-2.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300">
-                        Integrity Hash: DIGEST-FINOPS-TELEMETRY-{selectedEntity.entityId}-SHA256
+                        Not available - no digest is stored for this entity
                       </div>
                       <p className="text-[11px] text-slate-500">
-                        Chained into the Protected Audit Ledger upon budget recalibration and monthly closing.
+                        Budget recalibration writes a tamper-evident evidence record with a recomputable content digest to the evidence ledger; it is not hash-chained.
                       </p>
                     </div>
                   </div>

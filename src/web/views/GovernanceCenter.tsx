@@ -32,6 +32,7 @@ import {
 import { useIndustry } from '../context/IndustryContext';
 import { DecisionStore, OperationalFinding } from '../services/decision-store';
 import { ProtectedEvidenceRecord } from '../../core/governance-control-plane';
+import { isComputedEvidenceDigest, hasCryptographicDigest } from '../services/evidence-digest';
 
 interface GovernanceCenterProps {
   onNavigateToScanner: () => void;
@@ -201,7 +202,9 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
             <div>
               <span className="font-semibold">{feedback.message}</span>
               <span className="ml-2 font-mono text-[11px] text-emerald-700 dark:text-emerald-300">
-                Decision: <strong>{feedback.decisionId}</strong> | SHA-256 Ledger Digest: <strong>{feedback.signature.slice(0, 18)}...</strong>
+                Decision: <strong>{feedback.decisionId}</strong> | {hasCryptographicDigest(feedback.signature)
+                  ? <>SHA-256 Ledger Digest: <strong>{feedback.signature.slice(0, 18)}...</strong></>
+                  : <>Ledger Digest: <strong>unavailable (not computed)</strong></>}
               </span>
             </div>
           </div>
@@ -310,7 +313,9 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
                 </div>
                 <p className="text-xs text-slate-200 font-sans truncate">{item.payloadSummary}</p>
                 <span className="text-[10px] font-mono text-slate-500 block truncate">
-                  SHA-256: {item.tamperEvidentSignature.slice(0, 24)}...
+                  {hasCryptographicDigest(item.tamperEvidentSignature)
+                    ? `SHA-256 Digest: ${item.tamperEvidentSignature}`
+                    : `Record signature (non-cryptographic fixture): ${item.tamperEvidentSignature}`}
                 </span>
               </div>
             ))}
@@ -554,7 +559,11 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
                 Tamper-Evident Ledger
               </p>
               <span className="text-[10px] font-mono text-slate-400 block truncate pt-0.5">
-                SHA-256: {activeInvestigatedFinding?.evidenceDigest.slice(0, 14)}...
+                {activeInvestigatedFinding?.evidenceDigest
+                  ? (isComputedEvidenceDigest(activeInvestigatedFinding.evidenceDigest)
+                      ? `SHA-256 Digest: ${activeInvestigatedFinding.evidenceDigest}`
+                      : `Digest identifier (not a computed hash): ${activeInvestigatedFinding.evidenceDigest}`)
+                  : 'Evidence digest: not available'}
               </span>
             </div>
           </div>
@@ -670,11 +679,19 @@ export const GovernanceCenter: React.FC<GovernanceCenterProps> = ({
 
                 {activeDeepDisclosure === 'evidence' && (
                   <div className="space-y-1.5">
-                    <span className="font-bold text-slate-200 block">RFC 8785 Canonical Evidence</span>
+                    <span className="text-[11px] font-bold text-slate-200 block">Canonical Evidence Digest</span>
                     <p className="text-[11px] font-mono text-sky-400 bg-slate-900 p-2 rounded border border-slate-800 break-all">
-                      SHA-256 Digest: {activeInvestigatedFinding?.evidenceDigest}
+                      {activeInvestigatedFinding?.evidenceDigest
+                        ? (isComputedEvidenceDigest(activeInvestigatedFinding.evidenceDigest)
+                            ? `SHA-256 Digest: ${activeInvestigatedFinding.evidenceDigest}`
+                            : `Digest identifier (not a computed hash): ${activeInvestigatedFinding.evidenceDigest}`)
+                        : 'Evidence digest: not available'}
                     </p>
-                    <p className="text-[11px] text-slate-400">Recorded into a verifiable session ledger with human accountability timestamp.</p>
+                    <p className="text-[11px] text-slate-400">
+                      {activeInvestigatedFinding?.evidenceDigest && isComputedEvidenceDigest(activeInvestigatedFinding.evidenceDigest)
+                        ? 'Recomputable from the finding record fields; scan ingestion is also recorded in the hash-chained audit ledger.'
+                        : 'Static baseline record: no computed hash is recorded for this finding.'}
+                    </p>
                   </div>
                 )}
 

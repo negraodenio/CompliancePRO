@@ -27,6 +27,7 @@ import {
 import type { ScannerResult } from '../../core/types';
 import { useIndustry } from '../context/IndustryContext';
 import { ComplianceStore, ComplianceFramework, RegulatoryClauseMapping } from '../services/compliance-store';
+import { isComputedEvidenceDigest } from '../services/evidence-digest';
 
 export const ComplianceFrameworksView: React.FC<{ result?: ScannerResult | null }> = ({ result }) => {
   const { activeProfile, environment } = useIndustry();
@@ -560,13 +561,15 @@ export const ComplianceFrameworksView: React.FC<{ result?: ScannerResult | null 
                     <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
                       <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                         <Lock className="w-4 h-4 text-emerald-500" />
-                        <span>Tamper-Evident Digest & Crosswalk Hash</span>
+                        <span>{isComputedEvidenceDigest(selectedClause.evidenceDigest) ? 'Tamper-Evident Digest & Crosswalk Hash' : 'Crosswalk Record Digest (identifier - not a computed hash)'}</span>
                       </div>
                       <div className="font-mono-code text-[11px] p-2.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300">
-                        Integrity Hash: {selectedClause.evidenceDigest}
+                        Digest: {selectedClause.evidenceDigest}
                       </div>
                       <p className="text-[11px] text-slate-500">
-                        Verified across all {selectedClause.mappedControlIds.length} mapped CG-AG controls and chained into the audit ledger.
+                        {isComputedEvidenceDigest(selectedClause.evidenceDigest)
+                          ? `Digest computed over the clause crosswalk record content (${selectedClause.mappedControlIds.length} mapped CG-AG controls).`
+                          : `Static crosswalk record - not a computed hash and not chained into the Audit Ledger (${selectedClause.mappedControlIds.length} mapped CG-AG controls listed).`}
                       </p>
                     </div>
                   </div>

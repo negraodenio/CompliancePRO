@@ -31,6 +31,7 @@ import type { ScannerResult } from '../../core/types';
 import { useIndustry } from '../context/IndustryContext';
 import { PolicyStore, GovernancePolicy, PolicyType, PolicyStatus, EnforcementMode } from '../services/policy-store';
 import { DecisionStore } from '../services/decision-store';
+import { isComputedEvidenceDigest } from '../services/evidence-digest';
 
 export const PolicyEngineView: React.FC<{ result?: ScannerResult | null }> = ({ result }) => {
   const { activeProfile, environment } = useIndustry();
@@ -141,7 +142,9 @@ export const PolicyEngineView: React.FC<{ result?: ScannerResult | null }> = ({ 
             <div>
               <span className="font-semibold">{feedback.message}</span>
               <span className="ml-2 font-mono-code text-[11px] text-emerald-700 dark:text-emerald-300">
-                Integrity Hash: <strong>{feedback.digest}</strong>
+                Integrity Hash: <strong>{isComputedEvidenceDigest(feedback.digest)
+                  ? feedback.digest
+                  : 'unavailable (not computed)'}</strong>
               </span>
             </div>
           </div>
@@ -645,10 +648,10 @@ export const PolicyEngineView: React.FC<{ result?: ScannerResult | null }> = ({ 
                         <span>Tamper-Evident Evidence & Audit Link</span>
                       </div>
                       <div className="font-mono-code text-[11px] p-2.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300">
-                        Integrity Hash: {selectedPolicy.evidenceReference}
+                        Evidence Reference: {selectedPolicy.evidenceReference} (identifier - not a computed hash)
                       </div>
                       <p className="text-[11px] text-slate-500">
-                        Chained into the Tamper-Evident Audit Ledger. Regulatory Overlays: {selectedPolicy.regulatoryOverlays.join(' · ')}.
+                        Static policy reference: no computed digest or ledger chain is recorded for this definition. Regulatory Overlays: {selectedPolicy.regulatoryOverlays.join(' · ')}.
                       </p>
                     </div>
                   </div>

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import type { ScannerResult } from '../../core/types';
 import { CONTROL_LIST } from '../../core/cg-ag-controls';
+import { isComputedEvidenceDigest } from '../services/evidence-digest';
 
 
 
@@ -452,13 +453,15 @@ export const AssessmentsView: React.FC<{ result?: ScannerResult | null }> = ({ r
                   <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
                     <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                       <Lock className="w-4 h-4 text-emerald-500" />
-                      <span>Tamper-Evident Assessment Digest</span>
+                      <span>{isComputedEvidenceDigest(selectedAssessment.evidenceDigest) ? 'Tamper-Evident Assessment Digest' : 'Assessment Digest (identifier - not a computed hash)'}</span>
                     </div>
                     <div className="font-mono-code text-[11px] p-2.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300">
                       Digest: {selectedAssessment.evidenceDigest}
                     </div>
                     <p className="text-[11px] text-slate-500">
-                      This assessment is cryptographically sealed and chained into the Tamper-Evident Audit Ledger.
+                      {isComputedEvidenceDigest(selectedAssessment.evidenceDigest)
+                        ? 'Digest computed over the assessment record content.'
+                        : 'Static baseline record - not a computed hash; this assessment is not sealed or chained into the Audit Ledger.'}
                     </p>
                   </div>
                 )}

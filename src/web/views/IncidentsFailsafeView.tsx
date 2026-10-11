@@ -29,6 +29,7 @@ import {
 import type { ScannerResult } from '../../core/types';
 import { useIndustry } from '../context/IndustryContext';
 import { IncidentStore, AIIncident, ContainmentStatus, CircuitBreakerAction } from '../services/incident-store';
+import { isComputedEvidenceDigest } from '../services/evidence-digest';
 
 export const IncidentsFailsafeView: React.FC<{ result?: ScannerResult | null }> = ({ result }) => {
   const { activeProfile, environment } = useIndustry();
@@ -134,7 +135,9 @@ export const IncidentsFailsafeView: React.FC<{ result?: ScannerResult | null }> 
             <div>
               <span className="font-semibold">{feedback.message}</span>
               <span className="ml-2 font-mono-code text-[11px] text-emerald-700 dark:text-emerald-300">
-                Incident ID: <strong>{feedback.incidentId}</strong> | Ledger Hash: <strong>{feedback.digest}</strong>
+                Incident ID: <strong>{feedback.incidentId}</strong> | Ledger Hash: <strong>{isComputedEvidenceDigest(feedback.digest)
+                ? feedback.digest
+                : 'unavailable (not computed)'}</strong>
               </span>
             </div>
           </div>
@@ -556,10 +559,16 @@ export const IncidentsFailsafeView: React.FC<{ result?: ScannerResult | null }> 
                         <span>Tamper-Evident Incident Digest</span>
                       </div>
                       <div className="font-mono-code text-[11px] p-2.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300">
-                        Integrity Hash: {selectedIncident.investigation?.evidenceDigest || 'DIGEST-INCIDENT-NO-SIGNATURE'}
+                        {selectedIncident.investigation?.evidenceDigest
+                          ? (isComputedEvidenceDigest(selectedIncident.investigation.evidenceDigest)
+                              ? `Integrity Hash: ${selectedIncident.investigation.evidenceDigest}`
+                              : `Digest identifier (not a computed hash): ${selectedIncident.investigation.evidenceDigest}`)
+                          : 'Recovery digest: not available - no recovery digest recorded'}
                       </div>
                       <p className="text-[11px] text-slate-500">
-                        Chained into the Protected Audit Ledger upon containment and safe recovery.
+                        {selectedIncident.investigation?.evidenceDigest && isComputedEvidenceDigest(selectedIncident.investigation.evidenceDigest)
+                          ? 'Recomputable from the stored recovery fields (incidentId, status, resumedAt, approver, rationale).'
+                          : 'Static baseline record: no computed digest or audit ledger chain entry exists for this incident.'}
                       </p>
                     </div>
                   </div>

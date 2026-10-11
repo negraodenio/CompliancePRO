@@ -29,6 +29,7 @@ import type { ScannerResult } from '../../core/types';
 import { useIndustry } from '../context/IndustryContext';
 import { DecisionStore, OperationalFinding } from '../services/decision-store';
 import { GovernanceDecision } from '../../core/governance-control-plane';
+import { isComputedEvidenceDigest } from '../services/evidence-digest';
 
 export const DecisionsPipelineView: React.FC<{ result?: ScannerResult | null }> = ({ result }) => {
   const { activeProfile, environment } = useIndustry();
@@ -138,7 +139,9 @@ export const DecisionsPipelineView: React.FC<{ result?: ScannerResult | null }> 
             <div>
               <span className="font-semibold">{feedback.message}</span>
               <span className="ml-2 font-mono-code text-[11px] text-emerald-700 dark:text-emerald-300">
-                Decision ID: <strong>{feedback.decisionId}</strong> | Integrity Hash: <strong>{feedback.digest}</strong>
+                Decision ID: <strong>{feedback.decisionId}</strong> | {isComputedEvidenceDigest(feedback.digest)
+                  ? <>Integrity Hash: <strong>{feedback.digest}</strong></>
+                  : <>Integrity Hash: <strong>unavailable (not computed)</strong></>}
               </span>
             </div>
           </div>
@@ -630,10 +633,16 @@ export const DecisionsPipelineView: React.FC<{ result?: ScannerResult | null }> 
                       <span>Tamper-Evident Digest & Audit Ledger Reference</span>
                     </div>
                     <div className="font-mono-code text-[11px] p-2.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300">
-                      Integrity Hash: {selectedItem.evidenceDigest}
+                      {selectedItem.evidenceDigest
+                        ? (isComputedEvidenceDigest(selectedItem.evidenceDigest)
+                            ? `Integrity Hash: ${selectedItem.evidenceDigest}`
+                            : `Digest identifier (not a computed hash): ${selectedItem.evidenceDigest}`)
+                        : 'Evidence digest: not available'}
                     </div>
                     <p className="text-[11px] text-slate-500">
-                      Chained into the Protected Audit Ledger upon decision execution.
+                      {isComputedEvidenceDigest(selectedItem.evidenceDigest)
+                        ? 'Recomputable from the finding record fields and recorded as tamper-evident evidence on decision execution.'
+                        : 'Static baseline record: no computed digest or audit ledger chain entry exists for this finding.'}
                     </p>
                   </div>
                 )}

@@ -24,6 +24,7 @@ import {
 import type { ScannerResult } from '../../core/types';
 import { useIndustry } from '../context/IndustryContext';
 import { ScanGovernanceBridge } from '../services/scan-governance-bridge';
+import { hasCryptographicDigest } from '../services/evidence-digest';
 
 export interface AISystemRecord {
   id: string;
@@ -146,6 +147,15 @@ const INITIAL_INVENTORY: AISystemRecord[] = [
     description: 'Multi-agent simulation and asset rebalancing team operating under strict human mandate.'
   }
 ];
+
+// Human-readable drawer tab labels; tab IDs stay unchanged (UX audit F9).
+const INVENTORY_TAB_LABELS: Record<string, string> = {
+  overview: 'Overview',
+  ownership: 'Ownership & RACI',
+  controls: 'Controls Coverage',
+  evidence: 'Evidence',
+  incidents: 'Incidents'
+};
 
 export const AiInventoryView: React.FC<{ result?: ScannerResult | null; onOpenScanner: () => void }> = ({
   result,
@@ -486,7 +496,7 @@ export const AiInventoryView: React.FC<{ result?: ScannerResult | null; onOpenSc
                         : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
-                    {tab}
+                    {INVENTORY_TAB_LABELS[tab]}
                   </button>
                 ))}
               </div>
@@ -589,13 +599,15 @@ export const AiInventoryView: React.FC<{ result?: ScannerResult | null; onOpenSc
                   <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
                     <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                       <Lock className="w-4 h-4 text-emerald-500" />
-                      <span>Tamper-Evident Evidence Signature</span>
+                      <span>{hasCryptographicDigest(selectedSystem.signature) ? 'Tamper-Evident Evidence Signature' : 'Record Signature (identifier - not a computed hash)'}</span>
                     </div>
                     <div className="font-mono-code text-[11px] p-2 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300">
-                      Digital Hash: {selectedSystem.signature}
+                      Signature: {selectedSystem.signature}
                     </div>
                     <div className="text-[11px] text-slate-500">
-                      Cryptographically chained to Audit Ledger. Legal retention standard: 1825 days (5 years).
+                      {hasCryptographicDigest(selectedSystem.signature)
+                        ? 'Cryptographically chained to the Audit Ledger. Legal retention standard: 1825 days (5 years).'
+                        : 'Static inventory record - not a computed hash and not chained into the Audit Ledger. Legal retention standard: 1825 days (5 years).'}
                     </div>
                   </div>
                 )}
