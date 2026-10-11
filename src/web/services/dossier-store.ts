@@ -5,6 +5,7 @@
  */
 
 import { PersistenceAdapter } from './persistence-adapter';
+import { computeEvidenceDigest } from './evidence-digest';
 
 export type RegulatoryFramework = 'EU_AI_ACT' | 'LGPD_RIPD' | 'NIST_AI_RMF' | 'ISO_IEC_42001';
 export type DossierStatus = 'DRAFT' | 'GENERATED' | 'INTEGRITY_VERIFIED' | 'EXPORTED';
@@ -172,7 +173,14 @@ export class DossierStore {
     if (saved && Array.isArray(saved) && saved.length > 0) {
       return saved;
     }
-    return JSON.parse(JSON.stringify(BASELINE_DOSSIERS));
+    // Baseline seeds carry a genuine, recomputable SHA-256 package digest
+    // (R5): recompute over the dossier content itself so the displayed
+    // "Package Cryptographic Integrity Digest" is never a static placeholder.
+    const baseline: RegulatoryDossier[] = JSON.parse(JSON.stringify(BASELINE_DOSSIERS));
+    return baseline.map((d) => ({
+      ...d,
+      packageHash: computeEvidenceDigest({ ...d, packageHash: '' })
+    }));
   }
 
   static resetToBaseline(tenantId?: string) {

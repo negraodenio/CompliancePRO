@@ -31,7 +31,29 @@ jobs:
       - name: TypeScript Typecheck
         run: npx tsc --noEmit
 
-      - name: Run Full Governance Test Suite (253 Tests)
+      # npm test requires the gitignored `.env.test.local` file with SUPABASE_URL,
+      # SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY, cryptographically validated
+      # against the dedicated TEST Supabase project by tests/test-supabase-environment.mjs.
+      # The file is intentionally provisioned at runtime from repository secrets and
+      # is never committed. Missing secrets fail fast with an actionable error.
+      - name: Provision TEST Environment File (from repository secrets)
+        env:
+          SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.TEST_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.TEST_SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::TEST Supabase repository secrets are not configured (TEST_SUPABASE_URL, TEST_SUPABASE_ANON_KEY, TEST_SUPABASE_SERVICE_ROLE_KEY). Configure them to enable the governance test suite in CI."
+            exit 1
+          fi
+          umask 077
+          {
+            echo "SUPABASE_URL=$SUPABASE_URL"
+            echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY"
+          } > .env.test.local
+
+      - name: Run Full Governance Test Suite
         run: npm test
         env:
           NODE_ENV: test

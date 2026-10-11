@@ -30,6 +30,7 @@ import {
 import type { ScannerResult } from '../../core/types';
 import { useIndustry } from '../context/IndustryContext';
 import { DossierStore, RegulatoryDossier, RegulatoryFramework, DossierStatus } from '../services/dossier-store';
+import { AuditLedgerStore } from '../services/audit-ledger-store';
 
 export const RegulatoryDossiersView: React.FC<{ result?: ScannerResult | null }> = ({ result }) => {
   const { activeProfile, environment } = useIndustry();
@@ -202,7 +203,7 @@ export const RegulatoryDossiersView: React.FC<{ result?: ScannerResult | null }>
             <span className="font-semibold text-slate-700 dark:text-slate-300">Manifest Standard</span>
             <Binary className="w-4 h-4 text-emerald-500" />
           </div>
-          <div className="mt-2 text-base font-bold text-emerald-600 dark:text-emerald-400">RFC 8785 JSON</div>
+          <div className="mt-2 text-base font-bold text-emerald-600 dark:text-emerald-400">SHA-256 over JSON</div>
           <div className="text-[11px] text-slate-500 mt-1">Canonical SHA-256 Digest</div>
         </div>
       </div>
@@ -451,7 +452,7 @@ export const RegulatoryDossiersView: React.FC<{ result?: ScannerResult | null }>
                         {selectedDossier.evidenceRefs.map(e => (
                           <div key={e} className="flex justify-between items-center p-2 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded font-mono-code">
                             <span className="font-bold text-emerald-600 dark:text-emerald-400">{e}</span>
-                            <span className="text-[10px] text-slate-400">Cryptographically Sealed</span>
+                            <span className="text-[10px] text-slate-400">Reference (verify in Evidence view)</span>
                           </div>
                         ))}
                       </div>
@@ -461,7 +462,9 @@ export const RegulatoryDossiersView: React.FC<{ result?: ScannerResult | null }>
                         {selectedDossier.ledgerBlockRefs.map(b => (
                           <div key={b} className="flex justify-between items-center p-2 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded font-mono-code">
                             <span className="font-bold text-purple-600 dark:text-purple-400">{b}</span>
-                            <span className="text-[10px] text-slate-400">Chained Hash Verified</span>
+                            <span className="text-[10px] text-slate-400">
+                              {AuditLedgerStore.getBlocks().some(blk => blk.blockId === b) ? 'Present in ledger' : 'Not found in ledger'}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -473,7 +476,7 @@ export const RegulatoryDossiersView: React.FC<{ result?: ScannerResult | null }>
                 {activeDrawerTab === 'manifest' && (
                   <div className="space-y-4">
                     <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-                      <div className="font-bold text-slate-800 dark:text-slate-200">Canonical Technical Manifest (RFC 8785 JSON)</div>
+                      <div className="font-bold text-slate-800 dark:text-slate-200">Technical Manifest (JSON)</div>
                       <pre className="p-3 bg-slate-900 text-slate-200 font-mono-code text-[10px] rounded-lg overflow-x-auto max-h-72">
                         {JSON.stringify(selectedDossier, null, 2)}
                       </pre>
@@ -521,7 +524,7 @@ export const RegulatoryDossiersView: React.FC<{ result?: ScannerResult | null }>
                             <span>JSON Manifest</span>
                             <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-500" />
                           </div>
-                          <p className="text-[10px] text-slate-500 mt-1">RFC 8785 canonical data file with SHA-256 hashes</p>
+                          <p className="text-[10px] text-slate-500 mt-1">JSON data file including the SHA-256 package digest</p>
                         </button>
 
                         <button
