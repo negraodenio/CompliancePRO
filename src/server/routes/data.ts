@@ -62,6 +62,17 @@ dataRouter.post('/query', requireRoles('developer'), defaultRateLimiter.middlewa
       });
     }
 
+    if (response.status === 'FAILED') {
+      return res.status(500).json({
+        ok: false,
+        status: response.status,
+        verdict: response.verdict,
+        error: response.error,
+        executionId: response.executionId,
+        decisionLatencyMs: response.decisionLatencyMs
+      });
+    }
+
     return res.status(200).json({
       ok: true,
       ...response

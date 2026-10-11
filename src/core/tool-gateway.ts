@@ -411,7 +411,7 @@ export class ToolGateway {
         channel: 'TOOL',
         capability: context.capability,
         action: context.action,
-        verdict: denied ? 'BLOCK' : 'ALLOW',
+        verdict: 'BLOCK',
         executionResult: denied ? 'BLOCKED' : 'FAILED',
         payloadDigest: crypto.createHash('sha256').update(errorMsg).digest('hex')
       }, evidenceTenant);
@@ -419,7 +419,7 @@ export class ToolGateway {
 
       return {
         status: denied ? 'BLOCKED' : 'FAILED',
-        verdict: denied ? 'BLOCK' : 'ALLOW',
+        verdict: 'BLOCK',
         executionId,
         capability: context.capability,
         provider: providerId,
@@ -685,8 +685,8 @@ export class ToolGateway {
         eventType: 'TOOL_ERROR', executionId, agentId: session.context.agentId,
         passportFingerprint: session.context.passport.passportFingerprint, complianceProfileId: profileId,
         complianceProfileChecksum: session.context.passport.complianceProfileChecksum,
-        capability: session.context.capability, verdict: 'ALLOW', executionResult: 'FAILED' }, tenantId);
-      return this.finishResume(session, { status: 'FAILED', verdict: 'ALLOW', executionId, capability: session.context.capability,
+        capability: session.context.capability, verdict: 'BLOCK', executionResult: 'FAILED' }, tenantId);
+      return this.finishResume(session, { status: 'FAILED', verdict: 'BLOCK', executionId, capability: session.context.capability,
         provider: providerId, latencyMs: 0, decisionLatencyMs: latestAuthorization.decisionLatencyMs,
         providerCallCount, error: err.message });
     }

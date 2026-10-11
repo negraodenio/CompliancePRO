@@ -398,11 +398,11 @@ export class ModelGateway {
       EvidenceLedger.append({evidenceId:`ev_merr_${crypto.randomUUID()}`,timestamp:new Date().toISOString(),
         eventType:'MODEL_ERROR',executionId,agentId:request.agentId,passportFingerprint:request.passport.passportFingerprint,
         complianceProfileId:profileId,complianceProfileChecksum:request.passport.complianceProfileChecksum,
-        channel:'MODEL',capability:request.model,verdict:'ALLOW',executionResult:'FAILED'},evidenceTenant);
+        channel:'MODEL',capability:request.model,verdict:'BLOCK',executionResult:'FAILED'},evidenceTenant);
       await EvidenceLedger.flushPendingWrites(evidenceTenant);
       return {
         status: 'FAILED',
-        verdict: 'ALLOW',
+        verdict: 'BLOCK',
         executionId,
         provider: request.provider,
         model: request.model,
@@ -465,7 +465,7 @@ export class ModelGateway {
         channel: 'MODEL',
         capability: request.model,
         action: 'EXECUTE',
-        verdict: denied ? 'BLOCK' : 'ALLOW',
+        verdict: 'BLOCK',
         executionResult: denied ? 'BLOCKED' : 'FAILED',
         payloadDigest: crypto.createHash('sha256').update(errorMsg).digest('hex')
       }, evidenceTenant);
@@ -473,7 +473,7 @@ export class ModelGateway {
 
       return {
         status: denied ? 'BLOCKED' : 'FAILED',
-        verdict: denied ? 'BLOCK' : 'ALLOW',
+        verdict: 'BLOCK',
         executionId,
         provider: request.provider,
         model: request.model,

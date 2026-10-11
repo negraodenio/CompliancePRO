@@ -752,7 +752,7 @@ export class DataGateway {
         channel: 'DATA',
         capability: context.capability,
         action: context.action,
-        verdict: denied ? 'BLOCK' : 'ALLOW',
+        verdict: 'BLOCK',
         executionResult: denied ? 'BLOCKED' : 'FAILED',
         payloadDigest: crypto.createHash('sha256').update(errorMsg).digest('hex')
       }, tenantId);
@@ -760,7 +760,7 @@ export class DataGateway {
 
       return {
         status: denied ? 'BLOCKED' : 'FAILED',
-        verdict: denied ? 'BLOCK' : 'ALLOW',
+        verdict: 'BLOCK',
         executionId: context.executionId,
         capability: context.capability,
         provider: capability.provider,
