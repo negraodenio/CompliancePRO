@@ -1,19 +1,15 @@
 /**
- * COMPLYPRO R5 - dependency-free describe/it/expect harness.
- * vitest is NOT a declared dependency of this repository (house rule: zero
- * new dependencies), so the original vitest-style test bodies are preserved
- * verbatim while the runner is provided locally. Every failure propagates to
- * the process exit code so the governance runner reports it.
+ * COMPLYPRO Academy — curriculum & store validation.
+ * Dependency-free harness (house rule: zero new dependencies).
+ * vitest is NOT a declared dependency; the runner is local. Failures
+ * propagate to the process exit code so the governance suite reports them.
  */
 let harnessChecks = 0;
 const harnessFailures: string[] = [];
-const beforeEachHooks: Array<() => void> = [];
 
 const describe = (_name: string, fn: () => void): void => { fn(); };
-const beforeEach = (fn: () => void): void => { beforeEachHooks.push(fn); };
 const it = (name: string, fn: () => void): void => {
   try {
-    for (const hook of beforeEachHooks) hook();
     fn();
     harnessChecks++;
     console.log(`  [PASS ${harnessChecks}]: ${name}`);
@@ -41,7 +37,7 @@ const expect = (actual: unknown) => ({
   },
   toBeGreaterThanOrEqual: (bound: number): void => {
     if (typeof actual !== 'number' || !(actual >= bound)) {
-      throw new Error(`expected ${String(actual)} to be greater than or equal to ${bound}`);
+      throw new Error(`expected ${String(actual)} to be >= ${bound}`);
     }
   },
   toBeLessThan: (bound: number): void => {
@@ -59,128 +55,233 @@ const expect = (actual: unknown) => ({
     if (typeof actual !== 'string' || !actual.includes(String(part))) {
       throw new Error(`expected ${JSON.stringify(actual)} to contain ${JSON.stringify(part)}`);
     }
+  },
+  toBeGreaterThanLength: (bound: number): void => {
+    if (!Array.isArray(actual) && typeof actual !== 'string') {
+      throw new Error('expected array or string');
+    }
+    if (!(actual.length > bound)) {
+      throw new Error(`expected length > ${bound} but received ${actual.length}`);
+    }
   }
 });
 
 import {
   ACADEMY_MODULES,
-  AcademyStore
+  ACADEMY_LEVELS,
+  ACADEMY_GLOSSARY,
+  getAcademyModuleById,
+  getNextAcademyModule,
+  getPreviousAcademyModule,
+  searchAcademyModules,
+  getGlossaryEntries,
+  AcademyStore,
+  QUIZ_PASS_THRESHOLD
 } from '../src/web/services/academy-store';
 import { DecisionStore } from '../src/web/services/decision-store';
 import { EvidenceStore } from '../src/web/services/evidence-store';
 import { AuditLedgerStore } from '../src/web/services/audit-ledger-store';
 
-describe('CG-AG Academy: In-Product Instructional Learning Center', () => {
-  beforeEach(() => {
-    AcademyStore.resetProgress();
+const VALID_NAV_VIEWS = new Set([
+  'ai-agents', 'studio-builder', 'cockpit-control', 'overview-center',
+  'discover-inventory', 'discover-agents', 'discover-passports', 'discover-assessments',
+  'govern-controls', 'govern-risk', 'govern-policies', 'govern-compliance',
+  'operate-decisions', 'operate-approvals', 'operate-actions', 'operate-incidents',
+  'operate-runtime', 'assure-evidence', 'assure-audit', 'assure-reports',
+  'assure-simulator', 'assure-readiness', 'tools-scanner', 'tools-operations',
+  'tools-deployment', 'tools-integrations', 'learn-academy', 'manage-team', 'settings'
+]);
+
+describe('ComplyPRO Academy: 6-level curriculum, 20 modules, PT-PT', () => {
+  it('1. Contains exactly 20 modules numbered 1..20 in order', () => {
+    expect(ACADEMY_MODULES.length).toBe(20);
+    ACADEMY_MODULES.forEach((m, i) => expect(m.moduleNumber).toBe(i + 1));
   });
 
-  it('1. Contains exactly 18 comprehensive instructional modules', () => {
-    expect(ACADEMY_MODULES.length).toBe(18);
-    const moduleNumbers = ACADEMY_MODULES.map(m => m.moduleNumber);
-    for (let i = 1; i <= 18; i++) {
-      expect(moduleNumbers).toContain(i);
-    }
-  });
-
-  it('2. Enforces full pedagogical structure (WHAT, WHY, HOW, USE, INTERPRET, AUDIT) across all 18 modules', () => {
-    ACADEMY_MODULES.forEach(mod => {
-      expect(mod.id).toBeDefined();
-      expect(mod.title.length).toBeGreaterThan(5);
-      expect(mod.subtitle.length).toBeGreaterThan(5);
-      expect(mod.whatIsIt.length).toBeGreaterThan(20);
-      expect(mod.whyItExists.length).toBeGreaterThan(20);
-      expect(mod.howItWorks.length).toBeGreaterThan(20);
-      expect(mod.howToUse.length).toBeGreaterThan(0);
-      expect(mod.whatYouSee.length).toBeGreaterThan(10);
-      expect(mod.howToInterpret.length).toBeGreaterThan(0);
-      expect(mod.howToProveAndAudit.length).toBeGreaterThan(10);
-      expect(mod.knowledgeCheck.length).toBeGreaterThan(0);
+  it('2. Defines exactly 6 levels, each referencing real module ids', () => {
+    expect(ACADEMY_LEVELS.length).toBe(6);
+    ACADEMY_LEVELS.forEach((lvl) => {
+      expect(lvl.moduleIds.length).toBeGreaterThan(0);
+      lvl.moduleIds.forEach((id) => expect(getAcademyModuleById(id)).toBeDefined());
     });
   });
 
-  it('3. Provides valid cross-module connections with real navigation view targets', () => {
-    ACADEMY_MODULES.forEach(mod => {
-      expect(mod.crossModuleConnections.length).toBeGreaterThan(0);
-      mod.crossModuleConnections.forEach(conn => {
-        expect(conn.source).toBeDefined();
-        expect(conn.relationship).toBeDefined();
-        expect(conn.target).toBeDefined();
-        expect(conn.targetNavView).toBeDefined();
+  it('3. Every module belongs to a valid level with correct levelNumber', () => {
+    ACADEMY_MODULES.forEach((m) => {
+      const lvl = ACADEMY_LEVELS.find((l) => l.levelNumber === m.levelNumber);
+      expect(lvl).toBeDefined();
+      expect(lvl!.moduleIds).toContain(m.id);
+    });
+  });
+
+  it('4. Unique module ids and unique relatedNavView targets are valid ActiveNavView values', () => {
+    const ids = new Set<string>();
+    ACADEMY_MODULES.forEach((m) => {
+      expect(ids.has(m.id)).toBe(false);
+      ids.add(m.id);
+      if (m.relatedNavView) {
+        expect(VALID_NAV_VIEWS.has(m.relatedNavView)).toBe(true);
+      }
+    });
+  });
+
+  it('5. Full pedagogical structure present in every module (objectives, concept, terminology, steps, example, mistakes, exercise, quiz, skills, summary, criterion)', () => {
+    ACADEMY_MODULES.forEach((m) => {
+      expect(m.title.length).toBeGreaterThan(5);
+      expect(m.subtitle.length).toBeGreaterThan(5);
+      expect(m.learningObjectives.length).toBeGreaterThanOrEqual(3);
+      expect(m.conceptExplanation.length).toBeGreaterThan(150);
+      expect(m.terminology.length).toBeGreaterThanOrEqual(4);
+      expect(m.stepByStep.length).toBeGreaterThanOrEqual(5);
+      expect(m.businessExample.length).toBeGreaterThan(80);
+      expect(m.commonMistakes.length).toBeGreaterThanOrEqual(2);
+      expect(m.exercise.steps.length).toBeGreaterThanOrEqual(3);
+      expect(m.exercise.doneCriterion.length).toBeGreaterThan(10);
+      expect(m.knowledgeCheck.length).toBeGreaterThanOrEqual(3);
+      expect(m.skillsChecklist.length).toBeGreaterThanOrEqual(4);
+      expect(m.summary.length).toBeGreaterThan(60);
+      expect(m.completionCriterion.length).toBeGreaterThan(10);
+      expect(m.estimatedMinutes).toBeGreaterThan(0);
+    });
+  });
+
+  it('6. Quiz integrity: every question has >=2 options, valid correctIndex and a non-trivial explanation', () => {
+    ACADEMY_MODULES.forEach((m) => {
+      m.knowledgeCheck.forEach((q) => {
+        expect(q.options.length).toBeGreaterThanOrEqual(2);
+        expect(q.correctIndex).toBeGreaterThanOrEqual(0);
+        expect(q.correctIndex).toBeLessThan(q.options.length);
+        expect(q.explanation.length).toBeGreaterThan(15);
+        expect(q.question.length).toBeGreaterThan(10);
       });
     });
   });
 
-  it('4. Tracks progress, saves completion, and auto-advances current module', () => {
+  it('7. Required curriculum coverage: SIPOC, scanner, agent registration, governance, CG-AGF, HITL, evidence, dossiers, multi-tenancy, incidents, regulation, metrics, capstone', () => {
+    const titles = ACADEMY_MODULES.map((m) => m.title.toLowerCase()).join(' | ');
+    expect(titles).toContain('si');
+    expect(titles).toContain('scanner');
+    expect(titles).toContain('agente');
+    expect(titles).toContain('governa');
+    expect(titles).toContain('human-in-the-loop');
+    expect(titles).toContain('evid');
+    expect(titles).toContain('dossier');
+    expect(titles).toContain('multi-tenancy');
+    expect(titles).toContain('incidente');
+    expect(titles).toContain('regulamenta');
+    expect(titles).toContain('métrica');
+    expect(titles).toContain('projeto final');
+  });
+
+  it('8. Content is PT-PT and ComplyPRO-branded (no legacy CG-AG branding in titles, no English titles)', () => {
+    ACADEMY_MODULES.forEach((m) => {
+      expect(m.title.includes('CG-AG Governance OS')).toBe(false);
+      expect(m.title.includes('Introduction')).toBe(false);
+      expect(m.title.includes('The ')).toBe(false);
+      expect(m.subtitle.includes('Governance OS')).toBe(false);
+    });
+  });
+
+  it('9. SIPOC module teaches the method honestly (no fabricated native editor claim)', () => {
+    const sipoc = getAcademyModuleById('ac-04-processos-sipoc');
+    expect(sipoc).toBeDefined();
+    expect(sipoc!.conceptExplanation).toContain('SIPOC');
+    const honest = sipoc!.conceptExplanation.includes('NÃO dispõe') || sipoc!.conceptExplanation.includes('nao dispoe') || sipoc!.conceptExplanation.toLowerCase().includes('não dispõe de um editor');
+    expect(honest).toBe(true);
+  });
+
+  it('10. Module 20 (capstone) includes rubric and the "sem valor de acreditação externa" disclaimer', () => {
+    const capstone = getAcademyModuleById('ac-20-projeto-final');
+    expect(capstone).toBeDefined();
+    expect(capstone!.conceptExplanation).toContain('RUBRICA');
+    expect(capstone!.limitations).toBeDefined();
+    expect(capstone!.limitations!.join(' ')).toContain('acreditação externa');
+  });
+
+  it('11. Navigation helpers: next/previous module chain is consistent', () => {
+    expect(getNextAcademyModule(ACADEMY_MODULES[0].id)).toBeDefined();
+    expect(getNextAcademyModule(ACADEMY_MODULES[0].id)!.moduleNumber).toBe(2);
+    expect(getPreviousAcademyModule(ACADEMY_MODULES[1].id)!.moduleNumber).toBe(1);
+    expect(getNextAcademyModule(ACADEMY_MODULES[19].id)).toBeUndefined();
+    expect(getPreviousAcademyModule(ACADEMY_MODULES[0].id)).toBeUndefined();
+  });
+
+  it('12. Search finds modules by title and by terminology content', () => {
+    const byTitle = searchAcademyModules('SIPOC');
+    expect(byTitle.length).toBeGreaterThanOrEqual(1);
+    const byTerm = searchAcademyModules('prompt injection');
+    expect(byTerm.length).toBeGreaterThanOrEqual(1);
+    expect(searchAcademyModules('zzz-no-match-zzz').length).toBe(0);
+  });
+
+  it('13. Glossary has >=40 entries with definitions and valid related module links', () => {
+    expect(ACADEMY_GLOSSARY.length).toBeGreaterThanOrEqual(40);
+    ACADEMY_GLOSSARY.forEach((g) => {
+      expect(g.term.length).toBeGreaterThan(1);
+      expect(g.definition.length).toBeGreaterThan(10);
+      g.relatedModuleIds.forEach((id) => expect(getAcademyModuleById(id)).toBeDefined());
+    });
+    expect(getGlossaryEntries('SIPOC').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('14. Store: initial progress, quiz/exercise completion gate, and certificate eligibility after all modules', () => {
     const initial = AcademyStore.getProgress();
     expect(initial.completedModuleIds.length).toBe(0);
-    expect(initial.currentModuleId).toBe('mod-01');
+    expect(initial.currentModuleId).toBe(ACADEMY_MODULES[0].id);
 
-    const updated = AcademyStore.markModuleCompleted('mod-01', 100);
-    expect(updated.completedModuleIds).toContain('mod-01');
-    expect(updated.currentModuleId).toBe('mod-02');
-    expect(updated.quizScores['mod-01']).toBe(100);
-  });
+    const first = ACADEMY_MODULES[0].id;
+    AcademyStore.recordQuizScore(first, QUIZ_PASS_THRESHOLD);
+    expect(AcademyStore.getProgress().completedModuleIds.includes(first)).toBe(false);
+    AcademyStore.setExerciseDone(first, true);
+    expect(AcademyStore.getProgress().completedModuleIds).toContain(first);
 
-  it('5. Successfully unlocks Official Certificate when all 18 modules are completed', () => {
-    AcademyStore.setStudentName('Lead AI Compliance Officer');
+    expect(AcademyStore.isCertificateEligible(AcademyStore.getProgress())).toBe(false);
 
-    ACADEMY_MODULES.forEach(mod => {
-      AcademyStore.markModuleCompleted(mod.id, 100);
+    ACADEMY_MODULES.forEach((m) => {
+      AcademyStore.recordQuizScore(m.id, 100);
+      AcademyStore.setExerciseDone(m.id, true);
     });
-
-    const finalProgress = AcademyStore.getProgress();
-    expect(finalProgress.completedModuleIds.length).toBe(18);
-    expect(finalProgress.certificateId).toBeDefined();
-    expect(finalProgress.certificateId).toContain('CERT-CGAG-');
-    expect(finalProgress.certificateIssuedAt).toBeDefined();
-    expect(finalProgress.studentName).toBe('Lead AI Compliance Officer');
+    const final = AcademyStore.getProgress();
+    expect(final.completedModuleIds.length).toBe(20);
+    expect(AcademyStore.isCertificateEligible(final)).toBe(true);
+    expect(AcademyStore.getCompletionPercent(final)).toBe(100);
   });
 
-  it('6. Evaluates knowledge check questions accurately with explanations', () => {
-    const mod1 = ACADEMY_MODULES[0];
-    const q1 = mod1.knowledgeCheck[0];
-    expect(q1.question).toBeDefined();
-    expect(q1.options.length).toBe(4);
-    expect(q1.correctIndex).toBeGreaterThanOrEqual(0);
-    expect(q1.correctIndex).toBeLessThan(4);
-    expect(q1.explanation.length).toBeGreaterThan(10);
+  it('15. Store: certificate issuance produces id and timestamp; sub-threshold quiz never completes a module', () => {
+    ACADEMY_MODULES.forEach((m) => {
+      AcademyStore.recordQuizScore(m.id, 100);
+      AcademyStore.setExerciseDone(m.id, true);
+    });
+    const issued = AcademyStore.issueCertificate('Analista de Governança');
+    expect(issued.certificateIssuedAt).toBeDefined();
+    expect(issued.certificateId).toBeDefined();
+    expect(issued.certificateId!).toContain('CPA-');
+    expect(issued.studentName).toBe('Analista de Governança');
+
+    AcademyStore.resetProgress();
+    const second = ACADEMY_MODULES[1].id;
+    AcademyStore.recordQuizScore(second, QUIZ_PASS_THRESHOLD - 10);
+    AcademyStore.setExerciseDone(second, true);
+    expect(AcademyStore.getProgress().completedModuleIds.includes(second)).toBe(false);
   });
 
-  it('7. Preserves Data Isolation: Academy progress never pollutes DecisionStore or Audit Ledger', () => {
+  it('16. Academy progress does not pollute DecisionStore, EvidenceStore or AuditLedger', () => {
     const findingsBefore = DecisionStore.getFindings().length;
-    const blocksBefore = AuditLedgerStore.getBlocks().length;
     const evidenceBefore = EvidenceStore.getEvidenceRecords().length;
+    const blocksBefore = AuditLedgerStore.getBlocks().length;
 
-    // Complete multiple modules
-    AcademyStore.markModuleCompleted('mod-01', 100);
-    AcademyStore.markModuleCompleted('mod-02', 100);
-    AcademyStore.markModuleCompleted('mod-03', 100);
+    AcademyStore.recordQuizScore(ACADEMY_MODULES[0].id, 100);
+    AcademyStore.setExerciseDone(ACADEMY_MODULES[0].id, true);
+    AcademyStore.recordQuizScore(ACADEMY_MODULES[1].id, 100);
+    AcademyStore.setExerciseDone(ACADEMY_MODULES[1].id, true);
 
-    const findingsAfter = DecisionStore.getFindings().length;
-    const blocksAfter = AuditLedgerStore.getBlocks().length;
-    const evidenceAfter = EvidenceStore.getEvidenceRecords().length;
-
-    expect(findingsAfter).toBe(findingsBefore);
-    expect(blocksAfter).toBe(blocksBefore);
-    expect(evidenceAfter).toBe(evidenceBefore);
-  });
-
-  it('8. Resets progress cleanly back to 0 modules completed without errors', () => {
-    AcademyStore.markModuleCompleted('mod-01', 100);
-    expect(AcademyStore.getProgress().completedModuleIds.length).toBe(1);
-
-    const reset = AcademyStore.resetProgress();
-    expect(reset.completedModuleIds.length).toBe(0);
-    expect(reset.currentModuleId).toBe('mod-01');
-    expect(Object.keys(reset.quizScores).length).toBe(0);
+    expect(DecisionStore.getFindings().length).toBe(findingsBefore);
+    expect(EvidenceStore.getEvidenceRecords().length).toBe(evidenceBefore);
+    expect(AuditLedgerStore.getBlocks().length).toBe(blocksBefore);
   });
 });
 
-console.log('==================================================================');
+console.log(`\nAcademy curriculum suite: ${harnessChecks} passed, ${harnessFailures.length} failed.`);
 if (harnessFailures.length > 0) {
-  console.error(`>>> ACADEMY-MODULE: ${harnessFailures.length} FAILED / ${harnessChecks} PASSED <<<`);
-  process.exitCode = 1;
-} else {
-  console.log(`>>> ACADEMY-MODULE: ALL ${harnessChecks} CHECKS PASSED <<<`);
+  process.exit(1);
 }

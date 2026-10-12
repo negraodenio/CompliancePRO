@@ -1,42 +1,44 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import confetti from 'canvas-confetti';
 import {
   GraduationCap,
-  CheckCircle2,
-  ChevronRight,
-  ChevronLeft,
   BookOpen,
-  ArrowRight,
-  Award,
-  RotateCcw,
-  Sparkles,
-  HelpCircle,
+  CheckCircle2,
+  Circle,
   PlayCircle,
   ExternalLink,
-  Layers,
-  Activity,
-  Terminal,
-  Bot,
-  CheckSquare,
+  Clock,
+  Target,
+  Lightbulb,
   AlertTriangle,
-  Scale,
-  LockKeyhole,
-  FolderCheck,
-  Zap,
-  Server,
-  Download,
-  Share2,
-  FileCheck,
-  ShieldCheck,
+  ListChecks,
+  FileCheck2,
+  Award,
   Search,
-  Filter
+  X,
+  ChevronDown,
+  ChevronRight,
+  RotateCcw,
+  ArrowLeft,
+  ArrowRight,
+  ClipboardList,
+  MessageSquareQuote,
+  BookMarked,
+  Sparkles,
+  HelpCircle
 } from 'lucide-react';
 import {
   ACADEMY_MODULES,
-  AcademyModule,
+  ACADEMY_LEVELS,
+  ACADEMY_GLOSSARY,
+  getAcademyModuleById,
+  getNextAcademyModule,
+  getPreviousAcademyModule,
+  searchAcademyModules,
+  getGlossaryEntries,
   AcademyStore,
-  AcademyProgress
+  QUIZ_PASS_THRESHOLD
 } from '../services/academy-store';
+import type { AcademyModule, AcademyProgress, AcademyLevel } from '../data/academy';
 import type { ActiveNavView } from '../components/AppShell';
 
 interface AcademyViewProps {
@@ -45,681 +47,837 @@ interface AcademyViewProps {
 
 export const AcademyView: React.FC<AcademyViewProps> = ({ onNavigate }) => {
   const [progress, setProgress] = useState<AcademyProgress>(() => AcademyStore.getProgress());
-  const [selectedModuleId, setSelectedModuleId] = useState<string>(() => {
-    const p = AcademyStore.getProgress();
-    return p.currentModuleId || 'mod-01';
-  });
-
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, number>>({});
-  const [showQuizFeedback, setShowQuizFeedback] = useState<Record<string, boolean>>({});
+  const [activeModuleId, setActiveModuleId] = useState<string>(
+    () => AcademyStore.getProgress().currentModuleId || ACADEMY_MODULES[0]?.id || ''
+  );
+  const [activeTab, setActiveTab] = useState<'percurso' | 'glossario'>('percurso');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [expandedLevels, setExpandedLevels] = useState<Set<number>>(
+    () => new Set([getAcademyModuleById(AcademyStore.getProgress().currentModuleId || ACADEMY_MODULES[0]?.id || '')?.levelNumber ?? 1])
+  );
+  const [quizAnswers, setQuizAnswers] = useState<Record<string, number>>({});
+  const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [showCertificateModal, setShowCertificateModal] = useState(false);
-  const [studentNameInput, setStudentNameInput] = useState(progress.studentName || 'Enterprise AI Governance Operator');
-  const [filterCategory, setFilterCategory] = useState<string>('ALL');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [studentNameInput, setStudentNameInput] = useState('');
+  const [glossaryQuery, setGlossaryQuery] = useState('');
 
-  // Lab step completion tracker for Module 18
-  const [completedLabSteps, setCompletedLabSteps] = useState<number[]>([]);
+  const activeModule = getAcademyModuleById(activeModuleId) ?? ACADEMY_MODULES[0];
+  const completionPercent = AcademyStore.getCompletionPercent(progress);
+  const certificateEligible = AcademyStore.isCertificateEligible(progress);
 
   useEffect(() => {
-    const p = AcademyStore.getProgress();
-    setProgress(p);
-  }, [selectedModuleId]);
-
-  const activeModule = useMemo(() => {
-    return ACADEMY_MODULES.find(m => m.id === selectedModuleId) || ACADEMY_MODULES[0];
-  }, [selectedModuleId]);
-
-  const completionPercentage = useMemo(() => {
-    return Math.round((progress.completedModuleIds.length / ACADEMY_MODULES.length) * 100);
-  }, [progress.completedModuleIds]);
-
-  const isCurrentModuleCompleted = useMemo(() => {
-    return progress.completedModuleIds.includes(activeModule.id);
-  }, [progress.completedModuleIds, activeModule.id]);
-
-  const handleSelectOption = (questionId: string, optionIndex: number) => {
-    setSelectedAnswers(prev => ({ ...prev, [questionId]: optionIndex }));
-  };
-
-  const handleCheckQuiz = (questionId: string) => {
-    setShowQuizFeedback(prev => ({ ...prev, [questionId]: true }));
-  };
-
-  const handleCompleteCurrentModule = () => {
-    const updated = AcademyStore.markModuleCompleted(activeModule.id, 100);
-    setProgress(updated);
-
-    if (updated.completedModuleIds.length === ACADEMY_MODULES.length) {
-      confetti({
-        particleCount: 120,
-        spread: 80,
-        origin: { y: 0.6 }
-      });
-      setShowCertificateModal(true);
-    } else {
-      const currentIdx = ACADEMY_MODULES.findIndex(m => m.id === activeModule.id);
-      if (currentIdx < ACADEMY_MODULES.length - 1) {
-        setSelectedModuleId(ACADEMY_MODULES[currentIdx + 1].id);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
+    setQuizAnswers({});
+    setQuizSubmitted(false);
+    if (activeModule) {
+      const updated = AcademyStore.setCurrentModule(activeModule.id);
+      setProgress(updated);
     }
+  }, [activeModuleId]);
+
+  const searchResults = useMemo(() => searchAcademyModules(searchQuery), [searchQuery]);
+  const glossaryEntries = useMemo(() => getGlossaryEntries(glossaryQuery), [glossaryQuery]);
+
+  const selectModule = (moduleId: string) => {
+    setActiveModuleId(moduleId);
+    setActiveTab('percurso');
+    const mod = getAcademyModuleById(moduleId);
+    if (mod) {
+      setExpandedLevels((prev) => new Set([...Array.from(prev), mod.levelNumber]));
+    }
+  };
+
+  const toggleLevel = (levelNumber: number) => {
+    setExpandedLevels((prev) => {
+      const next = new Set(prev);
+      if (next.has(levelNumber)) next.delete(levelNumber);
+      else next.add(levelNumber);
+      return next;
+    });
+  };
+
+  const isModuleCompleted = (moduleId: string): boolean =>
+    progress.completedModuleIds.includes(moduleId);
+
+  const isExerciseDone = (moduleId: string): boolean =>
+    progress.exerciseDoneModuleIds.includes(moduleId);
+
+  const handleQuizSubmit = () => {
+    if (!activeModule) return;
+    const correct = activeModule.knowledgeCheck.filter(
+      (q) => quizAnswers[q.id] === q.correctIndex
+    ).length;
+    const score = Math.round((correct / activeModule.knowledgeCheck.length) * 100);
+    setQuizSubmitted(true);
+    setProgress(AcademyStore.recordQuizScore(activeModule.id, score));
+  };
+
+  const handleExerciseToggle = () => {
+    if (!activeModule) return;
+    const next = !isExerciseDone(activeModule.id);
+    setProgress(AcademyStore.setExerciseDone(activeModule.id, next));
   };
 
   const handleResetProgress = () => {
-    if (window.confirm('Tem certeza que deseja reiniciar o seu progresso no curso?')) {
-      const initial = AcademyStore.resetProgress();
-      setProgress(initial);
-      setSelectedModuleId('mod-01');
-      setSelectedAnswers({});
-      setShowQuizFeedback({});
-      setCompletedLabSteps([]);
+    if (window.confirm('Repor todo o progresso da Academia? Esta ação não pode ser anulada.')) {
+      const fresh = AcademyStore.resetProgress();
+      setProgress(fresh);
+      setActiveModuleId(fresh.currentModuleId);
     }
   };
 
-  const handleSaveStudentName = (e: React.FormEvent) => {
+  const handleIssueCertificate = (e: React.FormEvent) => {
     e.preventDefault();
-    const updated = AcademyStore.setStudentName(studentNameInput);
-    setProgress(updated);
+    if (!studentNameInput.trim() || !certificateEligible) return;
+    setProgress(AcademyStore.issueCertificate(studentNameInput));
   };
 
-  const toggleLabStep = (stepNumber: number) => {
-    setCompletedLabSteps(prev => 
-      prev.includes(stepNumber) ? prev.filter(s => s !== stepNumber) : [...prev, stepNumber]
-    );
-  };
+  const quizScore = activeModule
+    ? Math.round(
+        (activeModule.knowledgeCheck.filter((q) => quizAnswers[q.id] === q.correctIndex).length /
+          activeModule.knowledgeCheck.length) *
+          100
+      )
+    : 0;
 
-  const filteredModules = useMemo(() => {
-    return ACADEMY_MODULES.filter(m => {
-      const matchCat = filterCategory === 'ALL' || m.category === filterCategory;
-      const matchSearch = m.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          m.subtitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          String(m.moduleNumber).includes(searchTerm);
-      return matchCat && matchSearch;
-    });
-  }, [filterCategory, searchTerm]);
+  const bestQuizScore = activeModule ? progress.quizBestScores[activeModule.id] ?? 0 : 0;
+  const moduleReadyToComplete =
+    activeModule && bestQuizScore >= QUIZ_PASS_THRESHOLD && isExerciseDone(activeModule.id);
 
-  // Icon selector helper
-  const renderCategoryIcon = (category: AcademyModule['category']) => {
-    switch (category) {
-      case 'FOUNDATIONS': return <LayoutDashboardIcon className="w-4 h-4 text-indigo-500" />;
-      case 'DISCOVERY': return <Terminal className="w-4 h-4 text-sky-500" />;
-      case 'GOVERNANCE': return <CheckSquare className="w-4 h-4 text-emerald-500" />;
-      case 'OPERATIONS': return <Activity className="w-4 h-4 text-amber-500" />;
-      case 'ASSURANCE': return <ShieldCheck className="w-4 h-4 text-cyan-500" />;
-      case 'LAB': return <GraduationCap className="w-4 h-4 text-purple-500" />;
-      default: return <BookOpen className="w-4 h-4 text-slate-500" />;
+  const renderLevelIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'Sprout':
+        return <Sparkles className="w-4 h-4" />;
+      case 'Search':
+        return <Search className="w-4 h-4" />;
+      case 'Bot':
+        return <GraduationCap className="w-4 h-4" />;
+      case 'Shield':
+        return <FileCheck2 className="w-4 h-4" />;
+      case 'FolderCheck':
+        return <ClipboardList className="w-4 h-4" />;
+      case 'Award':
+        return <Award className="w-4 h-4" />;
+      default:
+        return <BookOpen className="w-4 h-4" />;
     }
   };
-
-  function LayoutDashboardIcon(props: { className?: string }) {
-    return <Layers {...props} />;
-  }
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-16">
-      
-      {/* 1. Header Banner & Progress Indicator */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white border border-indigo-500/30 shadow-2xl space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-indigo-800/40 pb-4">
-          <div className="flex items-center space-x-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-600/30 border border-indigo-500/50 flex items-center justify-center text-indigo-300 shadow-inner">
-              <GraduationCap className="w-7 h-7" />
+    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+      {/* Header */}
+      <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-slate-900 rounded-2xl p-6 text-white space-y-4 elevation-card">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-indigo-200">
+              <GraduationCap className="w-4 h-4" />
+              <span>ComplyPRO Academy</span>
             </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h1 className="text-xl font-bold tracking-tight text-white">
-                  CG-AG Academy — Enterprise AI Governance
-                </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  18 MODULES • IN-PRODUCT
-                </span>
-              </div>
-              <p className="text-xs text-indigo-200/80 mt-0.5">
-                Formação oficial de operadores e engenheiros de governança, conformidade e auditoria de IA.
-              </p>
-            </div>
+            <h1 className="text-2xl font-bold">Academia de Governação de Agentes de IA</h1>
+            <p className="text-sm text-indigo-100 max-w-2xl">
+              Percurso progressivo do primeiro acesso ao projeto final: processos e SIPOC, agentes,
+              governação, evidências e auditoria — com exemplos do produto real.
+            </p>
           </div>
-
-          {/* Quick Actions & Certification */}
-          <div className="flex items-center gap-2.5 flex-wrap">
-            {progress.completedModuleIds.length === ACADEMY_MODULES.length && (
-              <button
-                onClick={() => setShowCertificateModal(true)}
-                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-md transition flex items-center space-x-1.5 animate-pulse"
-              >
-                <Award className="w-4 h-4" />
-                <span>Ver Certificado Oficial</span>
-              </button>
-            )}
+          <div className="flex flex-col items-end space-y-2">
+            <button
+              onClick={() => {
+                setStudentNameInput(progress.studentName || '');
+                setShowCertificateModal(true);
+              }}
+              className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-sm font-bold transition flex items-center space-x-2"
+            >
+              <Award className="w-4 h-4" />
+              <span>{progress.certificateIssuedAt ? 'Ver Certificado' : 'Certificado'}</span>
+            </button>
             <button
               onClick={handleResetProgress}
-              className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-medium transition border border-slate-700 flex items-center space-x-1.5"
-              title="Reiniciar progresso do curso"
+              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] transition flex items-center space-x-1"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Resetar</span>
+              <RotateCcw className="w-3 h-3" />
+              <span>Repor progresso</span>
             </button>
           </div>
         </div>
 
-        {/* Global Progress Bar */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-indigo-200 font-medium flex items-center space-x-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>Progresso da Formação: <strong>{progress.completedModuleIds.length} de {ACADEMY_MODULES.length} Módulos Concluídos</strong></span>
+        {/* Progress bar */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between text-xs text-indigo-100">
+            <span>
+              Progresso: <strong>{progress.completedModuleIds.length} de {ACADEMY_MODULES.length} módulos</strong>
+              {progress.studentName ? ` • ${progress.studentName}` : ''}
             </span>
-            <span className="font-mono font-bold text-indigo-300">{completionPercentage}% Concluído</span>
+            <span className="font-bold">{completionPercent}%</span>
           </div>
-          <div className="w-full h-2.5 bg-slate-800/80 rounded-full overflow-hidden border border-indigo-900/50">
+          <div className="h-2 rounded-full bg-white/15 overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-indigo-500 via-sky-400 to-emerald-400 transition-all duration-500 ease-out"
-              style={{ width: `${completionPercentage}%` }}
+              className="h-full rounded-full bg-emerald-400 transition-all duration-500"
+              style={{ width: `${completionPercent}%` }}
             />
           </div>
         </div>
-      </div>
 
-      {/* 2. Main Body Grid: Modules Drawer (Left) & Active Module Canvas (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        {/* Left Column: Modules Sidebar (4 cols) */}
-        <div className="lg:col-span-4 space-y-4">
-          
-          {/* Filters and Search */}
-          <div className="bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-slate-800 p-3.5 space-y-2.5 elevation-card">
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Buscar módulo ou conceito..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 text-slate-800 dark:text-slate-200"
-              />
-            </div>
-
-            <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[11px]">
-              {['ALL', 'FOUNDATIONS', 'DISCOVERY', 'GOVERNANCE', 'OPERATIONS', 'ASSURANCE', 'LAB'].map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setFilterCategory(cat)}
-                  className={`px-2.5 py-1 rounded-md whitespace-nowrap font-medium transition ${
-                    filterCategory === cat
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Module List */}
-          <div className="bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-slate-800 p-2 space-y-1.5 max-h-[750px] overflow-y-auto elevation-card">
-            {filteredModules.map((mod) => {
-              const isSelected = mod.id === selectedModuleId;
-              const isDone = progress.completedModuleIds.includes(mod.id);
-
-              return (
-                <button
-                  key={mod.id}
-                  onClick={() => {
-                    setSelectedModuleId(mod.id);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className={`w-full p-3 rounded-xl text-left transition flex items-start space-x-3 border ${
-                    isSelected
-                      ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500/50 shadow-sm'
-                      : 'bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800/40 border-transparent'
-                  }`}
-                >
-                  <div className="mt-0.5 shrink-0">
-                    {isDone ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                    ) : (
-                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center text-[9px] font-bold ${
-                        isSelected
-                          ? 'border-indigo-600 bg-indigo-600 text-white'
-                          : 'border-slate-300 dark:border-slate-600 text-slate-500'
-                      }`}>
-                        {mod.moduleNumber}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 uppercase">
-                        MOD {String(mod.moduleNumber).padStart(2, '0')} • {mod.category}
-                      </span>
-                      <span className="text-[10px] text-slate-400">{mod.estimatedMinutes} min</span>
-                    </div>
-                    <div className={`text-xs font-bold truncate mt-0.5 ${
-                      isSelected ? 'text-indigo-900 dark:text-indigo-200' : 'text-slate-800 dark:text-slate-200'
-                    }`}>
-                      {mod.title}
-                    </div>
-                    <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                      {mod.subtitle}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+        {/* Search */}
+        <div className="relative max-w-xl">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-indigo-300" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Pesquisar módulos, conceitos, terminologia…"
+            className="w-full pl-9 pr-8 py-2 rounded-xl bg-white/10 border border-white/20 text-sm text-white placeholder:text-indigo-300 focus:outline-none focus:ring-2 focus:ring-white/40"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-300 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
-        {/* Right Column: Active Module Content (8 cols) */}
-        <div className="lg:col-span-8 space-y-6">
-          
-          {/* Active Module Header */}
-          <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 p-6 elevation-card space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
-              <div className="flex items-center space-x-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
-                {renderCategoryIcon(activeModule.category)}
-                <span>MÓDULO {String(activeModule.moduleNumber).padStart(2, '0')} • {activeModule.category}</span>
-              </div>
-              <div className="flex items-center space-x-2 text-xs text-slate-500">
-                <span>Duração Estimada: <strong>{activeModule.estimatedMinutes} minutos</strong></span>
-                {isCurrentModuleCompleted && (
-                  <span className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-semibold text-[10px] border border-emerald-200 dark:border-emerald-800 flex items-center space-x-1">
-                    <CheckCircle2 className="w-3 h-3" />
-                    <span>Concluído</span>
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                {activeModule.title}
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                {activeModule.subtitle}
-              </p>
-            </div>
-
-            {/* Quick Live Navigation Button */}
-            {activeModule.relatedNavView && (
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <div className="flex items-center space-x-2 text-xs text-slate-700 dark:text-slate-300">
-                  <PlayCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                  <span>Área Real no Sistema: <strong>{activeModule.relatedNavView}</strong></span>
-                </div>
-                <button
-                  onClick={() => onNavigate(activeModule.relatedNavView!)}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-1 shadow-xs"
-                >
-                  <span>Abrir Tela Real</span>
-                  <ExternalLink className="w-3 h-3" />
-                </button>
-              </div>
+        {searchQuery && (
+          <div className="text-xs text-indigo-100">
+            {searchResults.length} módulo(s) correspondem a «{searchQuery}».
+            {searchResults.length > 0 && (
+              <span className="ml-2">
+                {searchResults.slice(0, 4).map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => {
+                      selectModule(r.id);
+                      setSearchQuery('');
+                    }}
+                    className="underline hover:text-white mr-3"
+                  >
+                    M{r.moduleNumber}
+                  </button>
+                ))}
+              </span>
             )}
           </div>
+        )}
+      </div>
 
-          {/* Module 18 Special Component: 16-Step Guided Walkthrough */}
-          {activeModule.id === 'mod-18' && (
-            <div className="bg-white dark:bg-[#111827] rounded-2xl border border-purple-200 dark:border-purple-900/50 p-6 elevation-card space-y-4">
-              <div className="flex items-center space-x-2 text-xs font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider">
-                <Sparkles className="w-4 h-4 text-purple-600" />
-                <span>Esteira Prática de 16 Etapas (End-to-End Walkthrough)</span>
-              </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400">
-                Marque cada etapa conforme você executa no sistema para desbloquear a sua certificação final:
-              </p>
+      {/* Tabs */}
+      <div className="flex space-x-2">
+        {(
+          [
+            { id: 'percurso', label: 'Percurso de aprendizagem', icon: <BookOpen className="w-4 h-4" /> },
+            { id: 'glossario', label: 'Glossário técnico', icon: <BookMarked className="w-4 h-4" /> }
+          ] as const
+        ).map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2 rounded-xl text-sm font-bold transition flex items-center space-x-2 ${
+              activeTab === tab.id
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-indigo-300'
+            }`}
+          >
+            {tab.icon}
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-2">
-                {[
-                  { step: 1, label: '1. Selecionar Repositório ou Demo', target: 'tools-scanner' as ActiveNavView },
-                  { step: 2, label: '2. Executar Scan AST de Código', target: 'tools-scanner' as ActiveNavView },
-                  { step: 3, label: '3. Examinar AI Inventory de Sistemas', target: 'discover-inventory' as ActiveNavView },
-                  { step: 4, label: '4. Verificar Frota & Passports de Agentes', target: 'discover-agents' as ActiveNavView },
-                  { step: 5, label: '5. Abrir Cadeia SIPOC do Agente', target: 'discover-agents' as ActiveNavView },
-                  { step: 6, label: '6. Avaliar Conformidade nos 12 Controles', target: 'govern-controls' as ActiveNavView },
-                  { step: 7, label: '7. Analisar Riscos no Risk Engine', target: 'govern-risk' as ActiveNavView },
-                  { step: 8, label: '8. Revisar Frameworks & EU AI Act', target: 'govern-compliance' as ActiveNavView },
-                  { step: 9, label: '9. Registrar Decisão no Decision Pipeline', target: 'operate-decisions' as ActiveNavView },
-                  { step: 10, label: '10. Aprovar Gate Humano (HITL)', target: 'operate-approvals' as ActiveNavView },
-                  { step: 11, label: '11. Acompanhar Ações de Remediação', target: 'operate-actions' as ActiveNavView },
-                  { step: 12, label: '12. Inspecionar Failsafe e Incidentes', target: 'operate-incidents' as ActiveNavView },
-                  { step: 13, label: '13. Monitorar FinOps & Consumo de Tokens', target: 'operate-runtime' as ActiveNavView },
-                  { step: 14, label: '14. Inspecionar Evidência Canônica RFC 8785', target: 'assure-evidence' as ActiveNavView },
-                  { step: 15, label: '15. Executar Verificação no Audit Ledger', target: 'assure-audit' as ActiveNavView },
-                  { step: 16, label: '16. Emitir Dossiê Regulatório & RIPD', target: 'assure-reports' as ActiveNavView }
-                ].map((item) => {
-                  const isDone = completedLabSteps.includes(item.step);
-                  return (
-                    <div
-                      key={item.step}
-                      className={`p-3 rounded-xl border transition flex items-center justify-between ${
-                        isDone
-                          ? 'bg-purple-50/50 dark:bg-purple-950/20 border-purple-300 dark:border-purple-800/80'
-                          : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-                      }`}
-                    >
-                      <button
-                        onClick={() => toggleLabStep(item.step)}
-                        className="flex items-center space-x-2.5 text-left"
-                      >
-                        <div className={`w-4 h-4 rounded-md border flex items-center justify-center text-[10px] font-bold ${
-                          isDone
-                            ? 'bg-purple-600 border-purple-600 text-white'
-                            : 'border-slate-300 dark:border-slate-600 text-transparent'
-                        }`}>
-                          ✓
-                        </div>
-                        <span className={`text-xs font-semibold ${
-                          isDone ? 'text-purple-950 dark:text-purple-200 line-through opacity-80' : 'text-slate-800 dark:text-slate-200'
-                        }`}>
-                          {item.label}
-                        </span>
-                      </button>
-
-                      <button
-                        onClick={() => onNavigate(item.target)}
-                        className="px-2 py-1 rounded bg-purple-100 dark:bg-purple-900/60 hover:bg-purple-200 text-purple-800 dark:text-purple-200 text-[10px] font-bold transition flex items-center space-x-1 shrink-0 ml-2"
-                      >
-                        <span>Ir ➔</span>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* 3. Core Instructional Sections (WHAT, WHY, HOW, USE, INTERPRET, ACT, AUDIT) */}
-          <div className="space-y-4">
-            
-            {/* WHAT & WHY Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-5 rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 elevation-card space-y-2">
-                <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center space-x-1.5">
-                  <HelpCircle className="w-3.5 h-3.5" />
-                  <span>1. O que é? (What is it?)</span>
-                </div>
-                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                  {activeModule.whatIsIt}
-                </p>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 elevation-card space-y-2">
-                <div className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center space-x-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                  <span>2. Por que existe? (Why it exists?)</span>
-                </div>
-                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                  {activeModule.whyItExists}
-                </p>
-              </div>
-            </div>
-
-            {/* HOW IT WORKS Under the Hood */}
-            <div className="p-5 rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 elevation-card space-y-2.5">
-              <div className="text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider flex items-center space-x-1.5">
-                <Terminal className="w-3.5 h-3.5" />
-                <span>3. Como funciona sob o capô? (How it works?)</span>
-              </div>
-              <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-mono bg-slate-50 dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
-                {activeModule.howItWorks}
+      {activeTab === 'glossario' && (
+        <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 p-6 elevation-card space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Glossário técnico</h2>
+              <p className="text-xs text-slate-500">
+                {glossaryEntries.length} termos — terminologia do produto e da governação de IA.
               </p>
             </div>
-
-            {/* HOW TO USE Step-by-Step */}
-            <div className="p-5 rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 elevation-card space-y-3">
-              <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center space-x-1.5">
-                <CheckSquare className="w-3.5 h-3.5" />
-                <span>4. Como utilizar no dia a dia? (Step-by-Step Guide)</span>
-              </div>
-              <div className="space-y-2">
-                {activeModule.howToUse.map((step, idx) => (
-                  <div key={idx} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 flex items-start space-x-2">
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">•</span>
-                    <span className="leading-relaxed">{step}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* WHAT YOU SEE & INTERPRETATION */}
-            <div className="p-5 rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 elevation-card space-y-3">
-              <div className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center space-x-1.5">
-                <Activity className="w-3.5 h-3.5 text-indigo-600" />
-                <span>5. O que você vê & Como interpretar os resultados?</span>
-              </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 italic bg-indigo-50/40 dark:bg-indigo-950/20 p-3 rounded-xl border border-indigo-200/60 dark:border-indigo-900/40">
-                {activeModule.whatYouSee}
-              </p>
-              <div className="space-y-2">
-                {activeModule.howToInterpret.map((item, idx) => (
-                  <div key={idx} className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 flex items-center space-x-2 font-mono">
-                    <ArrowRight className="w-3 h-3 text-indigo-500 shrink-0" />
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* CROSS-MODULE CONNECTIONS ARCHITECTURE */}
-            <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50/50 via-white to-slate-50 dark:from-slate-900 dark:via-[#111827] dark:to-indigo-950/30 border border-indigo-200/80 dark:border-indigo-900/60 elevation-card space-y-3">
-              <div className="text-xs font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider flex items-center space-x-1.5">
-                <Layers className="w-3.5 h-3.5" />
-                <span>6. Como este módulo se conecta aos outros menus? (Cross-Module Map)</span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {activeModule.crossModuleConnections.map((conn, idx) => (
-                  <div key={idx} className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-indigo-200/60 dark:border-indigo-800/60 shadow-2xs space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-800 dark:text-slate-200">{conn.source}</span>
-                      <span className="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 font-semibold">
-                        {conn.relationship}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800">
-                      <span className="text-xs font-medium text-slate-700 dark:text-slate-300">➔ {conn.target}</span>
-                      <button
-                        onClick={() => onNavigate(conn.targetNavView)}
-                        className="px-2 py-1 rounded bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold transition flex items-center space-x-1"
-                      >
-                        <span>Abrir</span>
-                        <ChevronRight className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* WHAT TO DO AFTER & AUDITABILITY */}
-            <div className="p-5 rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 elevation-card space-y-2.5">
-              <div className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center space-x-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-cyan-500" />
-                <span>7. O que fazer a seguir & Como comprovar em auditoria?</span>
-              </div>
-              <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
-                {activeModule.howToProveAndAudit}
-              </p>
-            </div>
+            <input
+              type="text"
+              value={glossaryQuery}
+              onChange={(e) => setGlossaryQuery(e.target.value)}
+              placeholder="Filtrar termos…"
+              className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
           </div>
-
-          {/* 4. Interactive Knowledge Check (Quiz) */}
-          <div className="bg-white dark:bg-[#111827] rounded-2xl border border-indigo-200 dark:border-indigo-900/50 p-6 elevation-card space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div className="flex items-center space-x-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
-                <HelpCircle className="w-4 h-4" />
-                <span>Knowledge Check — Teste Rápido de Fixação</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {glossaryEntries.map((entry) => (
+              <div
+                key={entry.term}
+                className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1"
+              >
+                <div className="text-sm font-bold text-indigo-700 dark:text-indigo-300">{entry.term}</div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{entry.definition}</p>
+                {entry.relatedModuleIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {entry.relatedModuleIds.map((mid) => {
+                      const m = getAcademyModuleById(mid);
+                      return m ? (
+                        <button
+                          key={mid}
+                          onClick={() => selectModule(mid)}
+                          className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 font-semibold"
+                        >
+                          M{m.moduleNumber}
+                        </button>
+                      ) : null;
+                    })}
+                  </div>
+                )}
               </div>
-              <span className="text-[11px] text-slate-400">{activeModule.knowledgeCheck.length} questão(ões)</span>
-            </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-            <div className="space-y-6">
-              {activeModule.knowledgeCheck.map((q, qIdx) => {
-                const selected = selectedAnswers[q.id];
-                const isChecked = showQuizFeedback[q.id];
-                const isCorrect = selected === q.correctIndex;
-
-                return (
-                  <div key={q.id} className="space-y-3 p-4 rounded-xl bg-slate-50/60 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800">
-                    <div className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-start space-x-2">
-                      <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-[10px] font-mono shrink-0">
-                        {qIdx + 1}
-                      </span>
-                      <span className="leading-relaxed">{q.question}</span>
+      {activeTab === 'percurso' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left: curriculum levels */}
+          <div className="lg:col-span-4 space-y-3">
+            {ACADEMY_LEVELS.map((level: AcademyLevel) => {
+              const isExpanded = expandedLevels.has(level.levelNumber);
+              const levelModules = level.moduleIds
+                .map((id) => getAcademyModuleById(id))
+                .filter((m): m is AcademyModule => !!m);
+              const levelCompleted = levelModules.filter((m) => isModuleCompleted(m.id)).length;
+              return (
+                <div
+                  key={level.levelNumber}
+                  className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden elevation-card"
+                >
+                  <button
+                    onClick={() => toggleLevel(level.levelNumber)}
+                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-900/60 transition"
+                  >
+                    <div className="flex items-center space-x-2.5 text-left">
+                      <span className="text-indigo-600 dark:text-indigo-400">{renderLevelIcon(level.iconName)}</span>
+                      <div>
+                        <div className="text-xs font-bold text-slate-900 dark:text-white">
+                          Nível {level.levelNumber} — {level.title}
+                        </div>
+                        <div className="text-[10px] text-slate-500">
+                          {levelCompleted}/{levelModules.length} concluídos
+                        </div>
+                      </div>
                     </div>
-
-                    {/* Options */}
-                    <div className="space-y-2 pl-7">
-                      {q.options.map((opt, optIdx) => {
-                        const isThisSelected = selected === optIdx;
-                        let optionStyle = 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-400';
-
-                        if (isChecked) {
-                          if (optIdx === q.correctIndex) {
-                            optionStyle = 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-900 dark:text-emerald-200 font-semibold';
-                          } else if (isThisSelected && !isCorrect) {
-                            optionStyle = 'bg-rose-50 dark:bg-rose-950/40 border-rose-500 text-rose-900 dark:text-rose-200';
-                          }
-                        } else if (isThisSelected) {
-                          optionStyle = 'bg-indigo-50 dark:bg-indigo-950/50 border-indigo-600 text-indigo-900 dark:text-indigo-200 font-semibold';
-                        }
-
+                    {isExpanded ? (
+                      <ChevronDown className="w-4 h-4 text-slate-400" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                    )}
+                  </button>
+                  {isExpanded && (
+                    <div className="border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">
+                      {levelModules.map((mod) => {
+                        const isSelected = mod.id === activeModuleId;
+                        const completed = isModuleCompleted(mod.id);
                         return (
                           <button
-                            key={optIdx}
-                            onClick={() => handleSelectOption(q.id, optIdx)}
-                            className={`w-full p-2.5 rounded-lg border text-left text-xs transition flex items-center justify-between ${optionStyle}`}
+                            key={mod.id}
+                            onClick={() => selectModule(mod.id)}
+                            className={`w-full px-4 py-2.5 text-left transition ${
+                              isSelected
+                                ? 'bg-indigo-50 dark:bg-indigo-950/40 border-l-4 border-indigo-600'
+                                : 'hover:bg-slate-50 dark:hover:bg-slate-900/60 border-l-4 border-transparent'
+                            }`}
                           >
-                            <span>{opt}</span>
-                            {isChecked && optIdx === q.correctIndex && (
-                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 ml-2" />
-                            )}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2 min-w-0">
+                                {completed ? (
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                ) : (
+                                  <Circle className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 shrink-0" />
+                                )}
+                                <span
+                                  className={`text-xs font-semibold truncate ${
+                                    isSelected
+                                      ? 'text-indigo-900 dark:text-indigo-200'
+                                      : 'text-slate-800 dark:text-slate-200'
+                                  }`}
+                                >
+                                  {mod.moduleNumber}. {mod.title}
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-slate-400 shrink-0 ml-2">
+                                {mod.estimatedMinutes}min
+                              </span>
+                            </div>
                           </button>
                         );
                       })}
                     </div>
+                  )}
+                </div>
+              );
+            })}
+            <div className="text-[10px] text-slate-400 px-2 leading-relaxed">
+              O progresso é guardado neste navegador. A conclusão de cada módulo exige quiz ≥{' '}
+              {QUIZ_PASS_THRESHOLD}% e exercício prático marcado como concluído.
+            </div>
+          </div>
 
-                    {/* Submit / Check Button */}
-                    <div className="pl-7 pt-1 flex items-center justify-between">
-                      {!isChecked ? (
-                        <button
-                          disabled={selected === undefined}
-                          onClick={() => handleCheckQuiz(q.id)}
-                          className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold transition"
-                        >
-                          Verificar Resposta
-                        </button>
-                      ) : (
-                        <div className={`text-xs p-3 rounded-lg w-full ${
-                          isCorrect ? 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200' : 'bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200'
-                        }`}>
-                          <div className="font-bold mb-1 flex items-center space-x-1.5">
-                            <span>{isCorrect ? '✅ Resposta Correta!' : '❌ Incorreto.'}</span>
+          {/* Right: active lesson */}
+          {activeModule && (
+            <div className="lg:col-span-8 space-y-4">
+              {/* Lesson header */}
+              <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 p-6 elevation-card space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                  <div className="flex items-center space-x-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                    <span>
+                      Módulo {String(activeModule.moduleNumber).padStart(2, '0')} • Nível {activeModule.levelNumber} • {activeModule.difficulty}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-3 text-xs text-slate-500">
+                    <span className="flex items-center space-x-1">
+                      <Clock className="w-3 h-3" />
+                      <span>{activeModule.estimatedMinutes} min</span>
+                    </span>
+                    {isModuleCompleted(activeModule.id) && (
+                      <span className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-semibold text-[10px] border border-emerald-200 dark:border-emerald-800 flex items-center space-x-1">
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>Concluído</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">{activeModule.title}</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{activeModule.subtitle}</p>
+
+                {activeModule.prerequisites.length > 0 && (
+                  <div className="text-[11px] text-slate-500">
+                    <strong>Pré-requisitos:</strong> {activeModule.prerequisites.join(' • ')}
+                  </div>
+                )}
+
+                {activeModule.relatedNavView && (
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center space-x-2 text-xs text-slate-700 dark:text-slate-300">
+                      <PlayCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      <span>
+                        Área real no produto: <strong>{activeModule.relatedNavLabel ?? activeModule.relatedNavView}</strong>
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => onNavigate(activeModule.relatedNavView!)}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-1 shadow-xs"
+                    >
+                      <span>Abrir</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Learning objectives */}
+              <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 elevation-card space-y-2">
+                <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center space-x-1.5">
+                  <Target className="w-3.5 h-3.5" />
+                  <span>Objetivos de aprendizagem</span>
+                </div>
+                <ul className="space-y-1.5">
+                  {activeModule.learningObjectives.map((obj, i) => (
+                    <li key={i} className="text-xs text-slate-700 dark:text-slate-300 flex items-start space-x-2">
+                      <span className="text-indigo-500 mt-0.5">▸</span>
+                      <span>{obj}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Concept explanation */}
+              <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 elevation-card space-y-3">
+                <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center space-x-1.5">
+                  <Lightbulb className="w-3.5 h-3.5" />
+                  <span>Explicação conceptual</span>
+                </div>
+                {activeModule.conceptExplanation.split('\n\n').map((para, i) => (
+                  <p key={i} className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                    {para}
+                  </p>
+                ))}
+              </div>
+
+              {/* Terminology */}
+              {activeModule.terminology.length > 0 && (
+                <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 elevation-card space-y-3">
+                  <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center space-x-1.5">
+                    <BookMarked className="w-3.5 h-3.5" />
+                    <span>Terminologia essencial</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                    {activeModule.terminology.map((t) => (
+                      <div
+                        key={t.term}
+                        className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
+                      >
+                        <div className="text-xs font-bold text-slate-900 dark:text-white">{t.term}</div>
+                        <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
+                          {t.definition}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step by step */}
+              {activeModule.stepByStep.length > 0 && (
+                <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 elevation-card space-y-3">
+                  <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center space-x-1.5">
+                    <ClipboardList className="w-3.5 h-3.5" />
+                    <span>Demonstração passo a passo</span>
+                  </div>
+                  <ol className="space-y-2.5">
+                    {activeModule.stepByStep.map((s, i) => (
+                      <li key={i} className="flex items-start space-x-3">
+                        <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                          {i + 1}
+                        </span>
+                        <div>
+                          <div className="text-xs font-semibold text-slate-900 dark:text-white">{s.step}</div>
+                          <div className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed mt-0.5">
+                            {s.detail}
                           </div>
-                          <p className="text-[11px] leading-relaxed">{q.explanation}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              {/* Business example */}
+              <div className="bg-white dark:bg-[#111827] rounded-2xl border border-sky-200 dark:border-sky-900/50 p-5 elevation-card space-y-2">
+                <div className="text-xs font-bold text-sky-700 dark:text-sky-400 uppercase tracking-wider flex items-center space-x-1.5">
+                  <MessageSquareQuote className="w-3.5 h-3.5" />
+                  <span>Exemplo empresarial</span>
+                </div>
+                <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
+                  {activeModule.businessExample}
+                </p>
+              </div>
+
+              {/* Common mistakes */}
+              {activeModule.commonMistakes.length > 0 && (
+                <div className="bg-white dark:bg-[#111827] rounded-2xl border border-amber-200 dark:border-amber-900/50 p-5 elevation-card space-y-3">
+                  <div className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider flex items-center space-x-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>Erros frequentes e como os evitar</span>
+                  </div>
+                  <div className="space-y-2.5">
+                    {activeModule.commonMistakes.map((cm, i) => (
+                      <div
+                        key={i}
+                        className="p-3 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/40"
+                      >
+                        <div className="text-xs font-semibold text-amber-900 dark:text-amber-200">
+                          ✗ {cm.mistake}
+                        </div>
+                        <div className="text-[11px] text-slate-700 dark:text-slate-300 mt-1">
+                          <strong className="text-emerald-700 dark:text-emerald-400">✓ Correção:</strong> {cm.correction}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Exercise */}
+              <div className="bg-white dark:bg-[#111827] rounded-2xl border border-emerald-200 dark:border-emerald-900/50 p-5 elevation-card space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center space-x-1.5">
+                    <ListChecks className="w-3.5 h-3.5" />
+                    <span>Exercício prático</span>
+                  </div>
+                  <button
+                    onClick={handleExerciseToggle}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 border ${
+                      isExerciseDone(activeModule.id)
+                        ? 'bg-emerald-600 border-emerald-600 text-white'
+                        : 'bg-white dark:bg-slate-900 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50'
+                    }`}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>{isExerciseDone(activeModule.id) ? 'Concluído' : 'Marcar como concluído'}</span>
+                  </button>
+                </div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">{activeModule.exercise.goal}</p>
+                <ol className="space-y-1.5">
+                  {activeModule.exercise.steps.map((s, i) => (
+                    <li key={i} className="text-xs text-slate-700 dark:text-slate-300 flex items-start space-x-2">
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold mt-px">{i + 1}.</span>
+                      <span>{s}</span>
+                    </li>
+                  ))}
+                </ol>
+                <div className="p-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/70 dark:border-emerald-900/40 text-[11px] text-emerald-900 dark:text-emerald-200">
+                  <strong>Critério de conclusão do exercício:</strong> {activeModule.exercise.doneCriterion}
+                </div>
+              </div>
+
+              {/* Knowledge check */}
+              <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 elevation-card space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center space-x-1.5">
+                    <HelpCircle className="w-3.5 h-3.5" />
+                    <span>Questionário de avaliação ({QUIZ_PASS_THRESHOLD}% para concluir)</span>
+                  </div>
+                  {bestQuizScore > 0 && (
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
+                      Melhor pontuação: {bestQuizScore}%
+                    </span>
+                  )}
+                </div>
+
+                {activeModule.knowledgeCheck.map((q) => {
+                  const selected = quizAnswers[q.id];
+                  const isCorrect = selected === q.correctIndex;
+                  return (
+                    <div
+                      key={q.id}
+                      className={`p-4 rounded-xl border ${
+                        quizSubmitted
+                          ? isCorrect
+                            ? 'border-emerald-300 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/20'
+                            : 'border-red-300 dark:border-red-900 bg-red-50/40 dark:bg-red-950/20'
+                          : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900'
+                      }`}
+                    >
+                      <div className="text-xs font-semibold text-slate-900 dark:text-white mb-2">{q.question}</div>
+                      <div className="space-y-1.5">
+                        {q.options.map((opt, oi) => (
+                          <label
+                            key={oi}
+                            className={`flex items-start space-x-2 text-xs p-2 rounded-lg border cursor-pointer transition ${
+                              selected === oi
+                                ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200'
+                                : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+                            } ${quizSubmitted ? 'pointer-events-none' : ''}`}
+                          >
+                            <input
+                              type="radio"
+                              name={q.id}
+                              checked={selected === oi}
+                              onChange={() => setQuizAnswers((prev) => ({ ...prev, [q.id]: oi }))}
+                              className="mt-0.5"
+                              disabled={quizSubmitted}
+                            />
+                            <span>{opt}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {quizSubmitted && (
+                        <div className="mt-2 text-[11px] leading-relaxed">
+                          <div className={`font-bold ${isCorrect ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
+                            {isCorrect ? '✓ Resposta correta' : `✗ Resposta incorreta — correta: ${q.options[q.correctIndex]}`}
+                          </div>
+                          <div className="text-slate-600 dark:text-slate-400 mt-1">{q.explanation}</div>
                         </div>
                       )}
                     </div>
+                  );
+                })}
+
+                {!quizSubmitted ? (
+                  <button
+                    onClick={handleQuizSubmit}
+                    disabled={Object.keys(quizAnswers).length < activeModule.knowledgeCheck.length}
+                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold transition"
+                  >
+                    Submeter respostas ({Object.keys(quizAnswers).length}/{activeModule.knowledgeCheck.length})
+                  </button>
+                ) : (
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="text-sm font-bold text-slate-900 dark:text-white">
+                      Pontuação: {quizScore}%{' '}
+                      {quizScore >= QUIZ_PASS_THRESHOLD ? (
+                        <span className="text-emerald-600 dark:text-emerald-400">— requisito atingido</span>
+                      ) : (
+                        <span className="text-amber-600 dark:text-amber-400">
+                          — necessita de {QUIZ_PASS_THRESHOLD}%; reveja as explicações e repita
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setQuizAnswers({});
+                        setQuizSubmitted(false);
+                      }}
+                      className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50"
+                    >
+                      Repetir questionário
+                    </button>
                   </div>
-                );
-              })}
-            </div>
-          </div>
+                )}
+              </div>
 
-          {/* 5. Complete Module & Next Module Footer */}
-          <div className="p-5 rounded-2xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 elevation-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
-                Conclusão do Módulo {activeModule.moduleNumber}
-              </span>
-              <span className="text-xs text-slate-500">
-                {isCurrentModuleCompleted ? 'Este módulo já foi concluído com sucesso.' : 'Ao concluir, você avançará para o próximo módulo da formação.'}
-              </span>
-            </div>
+              {/* Skills checklist */}
+              {activeModule.skillsChecklist.length > 0 && (
+                <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 elevation-card space-y-2">
+                  <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center space-x-1.5">
+                    <ListChecks className="w-3.5 h-3.5" />
+                    <span>Competências adquiridas</span>
+                  </div>
+                  <ul className="space-y-1.5">
+                    {activeModule.skillsChecklist.map((skill, i) => (
+                      <li key={i} className="text-xs text-slate-700 dark:text-slate-300 flex items-start space-x-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0" />
+                        <span>{skill}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-            <button
-              onClick={handleCompleteCurrentModule}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs shadow-md transition flex items-center justify-center space-x-2 shrink-0"
-            >
-              <span>{isCurrentModuleCompleted ? 'Avançar para Próximo Módulo' : 'Marcar como Concluído & Avançar'}</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+              {/* Summary + criterion + limitations */}
+              <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 elevation-card space-y-3">
+                <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                  Resumo final
+                </div>
+                <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{activeModule.summary}</p>
+                <div className="p-3 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/70 dark:border-indigo-900/40 text-[11px] text-indigo-900 dark:text-indigo-200">
+                  <strong>Critério de conclusão:</strong> {activeModule.completionCriterion}
+                </div>
+                {activeModule.limitations && activeModule.limitations.length > 0 && (
+                  <div className="text-[11px] text-amber-700 dark:text-amber-400">
+                    <strong>Limitações:</strong> {activeModule.limitations.join(' • ')}
+                  </div>
+                )}
+                {moduleReadyToComplete && !isModuleCompleted(activeModule.id) && (
+                  <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200 font-semibold">
+                    ✓ Requisitos do módulo cumpridos — módulo marcado como concluído.
+                  </div>
+                )}
+              </div>
+
+              {/* Prev / Next navigation */}
+              <div className="flex items-center justify-between">
+                {getPreviousAcademyModule(activeModule.id) ? (
+                  <button
+                    onClick={() => selectModule(getPreviousAcademyModule(activeModule.id)!.id)}
+                    className="px-4 py-2 rounded-xl bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-300 hover:border-indigo-300 transition flex items-center space-x-1.5"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>
+                      Anterior: M{getPreviousAcademyModule(activeModule.id)!.moduleNumber}
+                    </span>
+                  </button>
+                ) : (
+                  <span />
+                )}
+                {getNextAcademyModule(activeModule.id) ? (
+                  <button
+                    onClick={() => selectModule(getNextAcademyModule(activeModule.id)!.id)}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-1.5"
+                  >
+                    <span>
+                      Seguinte: M{getNextAcademyModule(activeModule.id)!.moduleNumber} —{' '}
+                      {getNextAcademyModule(activeModule.id)!.title}
+                    </span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                ) : (
+                  <span className="text-xs text-slate-500 font-semibold">
+                    {certificateEligible
+                      ? 'Percurso completo — emita o seu certificado.'
+                      : 'Último módulo do percurso.'}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
-      {/* 6. Official Certificate of Completion Modal */}
+      {/* Certificate modal */}
       {showCertificateModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white dark:bg-[#111827] rounded-3xl border border-amber-500/40 shadow-2xl max-w-2xl w-full p-8 space-y-6 relative overflow-hidden">
-            
-            {/* Decorative Gold Header */}
-            <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500" />
-            
-            <div className="text-center space-y-2 pt-2">
-              <div className="inline-flex p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-700/80 text-amber-600 dark:text-amber-400 mb-1">
-                <Award className="w-10 h-10" />
-              </div>
-              <h3 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
-                Certificado Oficial de Conclusão
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111827] rounded-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 space-y-4 elevation-card max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+                <Award className="w-5 h-5 text-indigo-500" />
+                <span>Certificado de Conclusão</span>
               </h3>
-              <p className="text-xs text-slate-500 font-mono">
-                CG-AG GOVERNANCE OS — OPERATOR FOUNDATION
-              </p>
-            </div>
-
-            {/* Certificate Body Card */}
-            <div className="p-6 rounded-2xl bg-gradient-to-b from-amber-50/40 to-slate-50 dark:from-slate-900 dark:to-slate-900/60 border border-amber-200/80 dark:border-amber-900/50 space-y-4 text-center">
-              <p className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-widest font-semibold">
-                Certificamos que
-              </p>
-              
-              <form onSubmit={handleSaveStudentName} className="max-w-md mx-auto">
-                <input
-                  type="text"
-                  value={studentNameInput}
-                  onChange={(e) => setStudentNameInput(e.target.value)}
-                  placeholder="Seu Nome Completo ou Cargo"
-                  className="w-full text-center text-lg font-bold text-slate-900 dark:text-white bg-transparent border-b-2 border-indigo-500 pb-1 focus:outline-hidden"
-                />
-              </form>
-
-              <p className="text-xs text-slate-700 dark:text-slate-300 max-w-lg mx-auto leading-relaxed">
-                concluiu com êxito todos os <strong>18 Módulos de Formação Prática</strong> do CG-AG Governance OS, dominando a esteira canônica de Governança, Ingestão AST, Riscos, Human-in-the-Loop, Evidências Canônicas RFC 8785 e Encadeamento no Audit Ledger.
-              </p>
-
-              {/* Verification Metadata */}
-              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-amber-200/60 dark:border-slate-800 text-[11px] text-slate-500 font-mono">
-                <div>
-                  <span className="block font-bold text-slate-700 dark:text-slate-300">ID DO CERTIFICADO:</span>
-                  <span>{progress.certificateId || 'CERT-CGAG-PROD-2026'}</span>
-                </div>
-                <div>
-                  <span className="block font-bold text-slate-700 dark:text-slate-300">DATA DE EMISSÃO:</span>
-                  <span>{progress.certificateIssuedAt ? new Date(progress.certificateIssuedAt).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR')}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-end space-x-3 pt-2">
               <button
                 onClick={() => setShowCertificateModal(false)}
-                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
-                Fechar
-              </button>
-              <button
-                onClick={() => {
-                  window.print();
-                }}
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Imprimir / Salvar PDF</span>
+                <X className="w-5 h-5" />
               </button>
             </div>
+
+            {certificateEligible ? (
+              progress.certificateIssuedAt ? (
+                <div className="space-y-4">
+                  <div className="p-6 rounded-2xl border-2 border-indigo-300 dark:border-indigo-800 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/40 dark:to-[#111827] text-center space-y-3">
+                    <GraduationCap className="w-10 h-10 mx-auto text-indigo-600 dark:text-indigo-400" />
+                    <div className="text-xs uppercase tracking-widest text-indigo-600 dark:text-indigo-400 font-bold">
+                      ComplyPRO Academy
+                    </div>
+                    <div className="text-sm text-slate-500">Certificado de Conclusão do Percurso</div>
+                    <div className="text-xl font-bold text-slate-900 dark:text-white">
+                      {progress.studentName || 'Formando'}
+                    </div>
+                    <div className="text-xs text-slate-600 dark:text-slate-400">
+                      Concluiu os {ACADEMY_MODULES.length} módulos do percurso de
+                      <br />
+                      Governação de Agentes de IA
+                    </div>
+                    <div className="text-[10px] text-slate-500 pt-2 border-t border-indigo-200 dark:border-indigo-800">
+                      Emitido em {new Date(progress.certificateIssuedAt).toLocaleDateString('pt-PT')} • Ref.{' '}
+                      {progress.certificateId}
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    <strong>Nota:</strong> este certificado é emitido pela própria plataforma ComplyPRO para
+                    registar a conclusão do percurso formativo interno. Não possui valor de acreditação
+                    externa, certificação profissional reconhecida por reguladores nem validade jurídica de
+                    habilitação.
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={handleIssueCertificate} className="space-y-4">
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    Todos os {ACADEMY_MODULES.length} módulos concluídos. Introduza o nome a constar no certificado.
+                  </p>
+                  <input
+                    type="text"
+                    value={studentNameInput}
+                    onChange={(e) => setStudentNameInput(e.target.value)}
+                    placeholder="Nome completo"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    className="w-full px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition"
+                  >
+                    Emitir certificado
+                  </button>
+                  <p className="text-[10px] text-slate-500 leading-relaxed">
+                    Emitido pela plataforma ComplyPRO — sem valor de acreditação externa.
+                  </p>
+                </form>
+              )
+            ) : (
+              <div className="space-y-3 text-center py-4">
+                <Award className="w-10 h-10 mx-auto text-slate-300" />
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  O certificado fica disponível quando os {ACADEMY_MODULES.length} módulos estiverem concluídos.
+                </p>
+                <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                  {progress.completedModuleIds.length}/{ACADEMY_MODULES.length} módulos ({completionPercent}%)
+                </div>
+                <button
+                  onClick={() => {
+                    setShowCertificateModal(false);
+                    const nextId = AcademyStore.getNextUncompletedModuleId(progress);
+                    if (nextId) selectModule(nextId);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition"
+                >
+                  Continuar percurso
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -452,8 +452,19 @@ export const AppShell: React.FC<AppShellProps> = ({
             })}
           </div>
 
-          {/* Settings - Visually Separated */}
-          <div className="p-3 border-t border-slate-200/80 dark:border-slate-800/80">
+          {/* Academy & Settings - Visually Separated */}
+          <div className="p-3 border-t border-slate-200/80 dark:border-slate-800/80 space-y-1">
+            <button
+              onClick={() => setActiveView('learn-academy')}
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                activeView === 'learn-academy'
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <GraduationCap className={`w-4 h-4 shrink-0 ${activeView === 'learn-academy' ? 'text-white dark:text-slate-950' : 'text-slate-400'}`} />
+              <span className="truncate">Academia</span>
+            </button>
             <button
               onClick={() => setActiveView('settings')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
